@@ -18,7 +18,6 @@ import {
   UpdateDateColumn,
   Index,
   VersionColumn,
-  Generated,
 } from 'typeorm';
 import { ProductType, ProductFormat, ProductStatus } from '../enums';
 
@@ -60,7 +59,8 @@ export class Product {
   @Index()
   slug: string;
 
-  // ─── Classification ────────────────────────────────────────────────────────
+  // ─── Classification ───────────────
+─────────────────────────────────────────
   @Column({ type: 'enum', enum: ProductType })
   type: ProductType;
 
@@ -117,7 +117,8 @@ export class Product {
   @Column({ type: 'jsonb', nullable: true })
   fulfillment?: Record<string, any>;
   @Column({ type: 'jsonb', nullable: true })
-  serviceDelivery?: Record<string, any>;
+  serviceDe
+livery?: Record<string, any>;
   @Column({ type: 'jsonb', nullable: true })
   apiDelivery?: Record<string, any>;
   @Column({ type: 'jsonb', nullable: true })
@@ -162,7 +163,8 @@ export class Product {
   @Column({ type: 'jsonb', nullable: true })
   contentGeneration?: Record<string, any>;
   @Column({ type: 'jsonb', nullable: true })
-  marketingAutomation?: Record<string, any>;
+  market
+ingAutomation?: Record<string, any>;
   @Column({ type: 'jsonb', nullable: true })
   customerSupport?: Record<string, any>;
 
