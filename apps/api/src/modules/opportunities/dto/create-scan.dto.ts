@@ -16,6 +16,7 @@ import {
   IsBoolean,
   IsString,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { OpportunityCategory, OpportunitySource } from '../enums';
 
 export class CreateScanDto {
@@ -34,6 +35,3 @@ export class CreateScanDto {
   @IsOptional() @IsBoolean() notifyOnComplete?: boolean;
   @IsOptional() @IsString() note?: string;
 }
-
-// Import Type for the numeric transforms above.
-import { Type } from 'class-transformer';
