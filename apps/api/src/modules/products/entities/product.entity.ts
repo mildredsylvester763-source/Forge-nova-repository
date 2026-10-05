@@ -18,8 +18,10 @@ import {
   UpdateDateColumn,
   Index,
   VersionColumn,
+  Generated,
 } from 'typeorm';
 import { ProductType, ProductFormat, ProductStatus } from '../enums';
+import { ProductHistory } from './product-history.entity';
 
 @Entity('products')
 @Index(['userId', 'status'])
@@ -193,6 +195,10 @@ ingAutomation?: Record<string, any>;
   workflow?: Record<string, any>;      // { currentStep, totalSteps, completedSteps }
   @Column({ type: 'jsonb', nullable: true })
   metadata?: Record<string, any>;
+
+  // ─── Relations ──────────────────────────────────────────────────────────────
+  @OneToMany(() => ProductHistory, (h) => h.product)
+  histories: ProductHistory[];
 
   // ─── Lifecycle ────────────────────────────────────────────────────────────
   @Column({ type: 'timestamptz', nullable: true })
