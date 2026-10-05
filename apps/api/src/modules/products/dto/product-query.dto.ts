@@ -4,7 +4,8 @@
 // List/filter parameters. Carries the single-value filters, array filters,
 // and price/revenue ranges that findAll() reads. Pagination uses skip/take.
 
-import { IsOptional, IsEnum, IsString, IsInt, IsArray, IsNumber, Min, Max, IsUUID, Type } from 'class-validator';
+import { IsOptional, IsEnum, IsString, IsInt, IsArray, IsNumber, Min, Max, IsUUID } from 'class-validator';
+import { Type } from 'class-transformer';
 import { ProductType, ProductFormat, ProductStatus } from '../enums';
 
 export class ProductQueryDto {
