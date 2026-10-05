@@ -1,10 +1,18 @@
 // ============================================================================
 // FILE: /apps/api/src/modules/opportunities/enums.ts
 // ============================================================================
+// Domain vocabulary for the Opportunity & Intelligence Layer.
+// AUTHORITATIVE: the service is the source of truth for names used at runtime;
+// this enum set is its exact superset. Every value here must map 1:1 to a
+// string literal the service can assign without casts.
 
 // ─── Category ──────────────────────────────────────────────────────────────
-// The seven value-chain categories Forge Nova scouts across.
+// Two levels in one enum: the 7 value-chain categories from the Forge Nova
+// concept (content, physical micro-manufacturing, local services, digital
+// products, data arbitrage, niche education, seasonal physical goods) PLUS
+// the fine-grained micro-niches the source mappers classify into.
 export enum OpportunityCategory {
+  // Concept-level value-chain categories
   CONTENT = 'content',
   PHYSICAL_MICRO_MANUFACTURING = 'physical_micro_manufacturing',
   LOCAL_SERVICES = 'local_services',
@@ -12,14 +20,105 @@ export enum OpportunityCategory {
   DATA_ARBITRAGE = 'data_arbitrage',
   NICHE_EDUCATION = 'niche_education',
   SEASONAL_PHYSICAL_GOODS = 'seasonal_physical_goods',
+  // Software & digital niches
+  SOFTWARE_TOOLS = 'software_tools',
+  SAAS_MICRO = 'saas_micro',
+  AI_WRAPPERS = 'ai_wrappers',
+  MOBILE_APPS = 'mobile_apps',
+  GAMES = 'games',
+  PLUGINS_EXTENSIONS = 'plugins_extensions',
+  API_PRODUCTS = 'api_products',
+  AUTOMATIONS = 'automations',
+  // Education & knowledge
+  EBOOKS = 'ebooks',
+  ONLINE_COURSES = 'online_courses',
+  TEMPLATES = 'templates',
+  COACHING_MENTORSHIP = 'coaching_mentorship',
+  WORKSHOPS = 'workshops',
+  // Physical goods
+  PRINT_ON_DEMAND = 'print_on_demand',
+  MERCHANDISE = 'merchandise',
+  THREE_D_PRINTING = 'three_d_printing',
+  HANDMADE_CRAFTS = 'handmade_crafts',
+  FASHION = 'fashion',
+  FOOD_AND_BEVERAGE = 'food_and_beverage',
+  BEAUTY_PERSONAL_CARE = 'beauty_personal_care',
+  HOME_LIVING = 'home_living',
+  TOYS_GAMES = 'toys_games',
+  PET_PRODUCTS = 'pet_products',
+  FITNESS_WELLNESS = 'fitness_wellness',
+  ELECTRONICS_ACCESSORIES = 'electronics_accessories',
+  // Services
+  CONSULTING = 'consulting',
+  FREELANCE_SERVICES = 'freelance_services',
+  AGENCY_SERVICES = 'agency_services',
+  DIGITAL_MARKETING = 'digital_marketing',
+  DESIGN_SERVICES = 'design_services',
+  TECHNICAL_SERVICES = 'technical_services',
+  // Media & audience
+  NEWSLETTERS = 'newsletters',
+  PODCASTS = 'podcasts',
+  VIDEO_CONTENT = 'video_content',
+  STOCK_ASSETS = 'stock_assets',
+  MEMBERSHIP_COMMUNITIES = 'membership_communities',
+  EVENTS_RETREATS = 'events_retreats',
+  // Data & arbitrage
+  DATA_PRODUCTS = 'data_products',
+  DATASETS = 'datasets',
+  ARBITRAGE = 'arbitrage',
+  LEAD_GENERATION = 'lead_generation',
+  // Seasonal & fallback
+  SEASONAL_GOODS = 'seasonal_goods',
+  OTHER = 'other',
 }
 
 // ─── Source ────────────────────────────────────────────────────────────────
-// Where an opportunity signal originates (multi-source scanner inputs).
+// Multi-source scanner inputs. The first five are wired in the service
+// (Twitter, Reddit, Google Trends, GitHub, Google Search); the rest are
+// registered now so each scanner connector lands without schema changes.
 export enum OpportunitySource {
-  TREND_RADAR = 'trend_radar',
-  SEARCH_VOLUME = 'search_volume',
-  SOCIAL_SIGNALS = 'social_signals',
+  // Wired in service
+  TWITTER = 'twitter',
+  REDDIT = 'reddit',
+  GOOGLE_TRENDS = 'google_trends',
+  GOOGLE_SEARCH = 'google_search',
+  GITHUB = 'github',
+  // Social & community
+  TIKTOK = 'tiktok',
+  INSTAGRAM = 'instagram',
+  YOUTUBE = 'youtube',
+  FACEBOOK = 'facebook',
+  PINTEREST = 'pinterest',
+  LINKEDIN = 'linkedin',
+  PRODUCT_HUNT = 'product_hunt',
+  HACKER_NEWS = 'hacker_news',
+  STACK_OVERFLOW = 'stack_overflow',
+  DISCORD = 'discord',
+  TELEGRAM = 'telegram',
+  WHATSAPP = 'whatsapp',
+  TUMBLR = 'tumblr',
+  TWITCH = 'twitch',
+  // Marketplaces & commerce
+  AMAZON = 'amazon',
+  ETSY = 'etsy',
+  EBAY = 'ebay',
+  SHOPIFY_EXCHANGE = 'shopify_exchange',
+  ALIBABA = 'alibaba',
+  APP_STORE = 'app_store',
+  PLAY_STORE = 'play_store',
+  STEAM = 'steam',
+  // Crowdfunding & demand signals
+  KICKSTARTER = 'kickstarter',
+  INDIEGOGO = 'indiegogo',
+  UPWORK = 'upwork',
+  FIVERR = 'fiverr',
+  JOB_BOARDS = 'job_boards',
+  // Search & keyword intelligence
+  KEYWORD_PLANNER = 'keyword_planner',
+  BING_SEARCH = 'bing_search',
+  NEWS_RSS = 'news_rss',
+  // Local & regulatory
+  GOVERNMENT_TENDERS = 'government_tenders',
   LOCAL_DEMAND = 'local_demand',
   SEASONAL_CALENDAR = 'seasonal_calendar',
   COMPETITOR_GAP = 'competitor_gap',
@@ -30,16 +129,23 @@ export enum OpportunitySource {
 }
 
 // ─── Status (lifecycle) ─────────────────────────────────────────────────────
-// Full lifecycle: signal → vetted → experiment → live → scaled/retired.
+// Superset: concept lifecycle + the exact statuses the service transitions.
 export enum OpportunityStatus {
+  DISCOVERED = 'discovered',
   NEW = 'new',
   SCORING = 'scoring',
   VETTED = 'vetted',
+  VALIDATING = 'validating',
+  APPROVED = 'approved',
   QUEUED_FOR_BUILD = 'queued_for_build',
   BUILDING = 'building',
   EXPERIMENTING = 'experimenting',
+  GTM_LAUNCHING = 'gtm_launching',
+  OPERATIONS_ACTIVE = 'operations_active',
   LIVE = 'live',
   SCALING = 'scaling',
+  PAUSING = 'pausing',
+  PAUSED = 'paused',
   PIVOTING = 'pivoting',
   KILLED = 'killed',
   RETIRED = 'retired',
@@ -56,7 +162,6 @@ export enum OpportunityPriority {
 }
 
 // ─── Risk Level ─────────────────────────────────────────────────────────────
-// Used with per-country/category regulatory flags.
 export enum RiskLevel {
   MINIMAL = 'minimal',
   LOW = 'low',
@@ -77,11 +182,16 @@ export enum ScanStatus {
 }
 
 // ─── History Action ──────────────────────────────────────────────────────────
+// Exact union the service passes to createHistory, plus decision actions.
 export enum OpportunityHistoryAction {
   CREATE = 'CREATE',
   UPDATE = 'UPDATE',
+  DELETE = 'DELETE',
+  RESTORE = 'RESTORE',
   STATUS_CHANGE = 'STATUS_CHANGE',
+  PRIORITY_CHANGE = 'PRIORITY_CHANGE',
   SCORE_CHANGE = 'SCORE_CHANGE',
+  ACCESS = 'ACCESS',
   KILL = 'KILL',
   SCALE = 'SCALE',
   PIVOT = 'PIVOT',
