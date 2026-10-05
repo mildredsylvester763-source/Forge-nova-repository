@@ -1,9 +1,10 @@
 // ============================================================================
 // FILE: /apps/api/src/modules/opportunities/dto/create-scan.dto.ts
 // ============================================================================
-// Request body for launching a multi-source opportunity scan.
-// Budget and scope caps are validated here — the scanner never runs
-// unbounded on the user's behalf.
+// Request body for launching a scan. Matches what createScan() reads:
+// runImmediately, scheduledAt, source/sources, parameters, notifications.
+// Caps are validated here — the scanner never runs unbounded on the user's
+// behalf (zero-trust: agent budget is declared, not assumed).
 
 import {
   IsOptional,
@@ -15,23 +16,34 @@ import {
   IsUUID,
   IsBoolean,
   IsString,
+  IsObject,
+  IsDateString,
 } from 'class-validator';
-import { Type } from 'class-transformer';
 import { OpportunityCategory, OpportunitySource } from '../enums';
 
 export class CreateScanDto {
-  // Attach the scan to an existing opportunity, or leave null for a
-  // broad portfolio-wide discovery scan.
+  @IsOptional() @IsString() @IsString({ length: 255 }) name?: string;
+
+  // Attach to an existing opportunity, or null for a portfolio-wide scan.
   @IsOptional() @IsUUID() opportunityId?: string;
 
-  // Scope: which categories and sources to scan. Empty = all enabled sources.
-  @IsOptional() @IsArray() @IsEnum(OpportunityCategory, { each: true }) categories?: OpportunityCategory[];
+  // Single-source scan, or a multi-source batch.
+  @IsOptional() @IsEnum(OpportunitySource) source?: OpportunitySource;
   @IsOptional() @IsArray() @IsEnum(OpportunitySource, { each: true }) sources?: OpportunitySource[];
 
-  // Hard caps — zero-trust: the agent cannot exceed the user's declared budget.
-  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(50) maxSignals?: number;
-  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(3600) maxDurationSeconds?: number;
+  @IsOptional() @IsArray() @IsEnum(OpportunityCategory, { each: true }) categories?: OpportunityCategory[];
 
-  @IsOptional() @IsBoolean() notifyOnComplete?: boolean;
-  @IsOptional() @IsString() note?: string;
+  // Scanner input: query terms, subreddits, languages, recurrence rule.
+  @IsOptional() @IsObject() parameters?: Record<string, any>;
+
+  // Hard caps — the agent cannot exceed the user's declared budget.
+  @IsOptional() @IsInt() @Min(1) @Max(50) maxSignals?: number;
+  @IsOptional() @IsInt() @Min(1) @Max(3600) maxDurationSeconds?: number;
+
+  // Execution control.
+  @IsOptional() @IsBoolean() runImmediately?: boolean;
+  @IsOptional() @IsDateString() scheduledAt?: string;
+
+  // Notification preferences: { onCompletion, onFailure, channels }.
+  @IsOptional() @IsObject() notifications?: Record<string, any>;
 }
