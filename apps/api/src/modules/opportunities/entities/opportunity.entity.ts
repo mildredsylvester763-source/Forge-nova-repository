@@ -1,6 +1,8 @@
 // ============================================================================
 // FILE: /apps/api/src/modules/opportunities/entities/opportunity.entity.ts
 // ============================================================================
+// Matches every field the OpportunitiesService reads or writes.
+// Zero-trust: all queries scope by userId; ownership never comes from bodies.
 
 import {
   Entity,
@@ -8,9 +10,13 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  DeleteDateColumn,
   Index,
   VersionColumn,
+  OneToMany,
 } from 'typeorm';
+import { OpportunityHistory } from './opportunity-history.entity';
+import { OpportunityScan } from './opportunity-scan.entity';
 import {
   OpportunityCategory,
   OpportunitySource,
@@ -24,11 +30,12 @@ import {
 @Index(['userId', 'category'])
 @Index(['userId', 'priority'])
 @Index(['userId', 'riskLevel'])
+@Index(['userId', 'externalId', 'source'])   // upsert key for scanned signals
 export class Opportunity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  // ─── Ownership (zero-trust: every query is scoped by these) ───────────────
+  // ─── Ownership (zero-trust scoping) ────────────────────────────────────────
   @Column({ type: 'uuid' })
   @Index()
   userId: string;
@@ -37,21 +44,34 @@ export class Opportunity {
   @Index()
   accountId: string;
 
-  // ─── Identity ────────────────────────────────────────────────────────────
+  @Column({ type: 'uuid', nullable: true })
+  createdBy?: string;
+
+  @Column({ type: 'uuid', nullable: true })
+  updatedBy?: string;
+
+  // ─── Identity ──────────────────────────────────────────────────────────────
   @Column({ length: 255 })
   title: string;
 
   @Column({ type: 'text', nullable: true })
   description?: string;
 
-  // ─── Classification ──────────────────────────────────────────────────────
+  // ─── External provenance (scanner upsert key) ─────────────────────────────
+  @Column({ type: 'varchar', { length: 255 }, nullable: true })
+  externalId?: string;
+
+  @Column({ type: 'text', nullable: true })
+  externalUrl?: string;
+
+  // ─── Classification ─────────────────────────────────────────────────────────
   @Column({ type: 'enum', enum: OpportunityCategory })
   category: OpportunityCategory;
 
   @Column({ type: 'enum', enum: OpportunitySource })
   source: OpportunitySource;
 
-  @Column({ type: 'enum', enum: OpportunityStatus, default: OpportunityStatus.NEW })
+  @Column({ type: 'enum', enum: OpportunityStatus, default: OpportunityStatus.DISCOVERED })
   status: OpportunityStatus;
 
   @Column({ type: 'enum', enum: OpportunityPriority, default: OpportunityPriority.MEDIUM })
@@ -60,26 +80,29 @@ export class Opportunity {
   @Column({ type: 'enum', enum: RiskLevel, default: RiskLevel.LOW })
   riskLevel: RiskLevel;
 
-  // ─── Scoring (cross-category opportunity score, 0–100) ───────────────────
+  // ─── Composite score (0–100) and sub-scores (0–10, set by scoring agents) ──
   @Column({ type: 'decimal', precision: 5, scale: 2, default: 0 })
   score: number;
 
-  @Column({ type: 'decimal', precision: 5, scale: 2, default: 0 })
-  confidence: number;
+  @Column({ type: 'decimal', precision: 4, scale: 2, default: 0 })
+  demandScore?: number;
 
-  @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
-  estimatedMarketSize: number;
+  @Column({ type: 'decimal', precision: 4, scale: 2, default: 5 })
+  competitionScore?: number;
 
-  @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
-  estimatedMonthlyRevenue: number;
+  @Column({ type: 'decimal', precision: 4, scale: 2, default: 0 })
+  profitabilityScore?: number;
 
-  @Column({ type: 'decimal', precision: 6, scale: 2, default: 0 })
-  competitionIntensity: number;
+  @Column({ type: 'decimal', precision: 4, scale: 2, default: 0 })
+  feasibilityScore?: number;
 
-  @Column({ type: 'decimal', precision: 5, scale: 2, default: 0 })
-  priceElasticity: number;
+  @Column({ type: 'decimal', precision: 4, scale: 2, default: 0 })
+  trendScore?: number;
 
-  // ─── Context (validated by CreateOpportunityDto) ──────────────────────────
+  @Column({ type: 'decimal', precision: 4, scale: 2, default: 0 })
+  seasonalityScore?: number;
+
+  // ─── Context (validated by CreateOpportunityDto) ───────────────────────────
   @Column({ type: 'jsonb', nullable: true })
   targetAudience?: Record<string, any>;
 
@@ -99,17 +122,52 @@ export class Opportunity {
   regulatoryFlags?: Record<string, any>;
 
   @Column({ type: 'jsonb', nullable: true })
+  tags?: string[];
+
+  @Column({ type: 'jsonb', nullable: true })
   metadata?: Record<string, any>;
 
-  // ─── Lifecycle ────────────────────────────────────────────────────────────
+  // ─── Collaboration & triage ────────────────────────────────────────────────
+  @Column({ type: 'boolean', default: false })
+  isFavorite: boolean;
+
+  @Column({ type: 'jsonb', nullable: true })
+  watchers?: string[];
+
+  // ─── Lifecycle timestamps (set by changeStatus) ─────────────────────────────
+  @Column({ type: 'timestamptz', nullable: true })
+  discoveredAt?: Date;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  validatedAt?: Date;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  approvedAt?: Date;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  launchedAt?: Date;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  pausedAt?: Date;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  killedAt?: Date;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  retiredAt?: Date;
+
   @Column({ type: 'timestamptz', nullable: true })
   lastScannedAt?: Date;
 
   @Column({ type: 'timestamptz', nullable: true })
   nextScanAt?: Date;
 
-  @Column({ type: 'timestamptz', nullable: true })
-  decidedAt?: Date;
+  // ─── Relations ──────────────────────────────────────────────────────────────
+  @OneToMany(() => OpportunityHistory, (h) => h.opportunity)
+  histories: OpportunityHistory[];
+
+  @OneToMany(() => OpportunityScan, (s) => s.opportunity)
+  scans: OpportunityScan[];
 
   @VersionColumn()
   version: number;
@@ -119,6 +177,9 @@ export class Opportunity {
 
   @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt: Date;
+
+  @DeleteDateColumn({ type: 'timestamptz' })
+  deletedAt?: Date;
 
   @Column({ type: 'boolean', default: true })
   isActive: boolean;
