@@ -3,14 +3,11 @@
 // ============================================================================
 // Domain vocabulary for the Opportunity & Intelligence Layer.
 // AUTHORITATIVE: the service is the source of truth for names used at runtime;
-// this enum set is its exact superset. Every value here must map 1:1 to a
-// string literal the service can assign without casts.
+// this enum set is its exact superset.
 
 // ─── Category ──────────────────────────────────────────────────────────────
-// Two levels in one enum: the 7 value-chain categories from the Forge Nova
-// concept (content, physical micro-manufacturing, local services, digital
-// products, data arbitrage, niche education, seasonal physical goods) PLUS
-// the fine-grained micro-niches the source mappers classify into.
+// The 7 value-chain categories from the Forge Nova concept PLUS the
+// fine-grained micro-niches the source mappers classify into.
 export enum OpportunityCategory {
   // Concept-level value-chain categories
   CONTENT = 'content',
@@ -153,11 +150,15 @@ export enum OpportunityStatus {
 }
 
 // ─── Priority ───────────────────────────────────────────────────────────────
+// Includes VERY_HIGH / VERY_LOW used by the Reddit and GitHub priority
+// mappers, plus the concept tiers.
 export enum OpportunityPriority {
   CRITICAL = 'critical',
+  VERY_HIGH = 'very_high',
   HIGH = 'high',
   MEDIUM = 'medium',
   LOW = 'low',
+  VERY_LOW = 'very_low',
   WATCHLIST = 'watchlist',
 }
 
@@ -182,7 +183,6 @@ export enum ScanStatus {
 }
 
 // ─── History Action ──────────────────────────────────────────────────────────
-// Exact union the service passes to createHistory, plus decision actions.
 export enum OpportunityHistoryAction {
   CREATE = 'CREATE',
   UPDATE = 'UPDATE',
