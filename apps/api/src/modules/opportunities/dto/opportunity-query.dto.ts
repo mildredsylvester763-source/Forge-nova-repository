@@ -1,8 +1,7 @@
 // ============================================================================
 // FILE: /apps/api/src/modules/opportunities/dto/opportunity-query.dto.ts
 // ============================================================================
-// Query/filter DTO for listing opportunities. Matches the fields the service
-// already filters on (category, source, status, priority, riskLevel, search).
+// List/filter parameters. Uses skip/take — the exact names the service reads.
 
 import { IsOptional, IsEnum, IsString, IsInt, Min, Max, IsBoolean } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -23,8 +22,8 @@ export class OpportunityQueryDto {
 
   @IsOptional() @IsString() search?: string;
 
-  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) limit?: number;
-  @IsOptional() @Type(() => Number) @IsInt() @Min(0) offset?: number;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(0) skip?: number;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) take?: number;
 
   @IsOptional() @IsBoolean() includeKilled?: boolean;
   @IsOptional() @IsBoolean() includeArchived?: boolean;
