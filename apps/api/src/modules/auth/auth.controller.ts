@@ -18,6 +18,7 @@ import { Response } from 'express';
 import { AuthService, RequestMeta } from './auth.service';
 import { RegisterDto, LoginDto, RefreshDto } from './dto/auth.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { Public } from '../../common/decorators/public.decorator';
 
 @Controller('api/v1/auth')
 export class AuthController {
@@ -28,17 +29,20 @@ export class AuthController {
   }
 
   // ─── Email + password ──────────────────────────────────────────────────────
+  @Public()
   @Post('register')
   register(@Request() req: any, @Body() dto: RegisterDto) {
     return this.authService.register(dto, this.meta(req));
   }
 
+  @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
   login(@Request() req: any, @Body() dto: LoginDto) {
     return this.authService.login(dto, this.meta(req));
   }
 
+  @Public()
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   refresh(@Request() req: any, @Body() dto: RefreshDto) {
@@ -52,26 +56,31 @@ export class AuthController {
   }
 
   // ─── Google OAuth ───────────────────────────────────────────────────────────
+  @Public()
   @Get('google')
   @UseGuards(AuthGuard('google'))
   googleAuth(): void {
     // Passport redirects the user to Google's consent screen.
   }
 
+  @Public()
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
   async googleCallback(@Request() req: any, @Res() res: Response): Promise<void> {
-    const { user, tokens } = await this.authService.oauthLogin(req.user, this.meta(req));
+    const { user, tokens } = await this.authService.oauthLogin(req.user, t
+his.meta(req));
     this.redirectWithTokens(res, tokens);
   }
 
   // ─── Facebook OAuth ────────────────────────────────────────────────────────
+  @Public()
   @Get('facebook')
   @UseGuards(AuthGuard('facebook'))
   facebookAuth(): void {
     // Passport redirects the user to Facebook's consent screen.
   }
 
+  @Public()
   @Get('facebook/callback')
   @UseGuards(AuthGuard('facebook'))
   async facebookCallback(@Request() req: any, @Res() res: Response): Promise<void> {
