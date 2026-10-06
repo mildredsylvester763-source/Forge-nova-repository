@@ -24,7 +24,7 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductQueryDto } from './dto/product-query.dto';
 import { ProductStatus } from './enums';
 
-@Controller('api/v1/products')
+@Controller('products')
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
@@ -60,7 +60,8 @@ export class ProductsController {
 
   @Get(':id/history')
   getHistory(@Request() req: any, @Param('id', ParseUUIDPipe) id: string, @Query('page') page = 1, @Query('limit') limit = 20) {
-    return this.productsService.getHistory(req.user.id, id, page, limit);
+    retur
+n this.productsService.getHistory(req.user.id, id, page, limit);
   }
 
   @Patch(':id')
