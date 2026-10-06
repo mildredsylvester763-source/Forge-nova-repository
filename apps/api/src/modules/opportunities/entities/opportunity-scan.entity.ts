@@ -57,8 +57,7 @@ export class OpportunityScan {
   source?: OpportunitySource;
 
   @Column({ type: 'jsonb', nullable: true })
-  sources?: OpportunitySource
-[];
+  sources?: OpportunitySource[];
 
   @Column({ type: 'jsonb', nullable: true })
   categories?: OpportunityCategory[];
