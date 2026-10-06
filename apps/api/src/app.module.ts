@@ -1,15 +1,13 @@
 // ============================================================================
 // FILE: /apps/api/src/app.module.ts
 // ============================================================================
-// The root. Every feature module registers here. Global pipes enforce
-// validation on every request body; global filters turn failures into
-// consistent JSON; the auth guard is exported for controllers.
+// The root. Every feature module registers here. The global pipe enforces
+// DTO validation on every request body.
 
-import { Module } from '@nestjs/common';
+import { Module, ValidationPipe } from '@nestjs/common';
+import { APP_PIPE } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { APP_GUARD, APP_PIPE, APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
 import { AuthModule } from './modules/auth/auth.module';
 import { OpportunitiesModule } from './modules/opportunities/opportunities.module';
 import { ProductsModule } from './modules/products/products.module';
@@ -24,7 +22,6 @@ import { ProductHistory } from './modules/products/entities/product-history.enti
 
 @Module({
   imports: [
-    // Environment configuration — secrets come from env, never from code.
     ConfigModule.forRoot({ isGlobal: true, envFilePath: ['.env.local', '.env'] }),
 
     TypeOrmModule.forRootAsync({
@@ -42,8 +39,6 @@ import { ProductHistory } from './modules/products/entities/product-history.enti
           Product,
           ProductHistory,
         ],
-        // No auto-sync in production: migrations only. Schema changes are
-        // deliberate, versioned, and reversible.
         synchronize: config.get<string>('nodeEnv') === 'development',
         logging: config.get<string>('nodeEnv') === 'development',
         maxQueryExecutionTime: 2000,
@@ -57,7 +52,6 @@ import { ProductHistory } from './modules/products/entities/product-history.enti
     EgressModule,
   ],
   providers: [
-    // Validate EVERY request body globally — DTOs are the contract.
     { provide: APP_PIPE, useValue: new ValidationPipe({ whitelist: true, transform: true, forbidNonWhitelisted: true }) },
   ],
 })
