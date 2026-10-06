@@ -355,6 +355,12 @@ export class OpportunitiesService {
       id: randomUUID(),
       status: dto.runImmediately ? 'running' : 'pending',
       scheduledAt: dto.scheduledAt ? new Date(dto.scheduledAt) : null,
+      // maxSignals has no dedicated column (it arrives via ...dto but is
+      // not persisted); stash it into parameters so the budget survives
+      // reloads and the scanner can enforce it.
+      parameters: dto.maxSignals
+        ? { ...(dto.parameters || {}), maxSignals: dto.maxSignals }
+        : dto.parameters,
     });
 
     const saved = await this.opportunityScanRepository.save(scan);
@@ -386,7 +392,9 @@ export class OpportunitiesService {
     try {
       const results = await this.executeScan(scan, userId);
 
-      scan.status = 'completed';
+      // Some sources fetched, others failed → the run is partial, and
+      // summary.failures (persisted with the scan) names exactly which.
+      scan.status = results.summary?.failures?.length ? 'partial' : 'completed';
       scan.completedAt = new Date();
       scan.opportunitiesFound = results.opportunitiesFound;
       scan.opportunitiesCreated = results.opportunitiesCreated;
@@ -474,18 +482,21 @@ export class OpportunitiesService {
       .map(o => ({ id: o.id, title: o.title, score: o.score, category: o.category }));
 
     const executionTime = Date.now() - startTime;
+    const found = Object.values(summary.bySource).reduce(
+      (a: number, b: any) => a + Number(b),
+      0,
+    );
     return {
-      opportunitiesFound: Object.values(summary.bySource).reduce((a: number, b: any) => a + Number(b), 0),
-      opportunitiesCreated: Object.values(summary.bySource).reduce((a: number, b: any) => a + Number(b), 0),
-      opportunitiesUpdated: 0,
+      opportunitiesFound: found,
+      // Real outcomes from the upsert layer — previously "created" was
+      // always equal to "found" and "updated" was always a hard-coded 0.
+      opportunitiesCreated: summary.created || 0,
+      opportunitiesUpdated: summary.updated || 0,
       summary,
       performance: {
         executionTime,
         opportunitiesPerSecond:
-          executionTime > 0
-            ? Object.values(summary.bySource).reduce((a: number, b: any) => a + Number(b), 0) /
-              (executionTime / 1000)
-            : 0,
+          executionTime > 0 ? found / (executionTime / 1000) : 0,
       },
     };
   }
@@ -516,49 +527,158 @@ export class OpportunitiesService {
     }
   }
 
-  private async scanReddit(scan: OpportunityScan, userId: string, summary: any): Promise<void> {
-    try {
-      const subreddits = scan.parameters?.query?.split(',') || [
-        'Entrepreneur',
-        'sideproject',
-        'startups',
-        'smallbusiness',
-        'passiveincome',
-      ];
+  private // ─── Reddit scanner (Phase A, Feature 1) ──────────────────────────────────
+  // Fail-visible contract: every egress envelope is checked. A subreddit
+  // that cannot be fetched is recorded in summary.failures; if NO subreddit
+  // yielded data the scan throws (runScan marks it failed); partial success
+  // marks the run 'partial'. The user's maxSignals budget is enforced, and
+  // scores are normalized into the 0–100 domain — raw upvotes stay in
+  // trendData where they belong.
+  private static readonly REDDIT_DEFAULT_SUBREDDITS = [
+    'Entrepreneur',
+    'sideproject',
+    'startups',
+    'smallbusiness',
+    'passiveincome',
+  ];
+  private static readonly REDDIT_SUBREDDIT_PATTERN = /^[A-Za-z0-9_]{2,21}$/;
+  private static readonly REDDIT_MAX_SUBREDDITS = 10;
+  private static readonly REDDIT_POSTS_PER_SUBREDDIT = 25;
 
-      for (const subreddit of subreddits) {
-        const response = await this.egressGateway.getRedditHot(subreddit.trim(), 25);
-        for (const post of response.data?.data?.children || []) {
-          const data = post.data;
-          if (!data || data.over_18) continue;
+  private async scanReddit(
+    scan: OpportunityScan,
+    userId: string,
+    summary: any,
+  ): Promise<void> {
+    // Validate and dedupe subreddit targets. Invalid names are reported as
+    // warnings — never silently treated as "zero opportunities found".
+    const requested = scan.parameters?.query
+      ? String(scan.parameters.query).split(',')
+      : [...OpportunitiesService.REDDIT_DEFAULT_SUBREDDITS];
+    const valid = new Set<string>();
+    const invalid: string[] = [];
+    for (const entry of requested) {
+      const name = entry.trim();
+      if (!name) continue;
+      if (!OpportunitiesService.REDDIT_SUBREDDIT_PATTERN.test(name)) {
+        invalid.push(name);
+        continue;
+      }
+      valid.add(name);
+      if (valid.size >= OpportunitiesService.REDDIT_MAX_SUBREDDITS) break;
+    }
+    if (invalid.length) {
+      summary.warnings = summary.warnings || [];
+      summary.warnings.push({
+        source: OpportunitySource.REDDIT,
+        message: 'Invalid subreddit names skipped: ' + invalid.join(', '),
+      });
+    }
+    const subreddits = [...valid];
+    if (!subreddits.length) {
+      throw new Error(
+        'Reddit scan has no valid subreddit targets' +
+          (invalid.length ? ' — all provided names were invalid' : ''),
+      );
+    }
 
-          await this.upsertScannedOpportunity(
-            userId,
-            {
-              title: data.title,
-              description: data.selftext || '',
-              category: this.mapRedditToCategory(data, subreddit),
-              source: OpportunitySource.REDDIT,
-              externalId: data.id,
-              externalUrl: `https://www.reddit.com${data.permalink}`,
-              tags: data.tags || [],
-              score: data.score || 0,
-              trendData: {
-                reddit: {
-                  posts: 1,
-                  comments: data.num_comments || 0,
-                  upvotes: data.ups || data.score || 0,
-                  growthRate: data.upvote_ratio ? (data.upvote_ratio - 0.5) * 100 : 0,
-                },
+    const signalCap = this.readSignalCap(scan);
+    const seenPostIds = new Set<string>();
+    let fetchedAny = false;
+    let saved = 0;
+
+    for (const subreddit of subreddits) {
+      if (signalCap && saved >= signalCap) break;
+      // userId is passed so the gateway's rate limiter and circuit breaker
+      // are genuinely per-user: one user's scan cannot starve another's.
+      const response = await this.egressGateway.getRedditHot(
+        subreddit,
+        OpportunitiesService.REDDIT_POSTS_PER_SUBREDDIT,
+        userId,
+      );
+      if (!response.ok) {
+        // A blocked/rate-limited/failed call is a FAILURE, not "0 posts".
+        summary.failures = summary.failures || [];
+        summary.failures.push({
+          source: OpportunitySource.REDDIT,
+          target: subreddit,
+          code: response.error?.code,
+          message: response.error?.message,
+        });
+        continue;
+      }
+      fetchedAny = true;
+      for (const post of response.data?.data?.children || []) {
+        if (signalCap && saved >= signalCap) break;
+        const data = post?.data;
+        // NSFW and moderator-pinned posts are not opportunities.
+        if (!data || data.over_18 || data.stickied) continue;
+        // Cross-subreddit dedupe: the same post can appear in several subs.
+        if (!data.id || seenPostIds.has(data.id)) continue;
+        seenPostIds.add(String(data.id));
+
+        const upvotes = Number(data.ups ?? data.score ?? 0);
+        const comments = Number(data.num_comments ?? 0);
+        await this.upsertScannedOpportunity(
+          userId,
+          {
+            title: String(data.title || 'Untitled Reddit post'),
+            description: data.selftext || '',
+            category: this.mapRedditToCategory(data, subreddit),
+            source: OpportunitySource.REDDIT,
+            externalId: String(data.id),
+            externalUrl: 'https://www.reddit.com' + data.permalink,
+            tags: Array.isArray(data.tags) ? data.tags : [],
+            score: this.normalizeRedditEngagement(upvotes, comments),
+            trendData: {
+              reddit: {
+                posts: 1,
+                comments,
+                upvotes,
+                growthRate:
+                  typeof data.upvote_ratio === 'number'
+                    ? (data.upvote_ratio - 0.5) * 100
+                    : 0,
               },
             },
-            summary,
-          );
-        }
+          },
+          summary,
+        );
+        saved += 1;
       }
-    } catch (error) {
-      this.logger.error(`Error scanning Reddit: ${error.message}`, error.stack);
     }
+
+    if (!fetchedAny) {
+      // Every subreddit failed to fetch — this is a failed scan, not a
+      // completed scan that "found nothing".
+      const detail = (summary.failures || [])
+        .map((f: any) => f.target + ': ' + (f.code || 'unknown'))
+        .join('; ');
+      throw new Error(
+        'Reddit scan could not fetch any subreddit' +
+          (detail ? ' (' + detail + ')' : ''),
+      );
+    }
+  }
+
+  // Reddit engagement normalized into the 0–100 score domain:
+  // 20·log10(1 + upvotes + comments). Bounded (viral posts cannot exceed
+  // the column's 0–100 domain), monotonic, and explainable: ~100 upvotes ≈ 40,
+  // ~1,000 ≈ 60, ~10,000 ≈ 80, ~100,000 ≈ 100.
+  private normalizeRedditEngagement(upvotes: number, comments: number): number {
+    const safeUpvotes = Number.isFinite(upvotes) ? Math.max(0, upvotes) : 0;
+    const safeComments = Number.isFinite(comments) ? Math.max(0, comments) : 0;
+    const raw = 20 * Math.log10(1 + safeUpvotes + safeComments);
+    return Math.round(Math.min(100, Math.max(0, raw)) * 100) / 100;
+  }
+
+  // The user's declared budget from CreateScanDto. Accepted from the dto
+  // property (in-memory) or scan.parameters (persisted); 0 = uncapped.
+  private readSignalCap(scan: OpportunityScan): number {
+    const cap = Number(
+      (scan as any).maxSignals ?? scan.parameters?.maxSignals ?? 0,
+    );
+    return Number.isFinite(cap) && cap > 0 ? Math.trunc(cap) : 0;
   }
 
   private async scanGoogleTrends(scan: OpportunityScan, userId: string, summary: any): Promise<void> {
@@ -636,8 +756,8 @@ export class OpportunitiesService {
     userId: string,
     data: any,
     summary: any,
-  ): Promise<void> {
-    const opportunity = this.opportunityRepository.create({
+  ): Promise<'created' | 'updated'> {
+    const incoming = this.opportunityRepository.create({
       ...data,
       userId,
       accountId: userId,
@@ -650,33 +770,39 @@ export class OpportunitiesService {
 
     const existing = await this.opportunityRepository.findOne({
       where: {
-        externalId: opportunity.externalId,
-        source: opportunity.source,
+        externalId: incoming.externalId,
+        source: incoming.source,
         userId,
       },
     });
 
+    let outcome: 'created' | 'updated';
     if (existing) {
       Object.assign(existing, {
-        title: opportunity.title,
-        description: opportunity.description,
-        category: opportunity.category,
-        externalUrl: opportunity.externalUrl,
-        tags: opportunity.tags,
-        score: opportunity.score,
-        trendData: opportunity.trendData,
-        priority: opportunity.priority,
+        title: incoming.title,
+        description: incoming.description,
+        category: incoming.category,
+        externalUrl: incoming.externalUrl,
+        tags: incoming.tags,
+        score: incoming.score,
+        trendData: incoming.trendData,
+        priority: incoming.priority,
         updatedAt: new Date(),
         updatedBy: userId,
         version: (existing.version || 0) + 1,
       });
       await this.opportunityRepository.save(existing);
+      outcome = 'updated';
     } else {
-      await this.opportunityRepository.save(opportunity);
+      await this.opportunityRepository.save(incoming);
+      outcome = 'created';
     }
 
-    summary.bySource[opportunity.source] = (summary.bySource[opportunity.source] || 0) + 1;
-    summary.byCategory[opportunity.category] = (summary.byCategory[opportunity.category] || 0) + 1;
+    summary.bySource[incoming.source] = (summary.bySource[incoming.source] || 0) + 1;
+    summary.byCategory[incoming.category] = (summary.byCategory[incoming.category] || 0) + 1;
+    summary.created = (summary.created || 0) + (outcome === 'created' ? 1 : 0);
+    summary.updated = (summary.updated || 0) + (outcome === 'updated' ? 1 : 0);
+    return outcome;
   }
 
   private async createHistory(
