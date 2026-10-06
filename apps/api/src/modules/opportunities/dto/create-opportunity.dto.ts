@@ -24,8 +24,7 @@ import {
   RiskLevel,
 } from '../enums';
 
-// DTO 1: TargetAudienceDto
-class TargetAudienceDto {
+// DTO 1: TargetAudienceDtoclass TargetAudienceDto {
   @IsOptional()
   @ValidateNested()
   @Type(() => DemographicsDto)
@@ -42,8 +41,7 @@ class TargetAudienceDto {
   geographics?: GeographicsDto;
 }
 
-// DTO 2: DemographicsDto
-class DemographicsDto {
+// DTO 2: DemographicsDtoclass DemographicsDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
@@ -70,8 +68,7 @@ class DemographicsDto {
   location?: string[];
 }
 
-// DTO 3: PsychographicsDto
-class PsychographicsDto {
+// DTO 3: PsychographicsDtoclass PsychographicsDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
@@ -88,8 +85,7 @@ class PsychographicsDto {
   lifestyle?: string[];
 }
 
-// DTO 4: GeographicsDto
-class GeographicsDto {
+// DTO 4: GeographicsDtoclass GeographicsDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
@@ -106,8 +102,7 @@ class GeographicsDto {
   cities?: string[];
 }
 
-// DTO 5: CompetitorDto
-class CompetitorDto {
+// DTO 5: CompetitorDtoclass CompetitorDto {
   @IsString()
   id: string;
 
@@ -141,8 +136,7 @@ class CompetitorDto {
   rating?: number;
 }
 
-// DTO 6: TrendDataDto
-class TrendDataDto {
+// DTO 6: TrendDataDtoclass TrendDataDto {
   @IsOptional()
   @ValidateNested()
   @Type(() => GoogleTrendsDto)
@@ -159,8 +153,7 @@ class TrendDataDto {
   seasonality?: SeasonalityDto;
 }
 
-// DTO 7: GoogleTrendsDto
-class GoogleTrendsDto {
+// DTO 7: GoogleTrendsDtoclass GoogleTrendsDto {
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
@@ -186,8 +179,7 @@ class GoogleTrendsDto {
   relatedTopics?: RelatedTopicDto[];
 }
 
-// DTO 8: InterestOverTimeDto
-class InterestOverTimeDto {
+// DTO 8: InterestOverTimeDtoclass InterestOverTimeDto {
   @IsString()
   date: string;
 
@@ -195,8 +187,7 @@ class InterestOverTimeDto {
   value: number;
 }
 
-// DTO 9: RegionalInterestDto
-class RegionalInterestDto {
+// DTO 9: RegionalInterestDtoclass RegionalInterestDto {
   @IsString()
   region: string;
 
@@ -204,8 +195,7 @@ class RegionalInterestDto {
   value: number;
 }
 
-// DTO 10: RelatedQueryDto
-class RelatedQueryDto {
+// DTO 10: RelatedQueryDtoclass RelatedQueryDto {
   @IsString()
   query: string;
 
@@ -213,8 +203,7 @@ class RelatedQueryDto {
   value: number;
 }
 
-// DTO 11: RelatedTopicDto
-class RelatedTopicDto {
+// DTO 11: RelatedTopicDtoclass RelatedTopicDto {
   @IsString()
   topic: string;
 
@@ -222,8 +211,7 @@ class RelatedTopicDto {
   value: number;
 }
 
-// DTO 12: SocialMediaDto
-class SocialMediaDto {
+// DTO 12: SocialMediaDtoclass SocialMediaDto {
   @IsOptional()
   @ValidateNested()
   @Type(() => TwitterDto)
@@ -240,8 +228,7 @@ class SocialMediaDto {
   instagram?: InstagramDto;
 }
 
-// DTO 13: TwitterDto
-class TwitterDto {
+// DTO 13: TwitterDtoclass TwitterDto {
   @IsOptional()
   @IsNumber()
   mentions?: number;
@@ -255,8 +242,7 @@ class TwitterDto {
   growthRate?: number;
 }
 
-// DTO 14: RedditDto
-class RedditDto {
+// DTO 14: RedditDtoclass RedditDto {
   @IsOptional()
   @IsNumber()
   posts?: number;
@@ -274,8 +260,7 @@ class RedditDto {
   growthRate?: number;
 }
 
-// DTO 15: InstagramDto
-class InstagramDto {
+// DTO 15: InstagramDtoclass InstagramDto {
   @IsOptional()
   @IsNumber()
   posts?: number;
@@ -289,8 +274,7 @@ class InstagramDto {
   growthRate?: number;
 }
 
-// DTO 16: SeasonalityDto
-class SeasonalityDto {
+// DTO 16: SeasonalityDtoclass SeasonalityDto {
   @IsOptional()
   @IsBoolean()
   isSeasonal?: boolean;
@@ -310,8 +294,7 @@ class SeasonalityDto {
   seasonalityStrength?: number;
 }
 
-// DTO 17: FinancialProjectionsDto
-class FinancialProjectionsDto {
+// DTO 17: FinancialProjectionsDtoclass FinancialProjectionsDto {
   @IsOptional()
   @ValidateNested()
   @Type(() => RevenueDto)
@@ -337,8 +320,7 @@ class FinancialProjectionsDto {
   roi?: number;
 }
 
-// DTO 18: RevenueDto
-class RevenueDto {
+// DTO 18: RevenueDtoclass RevenueDto {
   @IsOptional()
   @IsNumber()
   year1?: number;
@@ -356,8 +338,7 @@ class RevenueDto {
   growthRate?: number;
 }
 
-// DTO 19: CostsDto
-class CostsDto {
+// DTO 19: CostsDtoclass CostsDto {
   @IsOptional()
   @IsNumber()
   startup?: number;
@@ -371,8 +352,7 @@ class CostsDto {
   variablePerUnit?: number;
 }
 
-// DTO 20: ProfitDto
-class ProfitDto {
+// DTO 20: ProfitDtoclass ProfitDto {
   @IsOptional()
   @IsNumber()
   year1?: number;
@@ -390,8 +370,7 @@ class ProfitDto {
   margin?: number;
 }
 
-// DTO 21: BreakEvenDto
-class BreakEvenDto {
+// DTO 21: BreakEvenDtoclass BreakEvenDto {
   @IsOptional()
   @IsNumber()
   units?: number;
@@ -401,8 +380,7 @@ class BreakEvenDto {
   months?: number;
 }
 
-// DTO 22: RequiredResourcesDto
-class RequiredResourcesDto {
+// DTO 22: RequiredResourcesDtoclass RequiredResourcesDto {
   @IsOptional()
   @ValidateNested()
   @Type(() => TimeDto)
@@ -429,8 +407,7 @@ class RequiredResourcesDto {
   team?: TeamDto;
 }
 
-// DTO 23: TimeDto
-class TimeDto {
+// DTO 23: TimeDtoclass TimeDto {
   @IsOptional()
   @IsNumber()
   setup?: number;
@@ -444,8 +421,7 @@ class TimeDto {
   ongoing?: number;
 }
 
-// DTO 24: BudgetDto
-class BudgetDto {
+// DTO 24: BudgetDtoclass BudgetDto {
   @IsOptional()
   @IsNumber()
   initial?: number;
@@ -459,8 +435,7 @@ class BudgetDto {
   total?: number;
 }
 
-// DTO 25: TeamDto
-class TeamDto {
+// DTO 25: TeamDtoclass TeamDto {
   @IsOptional()
   @IsNumber()
   size?: number;
@@ -471,8 +446,7 @@ class TeamDto {
   roles?: string[];
 }
 
-// DTO 26: FulfillmentOptionDto
-class FulfillmentOptionDto {
+// DTO 26: FulfillmentOptionDtoclass FulfillmentOptionDto {
   @IsString()
   id: string;
 
@@ -495,8 +469,7 @@ class FulfillmentOptionDto {
   description?: string;
 }
 
-// DTO 27: DistributionChannelDto
-class DistributionChannelDto {
+// DTO 27: DistributionChannelDtoclass DistributionChannelDto {
   @IsString()
   id: string;
 
@@ -534,8 +507,7 @@ class DistributionChannelDto {
   suitability?: number;
 }
 
-// DTO 28: RiskDto
-class RiskDto {
+// DTO 28: RiskDtoclass RiskDto {
   @IsString()
   id: string;
 
@@ -569,8 +541,7 @@ class RiskDto {
   severity: RiskLevel;
 }
 
-// DTO 29: RegulatoryRequirementDto
-class RegulatoryRequirementDto {
+// DTO 29: RegulatoryRequirementDtoclass RegulatoryRequirementDto {
   @IsString()
   jurisdiction: string;
 
@@ -590,8 +561,7 @@ class RegulatoryRequirementDto {
   time?: number;
 }
 
-// DTO 30: RecommendedActionDto
-class RecommendedActionDto {
+// DTO 30: RecommendedActionDtoclass RecommendedActionDto {
   @IsString()
   id: string;
 
@@ -631,8 +601,7 @@ class RecommendedActionDto {
   owner?: 'ai' | 'user';
 }
 
-// DTO 31: DecisionDto
-class DecisionDto {
+// DTO 31: DecisionDtoclass DecisionDto {
   @IsString()
   id: string;
 
@@ -663,8 +632,7 @@ class DecisionDto {
   confidence?: number;
 }
 
-// DTO 32: RelatedOpportunityDto
-class RelatedOpportunityDto {
+// DTO 32: RelatedOpportunityDtoclass RelatedOpportunityDto {
   @IsString()
   id: string;
 
@@ -680,8 +648,7 @@ class RelatedOpportunityDto {
     | 'child';
 }
 
-// DTO 33: SupportingDataDto
-class SupportingDataDto {
+// DTO 33: SupportingDataDtoclass SupportingDataDto {
   @IsString()
   id: string;
 
@@ -712,8 +679,7 @@ class SupportingDataDto {
   summary?: string;
 }
 
-// DTO 34: PortfolioMetricsDto
-class PortfolioMetricsDto {
+// DTO 34: PortfolioMetricsDtoclass PortfolioMetricsDto {
   @IsOptional()
   @IsNumber()
   correlation?: number;
@@ -727,8 +693,7 @@ class PortfolioMetricsDto {
   portfolioRiskImpact?: number;
 }
 
-// DTO 35: PerformanceMetricsDto
-class PerformanceMetricsDto {
+// DTO 35: PerformanceMetricsDtoclass PerformanceMetricsDto {
   @IsOptional()
   @IsNumber()
   discoveryToValidationTime?: number;
@@ -770,8 +735,7 @@ class PerformanceMetricsDto {
   roi?: number;
 }
 
-// DTO 36: LessonLearnedDto
-class LessonLearnedDto {
+// DTO 36: LessonLearnedDtoclass LessonLearnedDto {
   @IsString()
   id: string;
 
@@ -792,8 +756,7 @@ class LessonLearnedDto {
   appliedAt?: string;
 }
 
-// DTO 37: ImprovementSuggestionDto
-class ImprovementSuggestionDto {
+// DTO 37: ImprovementSuggestionDtoclass ImprovementSuggestionDto {
   @IsString()
   id: string;
 
@@ -820,8 +783,7 @@ class ImprovementSuggestionDto {
   feasibility?: number;
 }
 
-// DTO 38: AiAnalysisDto
-class AiAnalysisDto {
+// DTO 38: AiAnalysisDtoclass AiAnalysisDto {
   @IsOptional()
   @IsString()
   modelUsed?: string;
@@ -845,8 +807,7 @@ class AiAnalysisDto {
   warnings?: string[];
 }
 
-// DTO 39: AutomationPotentialDto
-class AutomationPotentialDto {
+// DTO 39: AutomationPotentialDtoclass AutomationPotentialDto {
   @IsOptional()
   @IsNumber()
   score?: number;
@@ -866,8 +827,7 @@ class AutomationPotentialDto {
   estimatedCostSaved?: number;
 }
 
-// DTO 40: AutomatableTaskDto
-class AutomatableTaskDto {
+// DTO 40: AutomatableTaskDtoclass AutomatableTaskDto {
   @IsString()
   task: string;
 
@@ -884,8 +844,7 @@ class AutomatableTaskDto {
   implementationEffort?: 'low' | 'medium' | 'high';
 }
 
-// DTO 41: NotificationDto
-class NotificationDto {
+// DTO 41: NotificationDtoclass NotificationDto {
   @IsString()
   id: string;
 
@@ -913,8 +872,7 @@ class NotificationDto {
   resolvedBy?: string;
 }
 
-// DTO 42: AlertDto
-class AlertDto {
+// DTO 42: AlertDtoclass AlertDto {
   @IsString()
   id: string;
 
@@ -955,8 +913,7 @@ class AlertDto {
   actionsTaken?: string[];
 }
 
-// DTO 43: ThresholdDto
-class ThresholdDto {
+// DTO 43: ThresholdDtoclass ThresholdDto {
   @IsString()
   metric: string;
 
@@ -970,8 +927,7 @@ class ThresholdDto {
   actual: number;
 }
 
-// DTO 44: UserNoteDto
-class UserNoteDto {
+// DTO 44: UserNoteDtoclass UserNoteDto {
   @IsString()
   id: string;
 
@@ -989,8 +945,7 @@ class UserNoteDto {
   author: string;
 }
 
-// DTO 45: TimelineEventDto
-class TimelineEventDto {
+// DTO 45: TimelineEventDtoclass TimelineEventDto {
   @IsString()
   event: string;
 
