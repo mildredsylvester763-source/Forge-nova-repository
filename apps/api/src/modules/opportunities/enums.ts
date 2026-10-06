@@ -47,7 +47,8 @@ export enum OpportunityCategory {
   ELECTRONICS_ACCESSORIES = 'electronics_accessories',
   // Services
   CONSULTING = 'consulting',
-  FREELANCE_SERVICES = 'freelance_services',
+  FREELANCE_SERVICES = 'free
+lance_services',
   AGENCY_SERVICES = 'agency_services',
   DIGITAL_MARKETING = 'digital_marketing',
   AFFILIATE_MARKETING = 'affiliate_marketing',
@@ -113,8 +114,7 @@ export enum OpportunitySource {
   JOB_BOARDS = 'job_boards',
   // Search & keyword intelligence
   KEYWORD_PLANNER = 'keyword_planner',
-  BING_SEAR
-CH = 'bing_search',
+BING_SEARCH = 'bing_search',
   NEWS_RSS = 'news_rss',
   // Local & regulatory
   GOVERNMENT_TENDERS = 'government_tenders',
