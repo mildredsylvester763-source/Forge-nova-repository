@@ -1,0 +1,37 @@
+# Forge Nova — continuous verification.
+# This workflow is the automated ground truth for every push to main:
+# the API must typecheck cleanly under strict TypeScript and pass its
+# full test suite before a change is considered done.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  api:
+    name: forge-nova-api (typecheck + tests)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Strict typecheck
+        run: npm run typecheck
+
+      - name: Run test suite
+        run: npm test -- --ci
