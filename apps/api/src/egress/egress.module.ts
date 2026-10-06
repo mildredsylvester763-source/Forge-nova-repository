@@ -8,11 +8,8 @@
 
 import { Module, OnModuleInit } from '@nestjs/common';
 import { EgressGatewayService } from './egress-gateway.service';
-import {
-  makeHttpAdapter,
-  buildAdapterRegistry,
-  EgressDestination,
-} from './adapters/http.adapters';
+import { makeHttpAdapter, buildAdapterRegistry } from './adapters/http.adapters';
+import { EgressDestination } from './egress.types';
 
 @Module({
   providers: [EgressGatewayService],
