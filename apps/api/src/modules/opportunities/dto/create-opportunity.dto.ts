@@ -9,11 +9,11 @@ import {
   IsEnum,
   IsArray,
   IsBoolean,
-  IsUrl,
+  IsURL,
   IsDateString,
   ValidateNested,
   IsUUID,
-  IsJson,
+  IsJSON,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import {
@@ -115,7 +115,7 @@ class CompetitorDto {
   name: string;
 
   @IsOptional()
-  @IsUrl()
+  @IsURL()
   url?: string;
 
   @IsOptional()
@@ -514,7 +514,7 @@ class DistributionChannelDto {
   name: string;
 
   @IsOptional()
-  @IsUrl()
+  @IsURL()
   url?: string;
 
   @IsOptional()
@@ -698,7 +698,7 @@ class SupportingDataDto {
   @IsString()
   title: string;
 
-  @IsUrl()
+  @IsURL()
   url: string;
 
   @IsString()
@@ -1035,7 +1035,7 @@ export class CreateOpportunityDto {
   externalId?: string;
 
   @IsOptional()
-  @IsUrl()
+  @IsURL()
   externalUrl?: string;
 
   @IsOptional()
@@ -1255,7 +1255,7 @@ export class CreateOpportunityDto {
   userNotes?: UserNoteDto[];
 
   @IsOptional()
-  @IsJson()
+  @IsJSON()
   customFields?: Record<string, any>;
 
   @IsOptional()
