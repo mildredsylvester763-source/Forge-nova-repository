@@ -30,12 +30,11 @@ import {
 @Index(['userId', 'category'])
 @Index(['userId', 'priority'])
 @Index(['userId', 'riskLevel'])
-@Index(['userId', 'externalId', 'source'])   // upsert key for scanned signals
-export class Opportunity {
+@Index(['userId', 'externalId', 'source'])   // upsert key for scanned signalsexport class Opportunity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  // ─── Ownership (zero-trust scoping) ────────────────────────────────────────
+  // --- Ownership (zero-trust scoping) ----------------------------------------
   @Column({ type: 'uuid' })
   @Index()
   userId: string;
@@ -50,21 +49,21 @@ export class Opportunity {
   @Column({ type: 'uuid', nullable: true })
   updatedBy?: string;
 
-  // ─── Identity ──────────────────────────────────────────────────────────────
+  // --- Identity --------------------------------------------------------------
   @Column({ length: 255 })
   title: string;
 
   @Column({ type: 'text', nullable: true })
   description?: string;
 
-  // ─── External provenance (scanner upsert key) ─────────────────────────────
+  // --- External provenance (scanner upsert key) -----------------------------
   @Column({ type: 'varchar', length: 255, nullable: true })
   externalId?: string;
 
   @Column({ type: 'text', nullable: true })
   externalUrl?: string;
 
-  // ─── Classification ─────────────────────────────────────────────────────────
+  // --- Classification ---------------------------------------------------------
   @Column({ type: 'enum', enum: OpportunityCategory })
   category: OpportunityCategory;
 
@@ -80,7 +79,7 @@ export class Opportunity {
   @Column({ type: 'enum', enum: RiskLevel, default: RiskLevel.LOW })
   riskLevel: RiskLevel;
 
-  // ─── Composite score (0–100) and sub-scores (0–10, set by scoring agents) ──
+  // --- Composite score (0â100) and sub-scores (0â10, set by scoring agents) --
   @Column({ type: 'decimal', precision: 5, scale: 2, default: 0 })
   score: number;
 
@@ -102,7 +101,7 @@ export class Opportunity {
   @Column({ type: 'decimal', precision: 4, scale: 2, default: 0 })
   seasonalityScore?: number;
 
-  // ─── Context (validated by CreateOpportunityDto) ───────────────────────────
+  // --- Context (validated by CreateOpportunityDto) ---------------------------
   @Column({ type: 'jsonb', nullable: true })
   targetAudience?: Record<string, any>;
 
@@ -127,14 +126,14 @@ export class Opportunity {
   @Column({ type: 'jsonb', nullable: true })
   metadata?: Record<string, any>;
 
-  // ─── Collaboration & triage ────────────────────────────────────────────────
+  // --- Collaboration & triage ------------------------------------------------
   @Column({ type: 'boolean', default: false })
   isFavorite: boolean;
 
   @Column({ type: 'jsonb', nullable: true })
   watchers?: string[];
 
-  // ─── Lifecycle timestamps (set by changeStatus) ─────────────────────────────
+  // --- Lifecycle timestamps (set by changeStatus) -----------------------------
   @Column({ type: 'timestamptz', nullable: true })
   discoveredAt?: Date;
 
@@ -162,7 +161,7 @@ export class Opportunity {
   @Column({ type: 'timestamptz', nullable: true })
   nextScanAt?: Date;
 
-  // ─── Relations ──────────────────────────────────────────────────────────────
+  // --- Relations --------------------------------------------------------------
   @OneToMany(() => OpportunityHistory, (h) => h.opportunity)
   histories: OpportunityHistory[];
 
