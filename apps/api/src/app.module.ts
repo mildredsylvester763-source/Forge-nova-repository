@@ -2,12 +2,15 @@
 // FILE: /apps/api/src/app.module.ts
 // ============================================================================
 // The root. Every feature module registers here. The global pipe enforces
-// DTO validation on every request body.
+// DTO validation on every request body; the global guard makes every route
+// private unless marked @Public().
 
 import { Module, ValidationPipe } from '@nestjs/common';
-import { APP_PIPE, APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_PIPE } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import configuration from './config/configuration';
+import { validateEnv } from './common/env.validation';
 import { AuthModule } from './modules/auth/auth.module';
 import { OpportunitiesModule } from './modules/opportunities/opportunities.module';
 import { ProductsModule } from './modules/products/products.module';
@@ -23,29 +26,36 @@ import { ProductHistory } from './modules/products/entities/product-history.enti
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, envFilePath: ['.env.local', '.env'] }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: ['.env.local', '.env'],
+      load: [configuration],
+      validate: validateEnv,
+    }),
 
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        type: 'postgres' as const,
-        url: config.get<string>('database.url'),
-        entities: [
-          User,
-          RefreshToken,
-          Opportunity,
-          OpportunityHistory,
-          OpportunityScan,
-          Product,
-          ProductHistory,
-        ],
-        synchronize: config.get<string>('nodeEnv') === 'development',
-        logging: config.get<string>('nodeEnv')
- === 'development',
-        maxQueryExecutionTime: 2000,
-        poolSize: 10,
-      }),
+      useFactory: (config: ConfigService) => {
+        const isDevelopment = config.get<string>('nodeEnv') === 'development';
+        return {
+          type: 'postgres' as const,
+          url: config.getOrThrow<string>('database.url'),
+          entities: [
+            User,
+            RefreshToken,
+            Opportunity,
+            OpportunityHistory,
+            OpportunityScan,
+            Product,
+            ProductHistory,
+          ],
+          synchronize: isDevelopment,
+          logging: isDevelopment,
+          maxQueryExecutionTime: 2000,
+          poolSize: 10,
+        };
+      },
     }),
 
     AuthModule,
@@ -54,7 +64,15 @@ import { ProductHistory } from './modules/products/entities/product-history.enti
     EgressModule,
   ],
   providers: [
-    { provide: APP_PIPE, useValue: new ValidationPipe({ whitelist: true, transform: true, forbidNonWhitelisted: true }) },
+    {
+      provide: APP_PIPE,
+      useValue: new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+        transformOptions: { enableImplicitConversion: false },
+      }),
+    },
     { provide: APP_GUARD, useClass: GlobalAuthGuard },
   ],
 })

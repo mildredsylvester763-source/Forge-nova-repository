@@ -4,23 +4,34 @@
 // Bootstrap with the transport-level security baseline:
 //   - helmet: hardened HTTP headers (HSTS, no sniffing, frame protection)
 //   - CORS: only the declared client origin — not '*'
-//   - Body caps: 1MB JSON — payloads are bounded, DoS-resistant by default
+//   - Body caps: 1MB JSON/urlencoded, enforced by the body parser itself
 //   - Global prefix: /api/v1 — versioned from day one
+// DTO validation is registered once, in AppModule (APP_PIPE).
 
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
-import * as compression from 'compression';
+import compression from 'compression';
 import { AppModule } from './app.module';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: true });
+  const config = app.get(ConfigService);
 
-  const clientUrl = process.env.CLIENT_URL || 'https://app.forge-nova.com';
-  const isDev = process.env.NODE_ENV === 'development';
+  const clientUrl = config.getOrThrow<string>('clientUrl');
+  const isDev = config.get<string>('nodeEnv') === 'development';
 
   app.use(helmet());
   app.use(compression());
+
+  // Bounded request bodies. Nest's default parser caps at 100kb; this sets
+  // the intended 1MB ceiling on the parser that actually reads the stream
+  // (a Content-Length check would not stop chunked uploads).
+  app.useBodyParser('json', { limit: '1mb' });
+  app.useBodyParser('urlencoded', { extended: true, limit: '1mb' });
+
   app.enableCors({
     origin: isDev ? true : clientUrl,
     credentials: true,
@@ -28,35 +39,14 @@ async function bootstrap(): Promise<void> {
   });
 
   app.setGlobalPrefix('api/v1');
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,          // strip unknown properties
-      forbidNonWhitelisted: true, // reject requests carrying unknown properties
-      transform: true,          // payloads converted to DTO instances
-      transformOptions: { enableImplicitConversion: false },
-    }),
-  );
-
-  // Bounded request bodies — nothing may post giant payloads at us.
-  app.use(expressBodyCap());
   app.enableShutdownHooks();
 
-  const port = Number(process.env.PORT || 3000);
+  const port = config.getOrThrow<number>('port');
   await app.listen(port);
-  console.log('FORGE Nova API listening on port ' + port + (isDev ? ' (development)' : ''));
+  new Logger('Bootstrap').log('FORGE Nova API listening on port ' + port + (isDev ? ' (development)' : ''));
 }
 
-// 1MB JSON body cap implemented without extra dependencies.
-function expressBodyCap(): (req: any, res: any, next: any) => void {
-  return (req: any, _res: any, next: any) => {
-    const contentLength = Number(req.headers['content-length'] || 0);
-    if (contentLength > 1024 * 1024) {
-      const err: any = new Error('Payload too large');
-      err.status = 413;
-      return next(err);
-    }
-    next();
-  };
-}
-
-bootstrap();
+bootstrap().catch((error: unknown) => {
+  console.error('Fatal: API failed to start', error);
+  process.exit(1);
+});
