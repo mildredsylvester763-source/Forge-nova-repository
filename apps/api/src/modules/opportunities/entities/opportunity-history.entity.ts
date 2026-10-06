@@ -33,7 +33,7 @@ export class OpportunityHistory {
   @Index()
   opportunityId: string;
 
-  @ManyToOne(() => Opportunity, (o) => o.histories, { onDelete: 'cascade' })
+  @ManyToOne(() => Opportunity, (o) => o.histories, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'opportunityId' })
   opportunity: Opportunity;
 
