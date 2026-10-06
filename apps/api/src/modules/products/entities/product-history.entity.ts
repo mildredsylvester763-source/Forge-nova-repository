@@ -37,22 +37,22 @@ export class ProductHistory {
   @Index()
   userId: string;
 
-  @Column({ type: 'varchar', { length: 32 } })
+  @Column({ type: 'varchar', length: 32 })
   action: ProductHistoryActionType;
 
   @Column({ type: 'jsonb', nullable: true })
   changes?: Record<string, any>;
 
-  @Column({ type: 'varchar', { length: 32 }, nullable: true })
+  @Column({ type: 'varchar', length: 32, nullable: true })
   oldStatus?: string;
 
-  @Column({ type: 'varchar', { length: 32 }, nullable: true })
+  @Column({ type: 'varchar', length: 32, nullable: true })
   newStatus?: string;
 
   @Column({ type: 'text', nullable: true })
   reason?: string;
 
-  @Column({ type: 'varchar', { length: 16 }, default: 'system' })
+  @Column({ type: 'varchar', length: 16, default: 'system' })
   source: 'user' | 'system' | 'agent';
 
   @Column({ type: 'jsonb', nullable: true })
