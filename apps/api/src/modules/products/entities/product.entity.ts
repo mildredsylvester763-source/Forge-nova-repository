@@ -18,6 +18,7 @@ import {
   UpdateDateColumn,
   Index,
   VersionColumn,
+  OneToMany,
   Generated,
 } from 'typeorm';
 import { ProductType, ProductFormat, ProductStatus } from '../enums';
@@ -58,7 +59,8 @@ export class Product {
 
   // URL-safe unique-per-user identifier for public listings.
   @Column({ length: 255 })
-  @Index()
+  @Index
+()
   slug: string;
 
   // ─── Classification ───────────────
@@ -98,7 +100,7 @@ export class Product {
   branding?: Record<string, any>;
 
   // ─── Commerce (business fields promoted to columns for querying) ─────────
-  @Column({ type: 'varchar', { length: 32 }, nullable: true })
+  @Column({ type: 'varchar', length: 32, nullable: true })
   pricingModel?: 'free' | 'one-time' | 'subscription' | 'freemium' | 'pay-what-you-want' | 'donation' | 'tiered';
 
   @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
@@ -107,7 +109,7 @@ export class Product {
   @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
   salePrice?: number;
 
-  @Column({ type: 'char', { length: 3 }, nullable: true })
+  @Column({ type: 'char', length: 3, nullable: true })
   currency?: string;
 
   @Column({ type: 'jsonb', nullable: true })
@@ -117,7 +119,8 @@ export class Product {
   @Column({ type: 'jsonb', nullable: true })
   shipping?: Record<string, any>;
   @Column({ type: 'jsonb', nullable: true })
-  fulfillment?: Record<string, any>;
+  fulfillment?: Record<string, an
+y>;
   @Column({ type: 'jsonb', nullable: true })
   serviceDe
 livery?: Record<string, any>;
@@ -163,7 +166,8 @@ livery?: Record<string, any>;
   @Column({ type: 'jsonb', nullable: true })
   productGeneration?: Record<string, any>;
   @Column({ type: 'jsonb', nullable: true })
-  contentGeneration?: Record<string, any>;
+  contentGeneration?: Record<string
+, any>;
   @Column({ type: 'jsonb', nullable: true })
   market
 ingAutomation?: Record<string, any>;
