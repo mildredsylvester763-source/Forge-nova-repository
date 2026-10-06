@@ -47,8 +47,7 @@ export enum OpportunityCategory {
   ELECTRONICS_ACCESSORIES = 'electronics_accessories',
   // Services
   CONSULTING = 'consulting',
-  FREELANCE_SERVICES = 'free
-lance_services',
+  FREELANCE_SERVICES = 'freelance_services',
   AGENCY_SERVICES = 'agency_services',
   DIGITAL_MARKETING = 'digital_marketing',
   AFFILIATE_MARKETING = 'affiliate_marketing',
