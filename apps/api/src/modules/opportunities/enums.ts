@@ -47,9 +47,11 @@ export enum OpportunityCategory {
   ELECTRONICS_ACCESSORIES = 'electronics_accessories',
   // Services
   CONSULTING = 'consulting',
-  FREELANCE_SERVICES = 'freelance_services',
+  FREELANCE_SERVICES = 'free
+lance_services',
   AGENCY_SERVICES = 'agency_services',
   DIGITAL_MARKETING = 'digital_marketing',
+  AFFILIATE_MARKETING = 'affiliate_marketing',
   DESIGN_SERVICES = 'design_services',
   TECHNICAL_SERVICES = 'technical_services',
   // Media & audience
@@ -112,7 +114,8 @@ export enum OpportunitySource {
   JOB_BOARDS = 'job_boards',
   // Search & keyword intelligence
   KEYWORD_PLANNER = 'keyword_planner',
-  BING_SEARCH = 'bing_search',
+  BING_SEAR
+CH = 'bing_search',
   NEWS_RSS = 'news_rss',
   // Local & regulatory
   GOVERNMENT_TENDERS = 'government_tenders',
@@ -182,7 +185,8 @@ export enum ScanStatus {
   CANCELLED = 'cancelled',
 }
 
-// ─── History Action ──────────────────────────────────────────────────────────
+// ─── History Action ──────────────────────
+────────────────────────────────────
 export enum OpportunityHistoryAction {
   CREATE = 'CREATE',
   UPDATE = 'UPDATE',
