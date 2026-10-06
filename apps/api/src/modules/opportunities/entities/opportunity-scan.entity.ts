@@ -41,7 +41,7 @@ export class OpportunityScan {
   createdBy?: string;
 
   // ─── Targeting ──────────────────────────────────────────────────────────────
-  @Column({ type: 'varchar', { length: 255 }, nullable: true })
+  @Column({ type: 'varchar', length: 255, nullable: true })
   name?: string;
 
   @Column({ type: 'uuid', nullable: true })
@@ -57,7 +57,8 @@ export class OpportunityScan {
   source?: OpportunitySource;
 
   @Column({ type: 'jsonb', nullable: true })
-  sources?: OpportunitySource[];
+  sources?: OpportunitySource
+[];
 
   @Column({ type: 'jsonb', nullable: true })
   categories?: OpportunityCategory[];
@@ -116,7 +117,8 @@ export class OpportunityScan {
   notifications?: Record<string, any>;   // { onCompletion, onFailure, ... }
 
   @Column({ type: 'jsonb', nullable: true })
-  notificationsSent?: Record<string, any>[];
+  not
+ificationsSent?: Record<string, any>[];
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
