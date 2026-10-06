@@ -184,4 +184,3 @@ export class Opportunity {
   @Column({ type: 'boolean', default: true })
   isActive: boolean;
 }
-ÿÿ
