@@ -394,7 +394,7 @@ export class OpportunitiesService {
       createdBy: userId,
       id: randomUUID(),
       status: dto.runImmediately ? 'running' : 'pending',
-      scheduledAt: dto.scheduledAt ? new Date(dto.scheduledAt) : null,
+      scheduledAt: dto.scheduledAt ? new Date(dto.scheduledAt) : undefined,
       // maxSignals has no dedicated column (it arrives via ...dto but is
       // not persisted); stash it into parameters so the budget survives
       // reloads and the scanner can enforce it.
@@ -417,7 +417,7 @@ export class OpportunitiesService {
   async runScan(
     scan: OpportunityScan,
     userId: string,
-    request?: any,
+    _request?: any,
   ): Promise<OpportunityScan> {
     scan.status = 'running';
     scan.startedAt = new Date();
@@ -444,7 +444,7 @@ export class OpportunitiesService {
       scan.runCount = (scan.runCount || 0) + 1;
 
       if (scan.parameters?.recurrence) {
-        scan.nextRunAt = this.calculateNextRun(scan);
+        scan.nextRunAt = this.calculateNextRun(scan) ?? undefined;
       }
 
       await this.opportunityScanRepository.save(scan);
