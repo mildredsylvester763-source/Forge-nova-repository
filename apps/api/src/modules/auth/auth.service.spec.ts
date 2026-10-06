@@ -72,7 +72,7 @@ describe('AuthService', () => {
         revokedAt: null,
         isExpired: false,
       };
-      const { service } = makeService({
+      const { service, refreshTokenRepository } = makeService({
         refreshTokenFindOne: async () => stored,
       });
       await expect(service.refresh('stolen-token', {})).rejects.toThrow(/compromised/);
@@ -111,7 +111,7 @@ describe('AuthService', () => {
         consumedAt: null, revokedAt: null, isExpired: false,
       };
       let updateCalls = 0;
-      const { service, refreshTokenRepository } = makeService({
+      const { service } = makeService({
         refreshTokenFindOne: async () => stored,
         userFindOne: async () => ({ id: 'u1', role: 'owner', status: UserStatus.ACTIVE }),
         refreshUpdate: async () => {
