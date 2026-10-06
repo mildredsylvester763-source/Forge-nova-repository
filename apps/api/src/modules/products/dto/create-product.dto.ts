@@ -1,6 +1,6 @@
 import {
-  IsOptional, IsString, IsNumber, IsEnum, IsArray, IsBoolean, IsUrl,
-  IsDateString, ValidateNested, IsUUID, IsJson
+  IsOptional, IsString, IsNumber, IsEnum, IsArray, IsBoolean, IsURL,
+  IsDateString, ValidateNested, IsUUID, IsJSON
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ProductType, ProductFormat, ProductStatus } from '../enums';
@@ -47,13 +47,13 @@ class ContentDto {
 }
 class AssetDimensionsDto { @IsOptional() @IsNumber() width?: number; @IsOptional() @IsNumber() height?: number; @IsOptional() @IsNumber() depth?: number; @IsOptional() @IsString() unit?: string; }
 class AssetDto {
-  @IsString() id: string; @IsOptional() @IsString() name?: string; @IsOptional() @IsString() type?: string; @IsOptional() @IsUrl() url?: string;
+  @IsString() id: string; @IsOptional() @IsString() name?: string; @IsOptional() @IsString() type?: string; @IsOptional() @IsURL() url?: string;
   @IsOptional() @IsString() altText?: string; @IsOptional() @IsNumber() size?: number; @IsOptional() @IsString() mimeType?: string;
   @IsOptional() @ValidateNested() @Type(() => AssetDimensionsDto) dimensions?: AssetDimensionsDto;
 }
 class DesignDto { @IsOptional() @IsString() style?: string; @IsOptional() @ValidateNested() @Type(() => ThemeDto) theme?: ThemeDto; @IsOptional() @ValidateNested() @Type(() => LayoutDto) layout?: LayoutDto; @IsOptional() @IsArray() @ValidateNested({each:true}) @Type(() => AssetDto) assets?: AssetDto[]; }
 class ThemeDto { @IsOptional() @IsString() name?: string; @IsOptional() @IsArray() @IsString({each:true}) colors?: string[]; @IsOptional() @IsString() fontFamily?: string; @IsOptional() @IsString() style?: string; }
-class LogoDto { @IsOptional() @IsUrl() url?: string; @IsOptional() @IsString() altText?: string; @IsOptional() @IsUrl() favicon?: string; }
+class LogoDto { @IsOptional() @IsURL() url?: string; @IsOptional() @IsString() altText?: string; @IsOptional() @IsURL() favicon?: string; }
 class BrandingDto { @IsOptional() @IsString() name?: string; @IsOptional() @IsString() tagline?: string; @IsOptional() @IsString() brandVoice?: string; @IsOptional() @IsArray() @IsString({each:true}) tone?: string[]; }
 class LayoutDto { @IsOptional() @IsString() type?: 'single-column'|'two-column'|'grid'|'custom'; @IsOptional() @IsString() template?: string; }
 
@@ -72,25 +72,25 @@ class TierDto { @IsString() id:string; @IsString() name:string; @IsOptional() @I
 class CostDto { @IsOptional() @IsNumber() production?:number; @IsOptional() @IsNumber() distribution?:number; @IsOptional() @IsNumber() marketing?:number; @IsOptional() @IsNumber() total?:number; }
 class VatDto { @IsString() country:string; @IsNumber() rate:number; }
 class PaymentOptionDto { @IsString() type:string; @IsOptional() @IsString() provider?:string; @IsOptional() @IsBoolean() enabled?:boolean; @IsOptional() @IsNumber() fee?:number; }
-class DownloadDeliveryDto { @IsOptional() @IsUrl() url?:string; @IsOptional() @IsNumber() expiresIn?:number; @IsOptional() @IsNumber() maxDownloads?:number; }
+class DownloadDeliveryDto { @IsOptional() @IsURL() url?:string; @IsOptional() @IsNumber() expiresIn?:number; @IsOptional() @IsNumber() maxDownloads?:number; }
 class PhysicalDeliveryDto { @IsOptional() @IsString() address?:string; @IsOptional() @IsString() carrier?:string; @IsOptional() @IsString() trackingNumber?:string; }
 class DeliveryDto { @IsOptional() @ValidateNested() @Type(() => DownloadDeliveryDto) download?:DownloadDeliveryDto; @IsOptional() @ValidateNested() @Type(() => PhysicalDeliveryDto) physical?:PhysicalDeliveryDto; @IsOptional() @IsArray() @ValidateNested({each:true}) @Type(() => PaymentOptionDto) paymentOptions?:PaymentOptionDto[]; }
 
 class ShippingDto { @IsBoolean() enabled:boolean; @IsOptional() @IsArray() @IsString({each:true}) providers?:string[]; @IsOptional() @IsArray() @IsString({each:true}) countries?:string[]; @IsOptional() @IsNumber() shippingCost?:number; @IsOptional() @IsString() handlingTime?:string; @IsOptional() @IsBoolean() tracking?:boolean; }
 class FulfillmentDto { @IsString() type:'self'|'dropshipping'|'print-on-demand'|'third-party'; @IsOptional() @IsString() provider?:string; @IsOptional() @IsString() location?:string; }
 class ServiceDeliveryDto { @IsString() type:'consultation'|'coaching'|'development'|'design'|'other'; @IsOptional() @IsNumber() duration?:number; @IsOptional() @IsString() format?:'video-call'|'in-person'|'email'|'chat'|'asynchronous'; @IsOptional() @ValidateNested() @Type(() => SchedulingDto) scheduling?:SchedulingDto; }
-class SchedulingDto { @IsBoolean() enabled:boolean; @IsOptional() @IsUrl() calendarUrl?:string; @IsOptional() @IsString() availability?:string; }
-class ApiDeliveryDto { @IsOptional() @IsString() endpoint?:string; @IsOptional() @IsUrl() documentationUrl?:string; @IsOptional() @IsNumber() rateLimit?:number; @IsOptional() @IsString() authentication?:'none'|'api-key'|'oauth'|'jwt'; }
+class SchedulingDto { @IsBoolean() enabled:boolean; @IsOptional() @IsURL() calendarUrl?:string; @IsOptional() @IsString() availability?:string; }
+class ApiDeliveryDto { @IsOptional() @IsString() endpoint?:string; @IsOptional() @IsURL() documentationUrl?:string; @IsOptional() @IsNumber() rateLimit?:number; @IsOptional() @IsString() authentication?:'none'|'api-key'|'oauth'|'jwt'; }
 class IntegrationDto { @IsString() type:'api'|'webhook'|'manual'|'zapier'; @IsBoolean() configured:boolean; @IsOptional() @IsString() lastSync?:string; }
-class DistributionChannelDto { @IsString() id:string; @IsString() type:'own-website'|'marketplace'|'social-media'|'email'|'affiliate'|'wholesale'|'retail'; @IsString() name:string; @IsOptional() @IsUrl() url?:string; @IsBoolean() enabled:boolean; @IsOptional() @IsNumber() commission?:number; @IsOptional() @IsNumber() fees?:number; @IsOptional() @IsNumber() reach?:number; @IsOptional() @ValidateNested() @Type(() => IntegrationDto) integration?:IntegrationDto; }
+class DistributionChannelDto { @IsString() id:string; @IsString() type:'own-website'|'marketplace'|'social-media'|'email'|'affiliate'|'wholesale'|'retail'; @IsString() name:string; @IsOptional() @IsURL() url?:string; @IsBoolean() enabled:boolean; @IsOptional() @IsNumber() commission?:number; @IsOptional() @IsNumber() fees?:number; @IsOptional() @IsNumber() reach?:number; @IsOptional() @ValidateNested() @Type(() => IntegrationDto) integration?:IntegrationDto; }
 
 class MarketingDto { @IsOptional() @ValidateNested() @Type(() => SeoDto) seo?:SeoDto; @IsOptional() @ValidateNested() @Type(() => ContentMarketingDto) content?:ContentMarketingDto; @IsOptional() @IsArray() @ValidateNested({each:true}) @Type(() => SocialPostDto) socialPosts?:SocialPostDto[]; @IsOptional() @IsArray() @ValidateNested({each:true}) @Type(() => AdDto) ads?:AdDto[]; }
 class SeoDto { @IsOptional() @IsString() title?:string; @IsOptional() @IsString() description?:string; @IsOptional() @IsArray() @IsString({each:true}) keywords?:string[]; @IsOptional() @IsString() canonicalUrl?:string; }
 class ContentMarketingDto { @IsOptional() @IsArray() @ValidateNested({each:true}) @Type(() => BlogPostDto) blogPosts?:BlogPostDto[]; @IsOptional() @IsArray() @ValidateNested({each:true}) @Type(() => VideoDto) videos?:VideoDto[]; }
-class BlogPostDto { @IsString() id:string; @IsString() title:string; @IsOptional() @IsString() content?:string; @IsOptional() @IsUrl() url?:string; @IsOptional() @IsDateString() publishedAt?:string; }
-class SocialPostDto { @IsString() id:string; @IsString() platform:string; @IsString() content:string; @IsOptional() @IsUrl() url?:string; @IsOptional() @IsBoolean() published?:boolean; @IsOptional() @IsDateString() publishedAt?:string; @IsOptional() @ValidateNested() @Type(() => EngagementDto) engagement?:EngagementDto; }
+class BlogPostDto { @IsString() id:string; @IsString() title:string; @IsOptional() @IsString() content?:string; @IsOptional() @IsURL() url?:string; @IsOptional() @IsDateString() publishedAt?:string; }
+class SocialPostDto { @IsString() id:string; @IsString() platform:string; @IsString() content:string; @IsOptional() @IsURL() url?:string; @IsOptional() @IsBoolean() published?:boolean; @IsOptional() @IsDateString() publishedAt?:string; @IsOptional() @ValidateNested() @Type(() => EngagementDto) engagement?:EngagementDto; }
 class EngagementDto { @IsOptional() @IsNumber() likes?:number; @IsOptional() @IsNumber() shares?:number; @IsOptional() @IsNumber() comments?:number; }
-class VideoDto { @IsString() id:string; @IsString() title:string; @IsOptional() @IsUrl() url?:string; @IsOptional() @IsString() platform?:string; @IsOptional() @IsBoolean() published?:boolean; @IsOptional() @IsDateString() publishedAt?:string; @IsOptional() @IsNumber() views?:number; }
+class VideoDto { @IsString() id:string; @IsString() title:string; @IsOptional() @IsURL() url?:string; @IsOptional() @IsString() platform?:string; @IsOptional() @IsBoolean() published?:boolean; @IsOptional() @IsDateString() publishedAt?:string; @IsOptional() @IsNumber() views?:number; }
 class EmailDto { @IsString() id:string; @IsString() subject:string; @IsOptional() @IsString() preview?:string; @IsOptional() @IsBoolean() sent?:boolean; @IsOptional() @IsDateString() sentAt?:string; @IsOptional() @IsNumber() openRate?:number; @IsOptional() @IsNumber() clickRate?:number; }
 class AdDto { @IsString() id:string; @IsString() platform:string; @IsString() campaign:string; @IsNumber() budget:number; @IsOptional() @IsNumber() spent?:number; @IsOptional() @IsNumber() clicks?:number; @IsOptional() @IsNumber() impressions?:number; @IsOptional() @IsNumber() conversions?:number; @IsOptional() @IsNumber() ctr?:number; @IsOptional() @IsNumber() cpc?:number; @IsOptional() @IsNumber() roi?:number; }
 class AffiliateDto { @IsString() id:string; @IsString() name:string; @IsNumber() commission:number; @IsOptional() @IsNumber() sales?:number; @IsOptional() @IsNumber() revenue?:number; @IsOptional() @IsString() status?:'active'|'inactive'|'pending'; }
@@ -99,10 +99,10 @@ class SalesMetricsDto { @IsOptional() @IsNumber() revenue?:number; @IsOptional()
 class FunnelDto { @IsOptional() @IsArray() @ValidateNested({each:true}) @Type(() => FunnelStepDto) steps?:FunnelStepDto[]; }
 class SalesDto { @IsOptional() @ValidateNested() @Type(() => FunnelDto) funnel?:FunnelDto; @IsOptional() @ValidateNested() @Type(() => SalesMetricsDto) metrics?:SalesMetricsDto; @IsOptional() @IsArray() @ValidateNested({each:true}) @Type(() => AffiliateDto) affiliates?:AffiliateDto[]; }
 
-class TermsDto { @IsOptional() @IsString() content?:string; @IsOptional() @IsUrl() url?:string; @IsOptional() @IsString() version?:string; @IsOptional() @IsDateString() lastUpdated?:string; @IsOptional() @IsBoolean() accepted?:boolean; }
-class PrivacyPolicyDto { @IsOptional() @IsString() content?:string; @IsOptional() @IsUrl() url?:string; @IsOptional() @IsString() version?:string; @IsOptional() @IsDateString() lastUpdated?:string; }
+class TermsDto { @IsOptional() @IsString() content?:string; @IsOptional() @IsURL() url?:string; @IsOptional() @IsString() version?:string; @IsOptional() @IsDateString() lastUpdated?:string; @IsOptional() @IsBoolean() accepted?:boolean; }
+class PrivacyPolicyDto { @IsOptional() @IsString() content?:string; @IsOptional() @IsURL() url?:string; @IsOptional() @IsString() version?:string; @IsOptional() @IsDateString() lastUpdated?:string; }
 class RefundPolicyDto { @IsOptional() @IsString() type?:'no-refunds'|'full-refund'|'partial-refund'|'store-credit'; @IsOptional() @IsNumber() days?:number; @IsOptional() @IsArray() @IsString({each:true}) conditions?:string[]; @IsOptional() @IsString() content?:string; }
-class LicenseDto { @IsString() id:string; @IsString() type:'commercial'|'personal'|'educational'|'open-source'; @IsOptional() @IsString() name?:string; @IsOptional() @IsString() content?:string; @IsOptional() @IsUrl() url?:string; @IsOptional() @IsNumber() price?:number; }
+class LicenseDto { @IsString() id:string; @IsString() type:'commercial'|'personal'|'educational'|'open-source'; @IsOptional() @IsString() name?:string; @IsOptional() @IsString() content?:string; @IsOptional() @IsURL() url?:string; @IsOptional() @IsNumber() price?:number; }
 class AgeRestrictionsDto { @IsBoolean() enabled:boolean; @IsOptional() @IsNumber() minAge?:number; @IsOptional() @IsBoolean() verificationRequired?:boolean; }
 class RegionalComplianceDto { @IsString() region:string; @IsBoolean() compliant:boolean; @IsOptional() @IsArray() @IsString({each:true}) requirements?:string[]; }
 class IpDto { @IsOptional() @IsBoolean() registered?:boolean; @IsOptional() @IsString() owner?:string; @IsOptional() @IsString() license?:string; }
@@ -115,7 +115,7 @@ class LegalDto { @IsOptional() @ValidateNested() @Type(() => TermsDto) termsAndC
 
 class RequirementsDto { @IsOptional() @IsArray() @IsString({each:true}) os?:string[]; @IsOptional() @IsArray() @IsString({each:true}) browser?:string[]; @IsOptional() @IsArray() @IsString({each:true}) dependencies?:string[]; }
 class VersionStatisticsDto { @IsOptional() @IsNumber() downloads?:number; @IsOptional() @IsNumber() activeUsers?:number; @IsOptional() @IsNumber() ratings?:number; @IsOptional() @IsNumber() reviews?:number; }
-class VersionDto { @IsString() id:string; @IsString() version:string; @IsOptional() @IsString() name?:string; @IsOptional() @IsString() description?:string; @IsOptional() @IsArray() @IsString({each:true}) changelog?:string[]; @IsOptional() @IsString() status?:'draft'|'beta'|'rc'|'stable'|'deprecated'; @IsOptional() @IsDateString() releasedAt?:string; @IsOptional() @IsString() releasedBy?:string; @IsOptional() @IsUrl() downloadUrl?:string; @IsOptional() @IsNumber() size?:number; @IsOptional() @IsString() checksum?:string; @IsOptional() @ValidateNested() @Type(() => RequirementsDto) requirements?:RequirementsDto; @IsOptional() @ValidateNested() @Type(() => VersionStatisticsDto) statistics?:VersionStatisticsDto; }
+class VersionDto { @IsString() id:string; @IsString() version:string; @IsOptional() @IsString() name?:string; @IsOptional() @IsString() description?:string; @IsOptional() @IsArray() @IsString({each:true}) changelog?:string[]; @IsOptional() @IsString() status?:'draft'|'beta'|'rc'|'stable'|'deprecated'; @IsOptional() @IsDateString() releasedAt?:string; @IsOptional() @IsString() releasedBy?:string; @IsOptional() @IsURL() downloadUrl?:string; @IsOptional() @IsNumber() size?:number; @IsOptional() @IsString() checksum?:string; @IsOptional() @ValidateNested() @Type(() => RequirementsDto) requirements?:RequirementsDto; @IsOptional() @ValidateNested() @Type(() => VersionStatisticsDto) statistics?:VersionStatisticsDto; }
 
 class ContributorDto { @IsString() id:string; @IsOptional() @IsString() name?:string; @IsOptional() @IsString() role?:string; @IsOptional() @IsNumber() contributions?:number; }
 class ContributionDto { @IsOptional() @IsNumber() commits?:number; @IsOptional() @IsNumber() changes?:number; @IsOptional() @IsNumber() issues?:number; @IsOptional() @IsArray() @ValidateNested({each:true}) @Type(() => ContributorDto) contributors?:ContributorDto[]; }
@@ -136,8 +136,8 @@ class AiAgentDto { @IsString() id:string; @IsString() name:string; @IsOptional()
 class AiAutomationDto { @IsOptional() @IsBoolean() enabled?:boolean; @IsOptional() @IsArray() @IsString({each:true}) triggers?:string[]; @IsOptional() @IsArray() @IsString({each:true}) actions?:string[]; }
 class AutomationDto { @IsBoolean() enabled:boolean; @IsOptional() @IsArray() @ValidateNested({each:true}) @Type(() => WorkflowDto) workflows?:WorkflowDto[]; @IsOptional() @IsArray() @ValidateNested({each:true}) @Type(() => AiAgentDto) aiAgents?:AiAgentDto[]; @IsOptional() @ValidateNested() @Type(() => AiAutomationDto) aiAutomation?:AiAutomationDto; }
 class TriggerDto { @IsString() type:'manual'|'scheduled'|'event-based'|'webhook'; @IsOptional() @IsString() event?:string; @IsOptional() @IsString() schedule?:string; }
-class ActionDto { @IsString() id:string; @IsString() type:'create'|'update'|'delete'|'notify'|'integrate'|'custom'; @IsOptional() @IsString() service?:string; @IsOptional() @IsJson() configuration?:any; @IsOptional() @IsNumber() order?:number; }
-class ConditionDto { @IsString() field:string; @IsString() operator:'=='|'!='|'>'|'<'|'>='|'<='|'contains'|'in'; @IsJson() value:any; }
+class ActionDto { @IsString() id:string; @IsString() type:'create'|'update'|'delete'|'notify'|'integrate'|'custom'; @IsOptional() @IsString() service?:string; @IsOptional() @IsJSON() configuration?:any; @IsOptional() @IsNumber() order?:number; }
+class ConditionDto { @IsString() field:string; @IsString() operator:'=='|'!='|'>'|'<'|'>='|'<='|'contains'|'in'; @IsJSON() value:any; }
 class WorkflowDto { @IsString() id:string; @IsString() name:string; @IsOptional() @IsString() description?:string; @IsOptional() @ValidateNested() @Type(() => TriggerDto) trigger?:TriggerDto; @IsOptional() @IsArray() @ValidateNested({each:true}) @Type(() => ActionDto) actions?:ActionDto[]; @IsOptional() @IsArray() @ValidateNested({each:true}) @Type(() => ConditionDto) conditions?:ConditionDto[]; @IsBoolean() enabled:boolean; @IsOptional() @IsDateString() lastRun?:string; @IsOptional() @IsDateString() nextRun?:string; @IsOptional() @IsNumber() runCount?:number; @IsOptional() @IsString() status?:'idle'|'running'|'paused'|'failed'; }
 
 class ProductGenerationDto { @IsOptional() @IsString() model?:string; @IsOptional() @IsString() prompt?:string; @IsOptional() @IsNumber() confidence?:number; @IsOptional() @IsNumber() iterations?:number; }
@@ -157,8 +157,8 @@ class ComplianceStandardDto { @IsString() name:string; @IsOptional() @IsString()
 class EndpointDto { @IsString() path:string; @IsString() method:string; @IsOptional() @IsString() description?:string; }
 class ApiReferenceDto { @IsOptional() @IsString() version?:string; @IsOptional() @IsArray() @ValidateNested({each:true}) @Type(() => EndpointDto) endpoints?:EndpointDto[]; }
 class SdkDto { @IsString() language:string; @IsOptional() @IsString() packageName?:string; @IsOptional() @IsString() version?:string; }
-class DeveloperGuideDto { @IsOptional() @IsString() content?:string; @IsOptional() @IsUrl() url?:string; }
-class UserGuideDto { @IsOptional() @IsString() content?:string; @IsOptional() @IsUrl() url?:string; }
+class DeveloperGuideDto { @IsOptional() @IsString() content?:string; @IsOptional() @IsURL() url?:string; }
+class UserGuideDto { @IsOptional() @IsString() content?:string; @IsOptional() @IsURL() url?:string; }
 class DocumentationDto { @IsOptional() @ValidateNested() @Type(() => UserGuideDto) userGuide?:UserGuideDto; @IsOptional() @ValidateNested() @Type(() => DeveloperGuideDto) developerGuide?:DeveloperGuideDto; @IsOptional() @ValidateNested() @Type(() => ApiReferenceDto) apiReference?:ApiReferenceDto; @IsOptional() @IsArray() @ValidateNested({each:true}) @Type(() => SdkDto) sdks?:SdkDto[]; }
 
 class FaqDto { @IsString() id:string; @IsString() question:string; @IsString() answer:string; @IsOptional() @IsString() category?:string; }
@@ -166,12 +166,12 @@ class TutorialStepDto { @IsString() id:string; @IsString() title:string; @IsStri
 class TutorialDto { @IsString() id:string; @IsString() title:string; @IsOptional() @IsString() description?:string; @IsOptional() @IsArray() @ValidateNested({each:true}) @Type(() => TutorialStepDto) steps?:TutorialStepDto[]; @IsOptional() @IsNumber() estimatedTime?:number; @IsOptional() @IsString() difficulty?:'beginner'|'intermediate'|'advanced'; }
 class ChangeDto { @IsString() type:'added'|'changed'|'fixed'|'removed'|'security'|'deprecated'; @IsString() content:string; }
 class ChangelogDto { @IsString() id:string; @IsString() version:string; @IsString() date:string; @IsString() title:string; @IsOptional() @IsString() description?:string; @IsOptional() @IsArray() @ValidateNested({each:true}) @Type(() => ChangeDto) changes?:ChangeDto[]; }
-class SupportChannelDto { @IsString() type:string; @IsOptional() @IsString() name?:string; @IsOptional() @IsUrl() url?:string; @IsOptional() @IsString() contact?:string; }
+class SupportChannelDto { @IsString() type:string; @IsOptional() @IsString() name?:string; @IsOptional() @IsURL() url?:string; @IsOptional() @IsString() contact?:string; }
 class ForumDto { @IsOptional() @IsString() url?:string; @IsOptional() @IsNumber() members?:number; }
-class ChatDto { @IsOptional() @IsString() provider?:string; @IsOptional() @IsUrl() url?:string; }
-class SocialDto { @IsString() platform:string; @IsOptional() @IsUrl() url?:string; }
+class ChatDto { @IsOptional() @IsString() provider?:string; @IsOptional() @IsURL() url?:string; }
+class SocialDto { @IsString() platform:string; @IsOptional() @IsURL() url?:string; }
 class CommunityDto { @IsOptional() @ValidateNested() @Type(() => ForumDto) forum?:ForumDto; @IsOptional() @ValidateNested() @Type(() => ChatDto) chat?:ChatDto; @IsOptional() @IsArray() @ValidateNested({each:true}) @Type(() => SocialDto) social?:SocialDto[]; }
-class KnowledgeBaseArticleDto { @IsString() id:string; @IsString() title:string; @IsOptional() @IsString() content?:string; @IsOptional() @IsUrl() url?:string; }
+class KnowledgeBaseArticleDto { @IsString() id:string; @IsString() title:string; @IsOptional() @IsString() content?:string; @IsOptional() @IsURL() url?:string; }
 class SupportDto { @IsOptional() @IsArray() @ValidateNested({each:true}) @Type(() => SupportChannelDto) channels?:SupportChannelDto[]; @IsOptional() @ValidateNested() @Type(() => CommunityDto) community?:CommunityDto; @IsOptional() @IsArray() @ValidateNested({each:true}) @Type(() => KnowledgeBaseArticleDto) knowledgeBase?:KnowledgeBaseArticleDto[]; }
 
 class TimelineDto { @IsString() id:string; @IsDateString() date:string; @IsOptional() @IsString() status?:'pending'|'completed'|'overdue'|'cancelled'; @IsOptional() @IsString() priority?:'low'|'medium'|'high'|'critical'; @IsOptional() @IsString() assignedTo?:string; @IsOptional() @IsArray() @IsString({each:true}) dependencies?:string[]; }
@@ -219,10 +219,10 @@ export class CreateProductDto {
   @IsOptional() @IsArray() @ValidateNested({each:true}) @Type(() => ChangelogDto) changelog?:ChangelogDto[];
   @IsOptional() @ValidateNested() @Type(() => SupportDto) support?:SupportDto;
   @IsOptional() @IsArray() @ValidateNested({each:true}) @Type(() => TimelineDto) timeline?:TimelineDto[];
-  @IsOptional() @IsJson() workflow?:{currentStep?:string; totalSteps?:number; completedSteps?:number; progress?:number; blocked?:boolean; blockingReason?:string};
+  @IsOptional() @IsJSON() workflow?:{currentStep?:string; totalSteps?:number; completedSteps?:number; progress?:number; blocked?:boolean; blockingReason?:string};
   @IsOptional() @IsBoolean() aiGenerated?:boolean;
-  @IsOptional() @IsJson() aiGeneration?:{modelUsed?:string; prompt?:string; generationDate?:string; confidence?:number; iterations?:number; temperature?:number; topP?:number; maxTokens?:number; generationTime?:number; cost?:number};
-  @IsOptional() @IsJson() aiOptimization?:{optimizedForSEO?:boolean; optimizedForConversion?:boolean; optimizedForAccessibility?:boolean; optimizationScore?:number; suggestions?:string[]};
+  @IsOptional() @IsJSON() aiGeneration?:{modelUsed?:string; prompt?:string; generationDate?:string; confidence?:number; iterations?:number; temperature?:number; topP?:number; maxTokens?:number; generationTime?:number; cost?:number};
+  @IsOptional() @IsJSON() aiOptimization?:{optimizedForSEO?:boolean; optimizedForConversion?:boolean; optimizedForAccessibility?:boolean; optimizationScore?:number; suggestions?:string[]};
   @IsOptional() @IsBoolean() isPublic?:boolean;
   @IsOptional() @IsBoolean() isFeatured?:boolean;
   @IsOptional() @IsBoolean() isArchived?:boolean;
