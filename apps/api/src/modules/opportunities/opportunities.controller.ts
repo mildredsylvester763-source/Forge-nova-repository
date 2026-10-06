@@ -3,7 +3,7 @@
 // ============================================================================
 // Zero-trust entry points. Every route requires an authenticated user; the
 // userId is taken from the request context (set by the auth guard), NEVER
-// from the body or query — cross-tenant access is structurally impossible.
+// from the body or query â cross-tenant access is structurally impossible.
 
 import {
   Controller,
@@ -55,8 +55,7 @@ export class OpportunitiesController {
     return this.opportunitiesService.createScan(req.user.id, dto, req);
   }
 
-  @Post('scans/:id/tri
-gger')
+  @Post('scans/:id/trigger')
   triggerScan(@Request() req: any, @Param('id', ParseUUIDPipe) id: string) {
     return this.opportunitiesService.triggerScan(req.user.id, id, req);
   }
@@ -160,3 +159,4 @@ ove(@Request() req: any, @Param('id', ParseUUIDPipe) id: string) {
     return this.opportunitiesService.removeWatcher(req.user.id, id, watcherId, req);
   }
 }
+ÿÿ
