@@ -58,14 +58,15 @@ export class Opportunity {
   description?: string;
 
   // ─── External provenance (scanner upsert key) ─────────────────────────────
-  @Column({ type: 'varchar', { length: 255 }, nullable: true })
+  @Column({ type: 'varchar', length: 255, nullable: true })
   externalId?: string;
 
   @Column({ type: 'text', nullable: true })
   externalUrl?: string;
 
   // ─── Classification ─────────────────────────────────────────────────────────
-  @Column({ type: 'enum', enum: OpportunityCategory })
+  @Column({ type: 'enum', enum: Opport
+unityCategory })
   category: OpportunityCategory;
 
   @Column({ type: 'enum', enum: OpportunitySource })
@@ -127,7 +128,8 @@ export class Opportunity {
   @Column({ type: 'jsonb', nullable: true })
   metadata?: Record<string, any>;
 
-  // ─── Collaboration & triage ────────────────────────────────────────────────
+  // ─── Collaboration & triage ────────────
+────────────────────────────────────
   @Column({ type: 'boolean', default: false })
   isFavorite: boolean;
 
