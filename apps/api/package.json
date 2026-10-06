@@ -9,12 +9,8 @@
     "start:dev": "nest start --watch",
     "build": "nest build",
     "lint": "eslint \"src/**/*.ts\" --max-warnings 0",
-    "test": "jest --passWithNoTests",
-    "typecheck": "tsc --noEmit",
-    "typeorm": "typeorm",
-    "migration:generate": "typeorm migration:generate -d src/database/data-source.ts",
-    "migration:run": "typeorm migration:run -d src/database/data-source.ts",
-    "migration:revert": "typeorm migration:revert -d src/database/data-source.ts"
+    "test": "jest",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.0",
@@ -55,7 +51,6 @@
     "eslint": "^8.57.0",
     "jest": "^29.7.0",
     "ts-jest": "^29.2.4",
-    "ts-node": "^10.9.2",
     "typescript": "^5.5.4"
   },
   "jest": {
