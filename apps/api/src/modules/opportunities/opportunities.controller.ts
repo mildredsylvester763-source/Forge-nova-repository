@@ -26,7 +26,7 @@ import { OpportunityQueryDto } from './dto/opportunity-query.dto';
 import { CreateScanDto } from './dto/create-scan.dto';
 import { OpportunityStatus, OpportunityPriority } from './enums';
 
-@Controller('api/v1/opportunities')
+@Controller('opportunities')
 export class OpportunitiesController {
   constructor(private readonly opportunitiesService: OpportunitiesService) {}
 
@@ -55,7 +55,8 @@ export class OpportunitiesController {
     return this.opportunitiesService.createScan(req.user.id, dto, req);
   }
 
-  @Post('scans/:id/trigger')
+  @Post('scans/:id/tri
+gger')
   triggerScan(@Request() req: any, @Param('id', ParseUUIDPipe) id: string) {
     return this.opportunitiesService.triggerScan(req.user.id, id, req);
   }
@@ -111,7 +112,8 @@ export class OpportunitiesController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Request() req: any, @Param('id', ParseUUIDPipe) id: string) {
+  rem
+ove(@Request() req: any, @Param('id', ParseUUIDPipe) id: string) {
     return this.opportunitiesService.remove(req.user.id, id, req);
   }
 
