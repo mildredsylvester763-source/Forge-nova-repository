@@ -6,7 +6,7 @@
 // Caps are validated here — the scanner never runs unbounded on the user's
 // behalf (zero-trust: agent budget is declared, not assumed).
 
-import {
+import { MaxLength,
   IsOptional,
   IsEnum,
   IsArray,
@@ -22,7 +22,7 @@ import {
 import { OpportunityCategory, OpportunitySource } from '../enums';
 
 export class CreateScanDto {
-  @IsOptional() @IsString() @IsString({ length: 255 }) name?: string;
+  @IsOptional() @IsString() @IsString() @MaxLength(255) name?: string;
 
   // Attach to an existing opportunity, or null for a portfolio-wide scan.
   @IsOptional() @IsUUID() opportunityId?: string;
