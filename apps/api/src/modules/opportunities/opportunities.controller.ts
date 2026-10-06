@@ -3,7 +3,7 @@
 // ============================================================================
 // Zero-trust entry points. Every route requires an authenticated user; the
 // userId is taken from the request context (set by the auth guard), NEVER
-// from the body or query Ã¢ÂÂ cross-tenant access is structurally impossible.
+// from the body or query ÃÂ¢ÃÂÃÂ cross-tenant access is structurally impossible.
 
 import {
   Controller,
@@ -111,8 +111,7 @@ export class OpportunitiesController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  rem
-ove(@Request() req: any, @Param('id', ParseUUIDPipe) id: string) {
+  remove(@Request() req: any, @Param('id', ParseUUIDPipe) id: string) {
     return this.opportunitiesService.remove(req.user.id, id, req);
   }
 
