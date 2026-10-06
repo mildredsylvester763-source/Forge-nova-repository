@@ -406,7 +406,7 @@ export class OpportunitiesService {
     const saved = await this.opportunityScanRepository.save(scan);
 
     if (dto.runImmediately) {
-      this.runScan(saved, userId, request).catch(error => {
+      this.runScan(saved, userId, request).catch((error: any) => {
         this.logger.error(`Error running scan ${saved.id}: ${error.message}`, error.stack);
       });
     }
@@ -457,7 +457,7 @@ export class OpportunitiesService {
           `Scan "${scan.name || scan.id}" completed successfully`,
         );
       }
-    } catch (error) {
+    } catch (error: any) {
       scan.status = 'failed';
       scan.completedAt = new Date();
       await this.opportunityScanRepository.save(scan);
@@ -541,9 +541,9 @@ export class OpportunitiesService {
     };
   }
 
-  private async scanTwitter(scan: OpportunityScan, userId: string, summary: any): Promise<void> {
+  private async scanTwitter(_scan: OpportunityScan, userId: string, summary: any): Promise<void> {
     try {
-      const response = await this.egressGateway.getTwitterTrends();
+      const response = await this.egressGateway.getTwitterTrends(userId);
       for (const trend of (response.data as any[]) || []) {
         await this.upsertScannedOpportunity(
           userId,
@@ -562,12 +562,12 @@ export class OpportunitiesService {
           summary,
         );
       }
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Error scanning Twitter: ${error.message}`, error.stack);
     }
   }
 
-  private // ─── Reddit scanner (Phase A, Feature 1) ──────────────────────────────────
+  // ─── Reddit scanner (Phase A, Feature 1) ──────────────────────────────────
   // Fail-visible contract: every egress envelope is checked. A subreddit
   // that cannot be fetched is recorded in summary.failures; if NO subreddit
   // yielded data the scan throws (runScan marks it failed); partial success
@@ -749,7 +749,7 @@ export class OpportunitiesService {
           summary,
         );
       }
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Error scanning Google Trends: ${error.message}`, error.stack);
     }
   }
@@ -787,7 +787,7 @@ export class OpportunitiesService {
           summary,
         );
       }
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Error scanning GitHub: ${error.message}`, error.stack);
     }
   }
@@ -1090,7 +1090,7 @@ export class OpportunitiesService {
       try {
         await this.update(userId, id, updates, request);
         updated++;
-      } catch (error) {
+      } catch (error: any) {
         failed++;
         errors.push(`${id}: ${error.message}`);
       }
@@ -1112,7 +1112,7 @@ export class OpportunitiesService {
       try {
         await this.remove(userId, id, request);
         deleted++;
-      } catch (error) {
+      } catch (error: any) {
         failed++;
         errors.push(`${id}: ${error.message}`);
       }
@@ -1136,7 +1136,7 @@ export class OpportunitiesService {
       try {
         await this.changeStatus(userId, id, status, reason, request);
         changed++;
-      } catch (error) {
+      } catch (error: any) {
         failed++;
         errors.push(`${id}: ${error.message}`);
       }
