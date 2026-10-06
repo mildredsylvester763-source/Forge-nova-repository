@@ -1306,4 +1306,3 @@ export class CreateOpportunityDto {
   @Type(() => TimelineEventDto)
   timeline?: TimelineEventDto[];
 }
-ÿ
