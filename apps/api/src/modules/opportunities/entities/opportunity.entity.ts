@@ -30,11 +30,12 @@ import {
 @Index(['userId', 'category'])
 @Index(['userId', 'priority'])
 @Index(['userId', 'riskLevel'])
-@Index(['userId', 'externalId', 'source'])   // upsert key for scanned signalsexport class Opportunity {
+@Index(['userId', 'externalId', 'source'])   // upsert key for scanned signals
+export class Opportunity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  // --- Ownership (zero-trust scoping) ----------------------------------------
+  // âââ Ownership (zero-trust scoping) ââââââââââââââââââââââââââââââââââââââââ
   @Column({ type: 'uuid' })
   @Index()
   userId: string;
@@ -49,21 +50,21 @@ import {
   @Column({ type: 'uuid', nullable: true })
   updatedBy?: string;
 
-  // --- Identity --------------------------------------------------------------
+  // âââ Identity ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   @Column({ length: 255 })
   title: string;
 
   @Column({ type: 'text', nullable: true })
   description?: string;
 
-  // --- External provenance (scanner upsert key) -----------------------------
+  // âââ External provenance (scanner upsert key) âââââââââââââââââââââââââââââ
   @Column({ type: 'varchar', length: 255, nullable: true })
   externalId?: string;
 
   @Column({ type: 'text', nullable: true })
   externalUrl?: string;
 
-  // --- Classification ---------------------------------------------------------
+  // âââ Classification âââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   @Column({ type: 'enum', enum: OpportunityCategory })
   category: OpportunityCategory;
 
@@ -79,7 +80,7 @@ import {
   @Column({ type: 'enum', enum: RiskLevel, default: RiskLevel.LOW })
   riskLevel: RiskLevel;
 
-  // --- Composite score (0â100) and sub-scores (0â10, set by scoring agents) --
+  // âââ Composite score (0â100) and sub-scores (0â10, set by scoring agents) ââ
   @Column({ type: 'decimal', precision: 5, scale: 2, default: 0 })
   score: number;
 
@@ -101,7 +102,7 @@ import {
   @Column({ type: 'decimal', precision: 4, scale: 2, default: 0 })
   seasonalityScore?: number;
 
-  // --- Context (validated by CreateOpportunityDto) ---------------------------
+  // âââ Context (validated by CreateOpportunityDto) âââââââââââââââââââââââââââ
   @Column({ type: 'jsonb', nullable: true })
   targetAudience?: Record<string, any>;
 
@@ -126,14 +127,14 @@ import {
   @Column({ type: 'jsonb', nullable: true })
   metadata?: Record<string, any>;
 
-  // --- Collaboration & triage ------------------------------------------------
+  // âââ Collaboration & triage ââââââââââââââââââââââââââââââââââââââââââââââââ
   @Column({ type: 'boolean', default: false })
   isFavorite: boolean;
 
   @Column({ type: 'jsonb', nullable: true })
   watchers?: string[];
 
-  // --- Lifecycle timestamps (set by changeStatus) -----------------------------
+  // âââ Lifecycle timestamps (set by changeStatus) âââââââââââââââââââââââââââââ
   @Column({ type: 'timestamptz', nullable: true })
   discoveredAt?: Date;
 
@@ -161,7 +162,7 @@ import {
   @Column({ type: 'timestamptz', nullable: true })
   nextScanAt?: Date;
 
-  // --- Relations --------------------------------------------------------------
+  // âââ Relations ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   @OneToMany(() => OpportunityHistory, (h) => h.opportunity)
   histories: OpportunityHistory[];
 
@@ -183,3 +184,4 @@ import {
   @Column({ type: 'boolean', default: true })
   isActive: boolean;
 }
+ÿÿ
