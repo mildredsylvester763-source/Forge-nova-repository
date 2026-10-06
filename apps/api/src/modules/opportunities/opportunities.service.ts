@@ -6,7 +6,6 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   Repository,
-  FindManyOptions,
   In,
   Not,
   MoreThan,
@@ -22,6 +21,7 @@ import { CreateOpportunityDto } from './dto/create-opportunity.dto';
 import { UpdateOpportunityDto } from './dto/update-opportunity.dto';
 import { OpportunityQueryDto } from './dto/opportunity-query.dto';
 import { CreateScanDto } from './dto/create-scan.dto';
+import { computeScore } from './scoring/scoring.service';
 import {
   OpportunitySource,
   OpportunityStatus,
@@ -343,13 +343,53 @@ export class OpportunitiesService {
     return { updated, total: opportunities.length };
   }
 
+  // ─── Scoring engine (pure core in ./scoring) ────────────────────────────
+  // Computes the composite 0-100 from the six sub-scores, persists it with a
+  // full explanation (factors, weights, missing signals), and returns both.
+  // Missing sub-scores degrade to the neutral default and are listed —
+  // never faked as real data.
+  async scoreOpportunity(userId: string, id: string): Promise<any> {
+    const opportunity = await this.opportunityRepository.findOne({
+      where: { id, userId },
+    });
+    if (!opportunity) {
+      throw new NotFoundException(`Opportunity ${id} not found for this user`);
+    }
+    // Decimal columns come back as strings; null/undefined must stay
+    // "missing" (not Number(null) === 0).
+    const num = (v: any): number | undefined => {
+      if (v === null || v === undefined) return undefined;
+      const n = Number(v);
+      return Number.isFinite(n) ? n : undefined;
+    };
+    const result = computeScore({
+      demand: num(opportunity.demandScore),
+      competition: num(opportunity.competitionScore),
+      profitability: num(opportunity.profitabilityScore),
+      feasibility: num(opportunity.feasibilityScore),
+      trend: num(opportunity.trendScore),
+      seasonality: num(opportunity.seasonalityScore),
+    });
+    opportunity.score = result.composite;
+    opportunity.metadata = {
+      ...(opportunity.metadata || {}),
+      scoring: { ...result, computedAt: new Date().toISOString() },
+    };
+    const saved = await this.opportunityRepository.save(opportunity);
+    return { ...result, opportunity: saved };
+  }
+
   async createScan(
     userId: string,
     dto: CreateScanDto,
     request?: any,
   ): Promise<OpportunityScan> {
+    // maxSignals has no dedicated column — pull it out of the DTO before
+    // create() so it never lands on the entity as a stray property, then
+    // stash it into parameters so the budget survives reloads.
+    const { maxSignals, ...scanFields } = dto;
     const scan = this.opportunityScanRepository.create({
-      ...dto,
+      ...scanFields,
       userId,
       createdBy: userId,
       id: randomUUID(),
@@ -358,8 +398,8 @@ export class OpportunitiesService {
       // maxSignals has no dedicated column (it arrives via ...dto but is
       // not persisted); stash it into parameters so the budget survives
       // reloads and the scanner can enforce it.
-      parameters: dto.maxSignals
-        ? { ...(dto.parameters || {}), maxSignals: dto.maxSignals }
+      parameters: maxSignals
+        ? { ...(dto.parameters || {}), maxSignals }
         : dto.parameters,
     });
 
