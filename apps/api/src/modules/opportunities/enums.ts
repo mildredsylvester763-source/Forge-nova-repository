@@ -5,7 +5,7 @@
 // AUTHORITATIVE: the service is the source of truth for names used at runtime;
 // this enum set is its exact superset.
 
-// ─── Category ──────────────────────────────────────────────────────────────
+// âââ Category ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 // The 7 value-chain categories from the Forge Nova concept PLUS the
 // fine-grained micro-niches the source mappers classify into.
 export enum OpportunityCategory {
@@ -47,8 +47,7 @@ export enum OpportunityCategory {
   ELECTRONICS_ACCESSORIES = 'electronics_accessories',
   // Services
   CONSULTING = 'consulting',
-  FREELANCE_SERVICES = 'free
-lance_services',
+  FREELANCE_SERVICES = 'freelance_services',
   AGENCY_SERVICES = 'agency_services',
   DIGITAL_MARKETING = 'digital_marketing',
   AFFILIATE_MARKETING = 'affiliate_marketing',
@@ -71,7 +70,7 @@ lance_services',
   OTHER = 'other',
 }
 
-// ─── Source ────────────────────────────────────────────────────────────────
+// âââ Source ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 // Multi-source scanner inputs. The first five are wired in the service
 // (Twitter, Reddit, Google Trends, GitHub, Google Search); the rest are
 // registered now so each scanner connector lands without schema changes.
@@ -127,7 +126,7 @@ BING_SEARCH = 'bing_search',
   MANUAL_DISCOVERY = 'manual_discovery',
 }
 
-// ─── Status (lifecycle) ─────────────────────────────────────────────────────
+// âââ Status (lifecycle) âââââââââââââââââââââââââââââââââââââââââââââââââââââ
 // Superset: concept lifecycle + the exact statuses the service transitions.
 export enum OpportunityStatus {
   DISCOVERED = 'discovered',
@@ -151,7 +150,7 @@ export enum OpportunityStatus {
   ARCHIVED = 'archived',
 }
 
-// ─── Priority ───────────────────────────────────────────────────────────────
+// âââ Priority âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 // Includes VERY_HIGH / VERY_LOW used by the Reddit and GitHub priority
 // mappers, plus the concept tiers.
 export enum OpportunityPriority {
@@ -164,7 +163,7 @@ export enum OpportunityPriority {
   WATCHLIST = 'watchlist',
 }
 
-// ─── Risk Level ─────────────────────────────────────────────────────────────
+// âââ Risk Level âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 export enum RiskLevel {
   MINIMAL = 'minimal',
   LOW = 'low',
@@ -174,7 +173,7 @@ export enum RiskLevel {
   PROHIBITED = 'prohibited',
 }
 
-// ─── Scan Status ────────────────────────────────────────────────────────────
+// âââ Scan Status ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 export enum ScanStatus {
   PENDING = 'pending',
   RUNNING = 'running',
@@ -184,7 +183,7 @@ export enum ScanStatus {
   CANCELLED = 'cancelled',
 }
 
-// ─── History Action ────────────────────────────────────────────────────────
+// âââ History Action ââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 export enum OpportunityHistoryAction {
   CREATE = 'CREATE',
   UPDATE = 'UPDATE',
@@ -201,7 +200,7 @@ export enum OpportunityHistoryAction {
   NOTE = 'NOTE',
 }
 
-// ─── Decision (kill / scale / pivot engine) ─────────────────────────────────
+// âââ Decision (kill / scale / pivot engine) âââââââââââââââââââââââââââââââââ
 export enum OpportunityDecision {
   SCALE = 'scale',
   HOLD = 'hold',
