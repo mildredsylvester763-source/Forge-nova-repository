@@ -72,7 +72,7 @@ describe('AuthService', () => {
         revokedAt: null,
         isExpired: false,
       };
-      const { service, refreshTokenRepository } = makeService({
+      const { service } = makeService({
         refreshTokenFindOne: async () => stored,
       });
       await expect(service.refresh('stolen-token', {})).rejects.toThrow(/compromised/);
