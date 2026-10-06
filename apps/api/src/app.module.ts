@@ -5,13 +5,14 @@
 // DTO validation on every request body.
 
 import { Module, ValidationPipe } from '@nestjs/common';
-import { APP_PIPE } from '@nestjs/core';
+import { APP_PIPE, APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './modules/auth/auth.module';
 import { OpportunitiesModule } from './modules/opportunities/opportunities.module';
 import { ProductsModule } from './modules/products/products.module';
 import { EgressModule } from './egress/egress.module';
+import { GlobalAuthGuard } from './common/guards/global-auth.guard';
 import { User } from './modules/auth/entities/user.entity';
 import { RefreshToken } from './modules/auth/entities/refresh-token.entity';
 import { Opportunity } from './modules/opportunities/entities/opportunity.entity';
@@ -40,7 +41,8 @@ import { ProductHistory } from './modules/products/entities/product-history.enti
           ProductHistory,
         ],
         synchronize: config.get<string>('nodeEnv') === 'development',
-        logging: config.get<string>('nodeEnv') === 'development',
+        logging: config.get<string>('nodeEnv')
+ === 'development',
         maxQueryExecutionTime: 2000,
         poolSize: 10,
       }),
@@ -53,6 +55,7 @@ import { ProductHistory } from './modules/products/entities/product-history.enti
   ],
   providers: [
     { provide: APP_PIPE, useValue: new ValidationPipe({ whitelist: true, transform: true, forbidNonWhitelisted: true }) },
+    { provide: APP_GUARD, useClass: GlobalAuthGuard },
   ],
 })
 export class AppModule {}
