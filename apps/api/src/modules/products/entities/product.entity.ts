@@ -3,7 +3,7 @@
 // ============================================================================
 // The Product entity mirrors CreateProductDto field-for-field.
 // Deep nested structures (specification, content, design, pricing, delivery,
-// legal, analytics, automation, quality, documentation, support, timeline…)
+// legal, analytics, automation, quality, documentation, support, timelineâ¦)
 // persist as JSONB: their shape is validated by the DTOs at the boundary,
 // and queryable business fields (status, pricing model, currency, revenue)
 // are promoted to indexed columns for filtering and portfolio decisions.
@@ -33,7 +33,7 @@ export class Product {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  // ─── Ownership (zero-trust scoping) ────────────────────────────────────────
+  // --- Ownership (zero-trust scoping) ----------------------------------------
   @Column({ type: 'uuid' })
   @Index()
   userId: string;
@@ -47,7 +47,7 @@ export class Product {
   @Index()
   opportunityId?: string;
 
-  // ─── Identity ─────────────────────────────────────────────────────────────
+  // --- Identity -------------------------------------------------------------
   @Column({ length: 255 })
   name: string;
 
@@ -63,7 +63,7 @@ export class Product {
 ()
   slug: string;
 
-  // ─── Classification ─────────────────────────────────────────────────────────
+  // --- Classification ---------------------------------------------------------
   @Column({ type: 'enum', enum: ProductType })
   type: ProductType;
 
@@ -82,7 +82,7 @@ export class Product {
   @Column({ type: 'enum', enum: ProductStatus, default: ProductStatus.DRAFT })
   status: ProductStatus;
 
-  // ─── Structure (validated deep shapes, stored as JSONB) ───────────────────
+  // --- Structure (validated deep shapes, stored as JSONB) -------------------
   @Column({ type: 'jsonb', nullable: true })
   specification?: Record<string, any>;
 
@@ -98,7 +98,7 @@ export class Product {
   @Column({ type: 'jsonb', nullable: true })
   branding?: Record<string, any>;
 
-  // ─── Commerce (business fields promoted to columns for querying) ─────────
+  // --- Commerce (business fields promoted to columns for querying) ---------
   @Column({ type: 'varchar', length: 32, nullable: true })
   pricingModel?: 'free' | 'one-time' | 'subscription' | 'freemium' | 'pay-what-you-want' | 'donation' | 'tiered';
 
@@ -118,23 +118,21 @@ export class Product {
   @Column({ type: 'jsonb', nullable: true })
   shipping?: Record<string, any>;
   @Column({ type: 'jsonb', nullable: true })
-  fulfillment?: Record<string, an
-y>;
+  fulfillment?: Record<string, any>;
   @Column({ type: 'jsonb', nullable: true })
-  serviceDe
-livery?: Record<string, any>;
+  serviceDelivery?: Record<string, any>;
   @Column({ type: 'jsonb', nullable: true })
   apiDelivery?: Record<string, any>;
   @Column({ type: 'jsonb', nullable: true })
   distributionChannels?: Record<string, any>[];
 
-  // ─── Growth & market ───────────────────────────────────────────────────────
+  // --- Growth & market -------------------------------------------------------
   @Column({ type: 'jsonb', nullable: true })
   marketing?: Record<string, any>;      // seo, content, social posts, ads
   @Column({ type: 'jsonb', nullable: true })
   salesData?: Record<string, any>;     // funnel, metrics, affiliates
 
-  // Portfolio decision metrics — denormalized for the kill/scale/pivot engine.
+  // Portfolio decision metrics - denormalized for the kill/scale/pivot engine.
   @Column({ type: 'decimal', precision: 14, scale: 2, default: 0 })
   revenue: number;
 
@@ -144,19 +142,19 @@ livery?: Record<string, any>;
   @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
   averageOrderValue: number;
 
-  // ─── Legal ────────────────────────────────────────────────────────────────
+  // --- Legal ----------------------------------------------------------------
   @Column({ type: 'jsonb', nullable: true })
   legal?: Record<string, any>;         // terms, privacy, refunds, licenses,
-                                       // compliance (GDPR/CCPA/…), IP, trademark
+                                       // compliance (GDPR/CCPA/â¦), IP, trademark
 
-  // ─── Versions & collaboration ─────────────────────────────────────────────
+  // --- Versions & collaboration ---------------------------------------------
   @Column({ type: 'jsonb', nullable: true })
   versions?: Record<string, any>[];
 
   @Column({ type: 'jsonb', nullable: true })
   team?: Record<string, any>[];
 
-  // ─── Intelligence & autonomy ──────────────────────────────────────────────
+  // --- Intelligence & autonomy ----------------------------------------------
   @Column({ type: 'jsonb', nullable: true })
   analytics?: Record<string, any>;      // usage, engagement, conversion, revenue,
                                        // retention, technical, insights
@@ -168,12 +166,11 @@ livery?: Record<string, any>;
   contentGeneration?: Record<string
 , any>;
   @Column({ type: 'jsonb', nullable: true })
-  market
-ingAutomation?: Record<string, any>;
+  marketingAutomation?: Record<string, any>;
   @Column({ type: 'jsonb', nullable: true })
   customerSupport?: Record<string, any>;
 
-  // ─── Quality & docs ───────────────────────────────────────────────────────
+  // --- Quality & docs -------------------------------------------------------
   @Column({ type: 'jsonb', nullable: true })
   testing?: Record<string, any>;
   @Column({ type: 'jsonb', nullable: true })
@@ -193,17 +190,17 @@ ingAutomation?: Record<string, any>;
   @Column({ type: 'jsonb', nullable: true })
   timeline?: Record<string, any>[];
 
-  // ─── Free-form extension (never trusted; validated shape at boundary) ────
+  // --- Free-form extension (never trusted; validated shape at boundary) ----
   @Column({ type: 'jsonb', nullable: true })
   workflow?: Record<string, any>;      // { currentStep, totalSteps, completedSteps }
   @Column({ type: 'jsonb', nullable: true })
   metadata?: Record<string, any>;
 
-  // ─── Relations ──────────────────────────────────────────────────────────────
+  // --- Relations --------------------------------------------------------------
   @OneToMany(() => ProductHistory, (h) => h.product)
   histories: ProductHistory[];
 
-  // ─── Lifecycle ────────────────────────────────────────────────────────────
+  // --- Lifecycle ------------------------------------------------------------
   @Column({ type: 'timestamptz', nullable: true })
   publishedAt?: Date;
 
