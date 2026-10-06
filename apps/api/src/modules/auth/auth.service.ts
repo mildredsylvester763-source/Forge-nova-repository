@@ -5,13 +5,13 @@
 // OAuth login, JWT access tokens (15 min) + rotating refresh tokens (30 days,
 // hashed at rest). Security behaviors:
 //   - bcrypt cost 12 password hashing
-//   - progressive lockout: 5 failed logins → 15-minute lock (atomic counter)
+//   - progressive lockout: 5 failed logins â 15-minute lock (atomic counter)
 //   - login failures are indistinguishable (no enumeration, no timing leak,
 //     and a locked account cannot be probed for the right password)
 //   - refresh rotation is an atomic compare-and-set; reuse kills the family
 //   - OAuth links to an existing account ONLY on a provider-verified email,
 //     and wipes an unverified local password to defeat pre-registration
-//   - status checks on every path — suspended/deleted accounts cannot enter
+//   - status checks on every path - suspended/deleted accounts cannot enter
 
 import {
   Injectable,
@@ -35,8 +35,7 @@ import { isUniqueViolation } from '../../common/utils/errors.util';
 const BCRYPT_COST = 12;
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_MINUTES = 15;
-const ACCESS_TOKEN_TTL_SEC = 15 * 60; // 15 minutes
-const REFRESH_TOKEN_TTL_DAYS = 30;
+const ACCESS_TOKEN_TTL_SEC = 15 * 60; // 15 minutesconst REFRESH_TOKEN_TTL_DAYS = 30;
 const LOGIN_FAILURE_MESSAGE = 'Invalid credentials, or account temporarily locked';
 
 // Compared against when the account does not exist, so response time does not
@@ -72,7 +71,7 @@ export class AuthService {
     private readonly configService: ConfigService,
   ) {}
 
-  // ─── Email + password ──────────────────────────────────────────────────────────────
+  // --- Email + password --------------------------------------------------------------
   async register(dto: RegisterDto, meta: RequestMeta): Promise<AuthResult> {
     const email = dto.email.trim().toLowerCase();
     const existing = await this.userRepository.findOne({ where: { email } });
@@ -136,7 +135,7 @@ export class AuthService {
     return { user: this.sanitize(user), tokens };
   }
 
-  // ─── OAuth (Google / Facebook) ───────────────────────────────────────────────
+  // --- OAuth (Google / Facebook) -----------------------------------------------
   async oauthLogin(profile: OAuthProfile, meta: RequestMeta): Promise<AuthResult> {
     const provider = this.toAuthProvider(profile.provider);
     const email = profile.email?.trim().toLowerCase();
@@ -146,7 +145,7 @@ export class AuthService {
       where: { provider, providerId: profile.providerId },
     });
 
-    // 2. Else link to an existing account by email — but ONLY when the provider
+    // 2. Else link to an existing account by email - but ONLY when the provider
     //    has verified that email. An unverified claim must never reach an
     //    existing account (that is account takeover).
     if (!user && email) {
@@ -222,7 +221,7 @@ export class AuthService {
     }
   }
 
-  // ─── Refresh rotation ────────────────────────────────────────────────────────────────
+  // --- Refresh rotation ----------------------------------------------------------------
   async refresh(rawRefreshToken: string, meta: RequestMeta): Promise<TokenPair> {
     const tokenHash = this.hashToken(rawRefreshToken);
     const stored = await this.refreshTokenRepository.findOne({ where: { tokenHash } });
@@ -232,13 +231,13 @@ export class AuthService {
     // Reuse of an already-consumed token = the family is compromised.
     if (stored.consumedAt || stored.revokedAt) {
       await this.revokeFamily(stored.familyId);
-      this.logger.warn('Refresh token reuse detected — family revoked: ' + stored.familyId);
-      throw new UnauthorizedException('Session compromised — please log in again');
+      this.logger.warn('Refresh token reuse detected - family revoked: ' + stored.familyId);
+      throw new UnauthorizedException('Session compromised - please log in again');
     }
 
     if (stored.isExpired) {
       await this.revokeFamily(stored.familyId);
-      throw new UnauthorizedException('Session expired — please log in again');
+      throw new UnauthorizedException('Session expired - please log in again');
     }
 
     const user = await this.userRepository.findOne({ where: { id: stored.userId } });
@@ -256,14 +255,14 @@ export class AuthService {
     );
     if (!consumed.affected) {
       await this.revokeFamily(stored.familyId);
-      this.logger.warn('Concurrent refresh with one token — family revoked: ' + stored.familyId);
-      throw new UnauthorizedException('Session compromised — please log in again');
+      this.logger.warn('Concurrent refresh with one token - family revoked: ' + stored.familyId);
+      throw new UnauthorizedException('Session compromised - please log in again');
     }
 
     return this.issueTokens(user.id, user.role, meta, stored.familyId);
   }
 
-  // Revokes the session family of the presented token — but only if it
+  // Revokes the session family of the presented token - but only if it
   // belongs to the authenticated caller.
   async logout(userId: string, rawRefreshToken: string): Promise<void> {
     const stored = await this.refreshTokenRepository.findOne({
@@ -274,7 +273,7 @@ export class AuthService {
     }
   }
 
-  // ─── Token machinery ────────────────────────────────────────────────────────────────────
+  // --- Token machinery --------------------------------------------------------------------
   private async issueTokens(
     userId: string,
     role: string,
