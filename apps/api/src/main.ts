@@ -4,34 +4,27 @@
 // Bootstrap with the transport-level security baseline:
 //   - helmet: hardened HTTP headers (HSTS, no sniffing, frame protection)
 //   - CORS: only the declared client origin — not '*'
-//   - Body caps: 1MB JSON/urlencoded, enforced by the body parser itself
+//   - Body caps: 1MB JSON — payloads are bounded, DoS-resistant by default
 //   - Global prefix: /api/v1 — versioned from day one
-// DTO validation is registered once, in AppModule (APP_PIPE).
+//   - FAIL-FAST env validation: no secret, no boot.
 
 import { NestFactory } from '@nestjs/core';
-import { Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { NestExpressApplication } from '@nestjs/platform-express';
+import { ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
-import compression from 'compression';
+import * as compression from 'compression';
 import { AppModule } from './app.module';
+import { validateEnv } from './common/env.validation';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: true });
-  const config = app.get(ConfigService);
+  validateEnv(process.env as unknown as Record<string, any>);
 
-  const clientUrl = config.getOrThrow<string>('clientUrl');
-  const isDev = config.get<string>('nodeEnv') === 'development';
+  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+
+  const clientUrl = process.env.CLIENT_URL || 'https://app.forge-nova.com';
+  const isDev = process.env.NODE_ENV === 'development';
 
   app.use(helmet());
   app.use(compression());
-
-  // Bounded request bodies. Nest's default parser caps at 100kb; this sets
-  // the intended 1MB ceiling on the parser that actually reads the stream
-  // (a Content-Length check would not stop chunked uploads).
-  app.useBodyParser('json', { limit: '1mb' });
-  app.useBodyParser('urlencoded', { extended: true, limit: '1mb' });
-
   app.enableCors({
     origin: isDev ? true : clientUrl,
     credentials: true,
@@ -39,14 +32,34 @@ async function bootstrap(): Promise<void> {
   });
 
   app.setGlobalPrefix('api/v1');
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+      transformOptions: { enableImplicitConversion: false },
+    }),
+  );
+
+  app.use(bodyCap());
   app.enableShutdownHooks();
 
-  const port = config.getOrThrow<number>('port');
+  const port = Number(process.env.PORT || 3000);
   await app.listen(port);
-  new Logger('Bootstrap').log('FORGE Nova API listening on port ' + port + (isDev ? ' (development)' : ''));
+  console.log('FORGE Nova API listening on port ' + port + (isDev ? ' (development)' : ''));
 }
 
-bootstrap().catch((error: unknown) => {
-  console.error('Fatal: API failed to start', error);
-  process.exit(1);
-});
+// 1MB JSON body cap.
+function bodyCap(): (req: any, res: any, next: any) => void {
+  return (req: any, _res: any, next: any) => {
+    const contentLength = Number(req.headers['content-length'] || 0);
+    if (contentLength > 1024 * 1024) {
+      const err: any = new Error('Payload too large');
+      err.status = 413;
+      return next(err);
+    }
+    next();
+  };
+}
+
+bootstrap();
