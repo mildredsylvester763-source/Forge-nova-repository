@@ -157,4 +157,9 @@ export class OpportunitiesController {
   removeWatcher(@Request() req: any, @Param('id', ParseUUIDPipe) id: string, @Param('watcherId', ParseUUIDPipe) watcherId: string) {
     return this.opportunitiesService.removeWatcher(req.user.id, id, watcherId, req);
   }
+
+  @Post(':id/score')
+  score(@Request() req: any, @Param('id', ParseUUIDPipe) id: string) {
+    return this.opportunitiesService.scoreOpportunity(req.user.id, id);
+  }
 }
