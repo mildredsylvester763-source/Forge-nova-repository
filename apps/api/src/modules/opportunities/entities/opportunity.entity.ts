@@ -65,8 +65,7 @@ export class Opportunity {
   externalUrl?: string;
 
   // ─── Classification ─────────────────────────────────────────────────────────
-  @Column({ type: 'enum', enum: Opport
-unityCategory })
+  @Column({ type: 'enum', enum: OpportunityCategory })
   category: OpportunityCategory;
 
   @Column({ type: 'enum', enum: OpportunitySource })
@@ -128,8 +127,7 @@ unityCategory })
   @Column({ type: 'jsonb', nullable: true })
   metadata?: Record<string, any>;
 
-  // ─── Collaboration & triage ────────────
-────────────────────────────────────
+  // ─── Collaboration & triage ────────────────────────────────────────────────
   @Column({ type: 'boolean', default: false })
   isFavorite: boolean;
 
