@@ -44,7 +44,7 @@ export class OpportunityHistory {
   @Column({ type: 'varchar', length: 32 })
   action: OpportunityHistoryActionType;
 
-  // Full change payload (before/after) — audit-grade evidence.
+  // Full change payload (before/after) - audit-grade evidence.
   @Column({ type: 'jsonb', nullable: true })
   changes?: Record<string, any>;
 
@@ -59,8 +59,7 @@ export class OpportunityHistory {
   oldPriority?: string;
 
   @Column({ type: 'varchar', length: 32, nullable: true })
-  newPr
-iority?: string;
+  newPriority?: string;
 
   @Column({ type: 'decimal', precision: 6, scale: 2, nullable: true })
   oldScore?: number;
@@ -72,7 +71,7 @@ iority?: string;
   reason?: string;
 
   // Actor attribution: 'user' when a request context exists, else 'system'
-  // (autonomous agents included — every decision is attributable).
+  // (autonomous agents included - every decision is attributable).
   @Column({ type: 'varchar', length: 16, default: 'system' })
   source: 'user' | 'system' | 'agent';
 
