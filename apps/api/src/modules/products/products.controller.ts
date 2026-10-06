@@ -2,7 +2,7 @@
 // FILE: /apps/api/src/modules/products/products.controller.ts
 // ============================================================================
 // Zero-trust entry points. userId comes from the authenticated request
-// context only — never from the body.
+// context only - never from the body.
 
 import {
   Controller,
@@ -60,8 +60,7 @@ export class ProductsController {
 
   @Get(':id/history')
   getHistory(@Request() req: any, @Param('id', ParseUUIDPipe) id: string, @Query('page') page = 1, @Query('limit') limit = 20) {
-    retur
-n this.productsService.getHistory(req.user.id, id, page, limit);
+    return this.productsService.getHistory(req.user.id, id, page, limit);
   }
 
   @Patch(':id')
