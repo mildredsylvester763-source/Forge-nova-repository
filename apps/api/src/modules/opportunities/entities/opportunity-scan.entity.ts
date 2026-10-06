@@ -48,7 +48,7 @@ export class OpportunityScan {
   @Index()
   opportunityId?: string;
 
-  @ManyToOne(() => Opportunity, (o) => o.scans, { nullable: true, onDelete: 'cascade' })
+  @ManyToOne(() => Opportunity, (o) => o.scans, { nullable: true, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'opportunityId' })
   opportunity?: Opportunity;
 
