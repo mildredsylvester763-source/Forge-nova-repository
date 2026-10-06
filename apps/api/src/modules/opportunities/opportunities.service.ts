@@ -806,7 +806,7 @@ export class OpportunitiesService {
       discoveredAt: data.discoveredAt || new Date(),
       createdBy: userId,
       updatedBy: userId,
-    });
+    }) as Opportunity;
 
     const existing = await this.opportunityRepository.findOne({
       where: {
