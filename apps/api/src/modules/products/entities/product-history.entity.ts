@@ -29,7 +29,7 @@ export class ProductHistory {
   @Index()
   productId: string;
 
-  @ManyToOne(() => Product, (p) => p.histories, { onDelete: 'cascade' })
+  @ManyToOne(() => Product, (p) => p.histories, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'productId' })
   product: Product;
 
