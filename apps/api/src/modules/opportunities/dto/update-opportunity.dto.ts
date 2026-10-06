@@ -12,11 +12,8 @@ import { MaxLength,
   IsEnum,
   IsArray,
   IsBoolean,
-  IsUrl,
   IsDateString,
-  IsUUID,
 } from 'class-validator';
-import { Type } from 'class-transformer';
 import {
   OpportunityCategory,
   OpportunitySource,
@@ -26,7 +23,7 @@ import {
 } from '../enums';
 
 export class UpdateOpportunityDto {
-  @IsOptional() @IsString() @IsString() @MaxLength(255) title?: string;
+  @IsOptional() @IsString() @MaxLength(255) title?: string;
   @IsOptional() @IsString() description?: string;
 
   @IsOptional() @IsEnum(OpportunityCategory) category?: OpportunityCategory;
