@@ -9,7 +9,7 @@ import {
   IsEnum,
   IsArray,
   IsBoolean,
-  IsURL,
+  IsUrl,
   IsDateString,
   ValidateNested,
   IsUUID,
@@ -115,7 +115,7 @@ class CompetitorDto {
   name: string;
 
   @IsOptional()
-  @IsURL()
+  @IsUrl()
   url?: string;
 
   @IsOptional()
@@ -514,7 +514,7 @@ class DistributionChannelDto {
   name: string;
 
   @IsOptional()
-  @IsURL()
+  @IsUrl()
   url?: string;
 
   @IsOptional()
@@ -698,7 +698,7 @@ class SupportingDataDto {
   @IsString()
   title: string;
 
-  @IsURL()
+  @IsUrl()
   url: string;
 
   @IsString()
@@ -1035,7 +1035,7 @@ export class CreateOpportunityDto {
   externalId?: string;
 
   @IsOptional()
-  @IsURL()
+  @IsUrl()
   externalUrl?: string;
 
   @IsOptional()
