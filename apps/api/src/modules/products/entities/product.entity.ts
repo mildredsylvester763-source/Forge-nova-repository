@@ -63,8 +63,7 @@ export class Product {
 ()
   slug: string;
 
-  // ─── Classification ───────────────
-─────────────────────────────────────────
+  // ─── Classification ─────────────────────────────────────────────────────────
   @Column({ type: 'enum', enum: ProductType })
   type: ProductType;
 
