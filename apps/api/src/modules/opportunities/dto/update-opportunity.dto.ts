@@ -5,7 +5,7 @@
 // Ownership and id are enforced at controller/service layer, never trusted
 // from the body.
 
-import {
+import { MaxLength,
   IsOptional,
   IsString,
   IsNumber,
@@ -26,7 +26,7 @@ import {
 } from '../enums';
 
 export class UpdateOpportunityDto {
-  @IsOptional() @IsString() @IsString({ length: 255 }) title?: string;
+  @IsOptional() @IsString() @IsString() @MaxLength(255) title?: string;
   @IsOptional() @IsString() description?: string;
 
   @IsOptional() @IsEnum(OpportunityCategory) category?: OpportunityCategory;
