@@ -4,7 +4,7 @@
 // Refresh tokens are stored hashed (SHA-256) — a database leak must not
 // yield usable tokens. Rotation: every refresh consumes the token row and
 // issues a new pair; reuse of a consumed token is treated as theft and
-// revokes the whole family (detected theft, defense in depth).
+// revokes the whole family.
 
 import {
   Entity,
@@ -27,12 +27,12 @@ export class RefreshToken {
   @Index()
   userId: string;
 
-  @ManyToOne(() => User, { onDelete: 'cascade' })
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
   user: User;
 
   // SHA-256 of the token — never the token itself.
-  @Column({ type: 'varchar', { length: 64 }, unique: true })
+  @Column({ type: 'varchar', length: 64, unique: true })
   tokenHash: string;
 
   // Family id groups a rotation chain; reuse detection kills the family.
@@ -44,13 +44,13 @@ export class RefreshToken {
   expiresAt: Date;
 
   @Column({ type: 'timestamptz', nullable: true })
-  consumedAt?: Date;
+  consumedAt?: Date | null;
 
   @Column({ type: 'timestamptz', nullable: true })
-  revokedAt?: Date;
+  revokedAt?: Date | null;
 
   // Forensics: where the token was issued from.
-  @Column({ type: 'varchar', { length: 64 }, nullable: true })
+  @Column({ type: 'varchar', length: 64, nullable: true })
   ipAddress?: string;
 
   @Column({ type: 'text', nullable: true })
@@ -61,9 +61,5 @@ export class RefreshToken {
 
   public get isExpired(): boolean {
     return this.expiresAt.getTime() < Date.now();
-  }
-
-  public get isActive(): boolean {
-    return !this.consumedAt && !this.revokedAt && !this.isExpired;
   }
 }

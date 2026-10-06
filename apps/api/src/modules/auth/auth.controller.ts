@@ -1,6 +1,8 @@
 // ============================================================================
 // FILE: /apps/api/src/modules/auth/auth.controller.ts
 // ============================================================================
+// The global prefix (api/v1) is applied in main.ts, so this controller
+// declares only its own segment.
 
 import {
   Controller,
@@ -13,22 +15,25 @@ import {
   HttpStatus,
   Res,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { AuthGuard } from '@nestjs/passport';
 import { Response } from 'express';
 import { AuthService, RequestMeta } from './auth.service';
 import { RegisterDto, LoginDto, RefreshDto } from './dto/auth.dto';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { Public } from '../../common/decorators/public.decorator';
 
-@Controller('api/v1/auth')
+@Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly configService: ConfigService,
+  ) {}
 
   private meta(req: any): RequestMeta {
     return { ipAddress: req.ip, userAgent: req.headers?.['user-agent'] };
   }
 
-  // ─── Email + password ──────────────────────────────────────────────────────
+  // ─── Email + password ──────────────────────────────────────────────────────────────
   @Public()
   @Post('register')
   register(@Request() req: any, @Body() dto: RegisterDto) {
@@ -49,13 +54,15 @@ export class AuthController {
     return this.authService.refresh(dto.refreshToken, this.meta(req));
   }
 
+  // Private (global guard): the caller must be authenticated, and may only
+  // revoke their own sessions.
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
-  logout(@Body() dto: RefreshDto) {
-    return this.authService.logout(dto.refreshToken);
+  logout(@Request() req: any, @Body() dto: RefreshDto) {
+    return this.authService.logout(req.user.id, dto.refreshToken);
   }
 
-  // ─── Google OAuth ───────────────────────────────────────────────────────────
+  // ─── Google OAuth ───────────────────────────────────────────────────────────────────────
   @Public()
   @Get('google')
   @UseGuards(AuthGuard('google'))
@@ -67,12 +74,11 @@ export class AuthController {
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
   async googleCallback(@Request() req: any, @Res() res: Response): Promise<void> {
-    const { user, tokens } = await this.authService.oauthLogin(req.user, t
-his.meta(req));
+    const { tokens } = await this.authService.oauthLogin(req.user, this.meta(req));
     this.redirectWithTokens(res, tokens);
   }
 
-  // ─── Facebook OAuth ────────────────────────────────────────────────────────
+  // ─── Facebook OAuth ───────────────────────────────────────────────────────────────────
   @Public()
   @Get('facebook')
   @UseGuards(AuthGuard('facebook'))
@@ -84,25 +90,28 @@ his.meta(req));
   @Get('facebook/callback')
   @UseGuards(AuthGuard('facebook'))
   async facebookCallback(@Request() req: any, @Res() res: Response): Promise<void> {
-    const { user, tokens } = await this.authService.oauthLogin(req.user, this.meta(req));
+    const { tokens } = await this.authService.oauthLogin(req.user, this.meta(req));
     this.redirectWithTokens(res, tokens);
   }
 
-  // ─── Me ────────────────────────────────────────────────────────────────────
+  // ─── Me ──────────────────────────────────────────────────────────────────────────────
+  // req.user is already the sanitized user (see JwtStrategy.validate).
   @Get('me')
-  @UseGuards(JwtAuthGuard)
   me(@Request() req: any) {
-    const { passwordHash: _p, providerProfile: _pr, ...safe } = req.user;
-    return safe;
+    return req.user;
   }
 
-  // For the SPA frontend: hand tokens back as a redirect to the client
-  // with a short-lived authorization code, or fragment. In production this
-  // becomes an HttpOnly-cookie set for the app domain (CSRF-safe).
+  // For the SPA frontend: hand tokens back as a redirect to the client.
+  // In production this should become an HttpOnly-cookie set for the app
+  // domain (CSRF-safe).
   private redirectWithTokens(res: Response, tokens: { accessToken: string; refreshToken: string }): void {
-    const clientUrl = process.env.CLIENT_URL || 'https://app.forge-nova.com';
-    res.redirect(302, clientUrl + '/auth/callback#' +
-      'access_token=' + encodeURIComponent(tokens.accessToken) + '&' +
-      'refresh_token=' + encodeURIComponent(tokens.refreshToken));
+    const clientUrl = this.configService.getOrThrow<string>('clientUrl');
+    res.redirect(
+      302,
+      clientUrl +
+        '/auth/callback#' +
+        'access_token=' + encodeURIComponent(tokens.accessToken) + '&' +
+        'refresh_token=' + encodeURIComponent(tokens.refreshToken),
+    );
   }
 }
