@@ -185,8 +185,7 @@ export enum ScanStatus {
   CANCELLED = 'cancelled',
 }
 
-// ─── History Action ──────────────────────
-────────────────────────────────────
+// ─── History Action ────────────────────────────────────────────────────────
 export enum OpportunityHistoryAction {
   CREATE = 'CREATE',
   UPDATE = 'UPDATE',
