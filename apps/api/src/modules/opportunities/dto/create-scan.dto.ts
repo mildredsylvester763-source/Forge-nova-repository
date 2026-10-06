@@ -22,7 +22,7 @@ import { MaxLength,
 import { OpportunityCategory, OpportunitySource } from '../enums';
 
 export class CreateScanDto {
-  @IsOptional() @IsString() @IsString() @MaxLength(255) name?: string;
+  @IsOptional() @IsString() @MaxLength(255) name?: string;
 
   // Attach to an existing opportunity, or null for a portfolio-wide scan.
   @IsOptional() @IsUUID() opportunityId?: string;
