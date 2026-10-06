@@ -29,7 +29,7 @@ export class OpportunityScan {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  // ─── Ownership ──────────────────────────────────────────────────────────────
+  // --- Ownership --------------------------------------------------------------
   @Column({ type: 'uuid' })
   @Index()
   userId: string;
@@ -40,7 +40,7 @@ export class OpportunityScan {
   @Column({ type: 'uuid', nullable: true })
   createdBy?: string;
 
-  // ─── Targeting ──────────────────────────────────────────────────────────────
+  // --- Targeting --------------------------------------------------------------
   @Column({ type: 'varchar', length: 255, nullable: true })
   name?: string;
 
@@ -67,7 +67,7 @@ export class OpportunityScan {
   @Column({ type: 'jsonb', nullable: true })
   parameters?: Record<string, any>;
 
-  // ─── Scheduling ─────────────────────────────────────────────────────────────
+  // --- Scheduling -------------------------------------------------------------
   @Column({ type: 'boolean', default: false })
   runImmediately: boolean;
 
@@ -80,7 +80,7 @@ export class OpportunityScan {
   @Column({ type: 'int', default: 0 })
   runCount: number;
 
-  // ─── Execution state ─────────────────────────────────────────────────────────
+  // --- Execution state ---------------------------------------------------------
   @Column({ type: 'enum', enum: ['pending','running','completed','partial','failed','cancelled'], default: 'pending' })
   status: ScanStatusType;
 
@@ -93,7 +93,7 @@ export class OpportunityScan {
   @Column({ type: 'timestamptz', nullable: true })
   completedAt?: Date;
 
-  // ─── Results ────────────────────────────────────────────────────────────────
+  // --- Results ----------------------------------------------------------------
   @Column({ type: 'int', default: 0 })
   opportunitiesFound: number;
 
@@ -112,13 +112,12 @@ export class OpportunityScan {
   @Column({ type: 'text', nullable: true })
   error?: string;
 
-  // ─── Notifications ──────────────────────────────────────────────────────────
+  // --- Notifications ----------------------------------------------------------
   @Column({ type: 'jsonb', nullable: true })
   notifications?: Record<string, any>;   // { onCompletion, onFailure, ... }
 
   @Column({ type: 'jsonb', nullable: true })
-  not
-ificationsSent?: Record<string, any>[];
+  notificationsSent?: Record<string, any>[];
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
