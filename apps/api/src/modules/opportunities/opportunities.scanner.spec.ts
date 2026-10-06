@@ -192,7 +192,7 @@ describe('normalizeRedditEngagement (0-100 log scale)', () => {
 describe('upsertScannedOpportunity (created vs updated)', () => {
   it('counts a new row as created and an existing one as updated', async () => {
     const ctx = makeService();
-    ctx.opportunityRepository.findOne.mockResolvedValueOnce(null).mockResolvedValueOnce({ id: 'existing', version: 3, save: undefined });
+    ctx.opportunityRepository.findOne.mockResolvedValueOnce(null as any).mockResolvedValueOnce({ id: 'existing', version: 3, save: undefined });
     const summary = freshSummary();
     const data = {
       title: 'T', source: OpportunitySource.REDDIT, externalId: 'x1',
