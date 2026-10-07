@@ -16,7 +16,7 @@ import {
 import { Product } from './product.entity';
 
 export type ProductHistoryActionType =
-  | 'CREATE' | 'UPDATE' | 'DELETE' | 'RESTORE' | 'STATUS_CHANGE';
+  | 'CREATE' | 'UPDATE' | 'DELETE' | 'RESTORE' | 'STATUS_CHANGE' | 'DECISION';
 
 @Entity('product_history')
 @Index(['productId', 'changedAt'])
@@ -49,7 +49,7 @@ export class ProductHistory {
   @Column({ type: 'varchar', length: 32, nullable: true })
   newStatus?: string;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: 'varchar', length: 32, nullable: true })
   reason?: string;
 
   @Column({ type: 'varchar', length: 16, default: 'system' })
