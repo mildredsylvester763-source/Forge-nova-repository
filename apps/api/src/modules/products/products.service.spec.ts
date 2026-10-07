@@ -51,7 +51,7 @@ describe('ProductsService.changeStatus', () => {
   });
 
   it('allows PRE_LAUNCH to LIVE and stamps publishedAt once', async () => {
-    const existing = product({ status: ProductStatus.PRE_LAUNCH, publishedAt: null });
+    const existing = product({ status: ProductStatus.PRE_LAUNCH, publishedAt: null as any });
     const { service } = makeService(existing);
     const updated = await service.changeStatus('u1', 'p-1', ProductStatus.LIVE);
     expect(updated.status).toBe(ProductStatus.LIVE);
