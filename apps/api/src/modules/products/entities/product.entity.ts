@@ -19,7 +19,6 @@ import {
   Index,
   VersionColumn,
   OneToMany,
-  Generated,
 } from 'typeorm';
 import { ProductType, ProductFormat, ProductStatus } from '../enums';
 import { ProductHistory } from './product-history.entity';
