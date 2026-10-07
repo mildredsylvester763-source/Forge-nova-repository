@@ -269,30 +269,23 @@ export class OpportunitiesService {
   }
 
   async calculateScore(opportunity: Opportunity): Promise<number> {
-    const weights = {
-      demand: 0.25,
-      competition: 0.20,
-      profitability: 0.20,
-      feasibility: 0.15,
-      trend: 0.10,
-      seasonality: 0.10,
+    // Single source of truth: the pure engine in ./scoring. The old local
+    // weights drifted from it — two engines meant two different answers for
+    // the same opportunity, and updateScore/recalculateAllScores could
+    // disagree with POST :id/score. Now they cannot, structurally.
+    const num = (v: any): number | undefined => {
+      if (v === null || v === undefined) return undefined;
+      const n = Number(v);
+      return Number.isFinite(n) ? n : undefined;
     };
-
-    const scores = {
-      demand: this.normalizeScore(opportunity.demandScore || 0, 0, 10),
-      competition: 1 - this.normalizeScore(opportunity.competitionScore || 5, 0, 10),
-      profitability: this.normalizeScore(opportunity.profitabilityScore || 0, 0, 10),
-      feasibility: this.normalizeScore(opportunity.feasibilityScore || 0, 0, 10),
-      trend: this.normalizeScore(opportunity.trendScore || 0, 0, 10),
-      seasonality: this.normalizeScore(opportunity.seasonalityScore || 0, 0, 10),
-    };
-
-    let weighted = 0;
-    for (const key of Object.keys(weights) as Array<keyof typeof weights>) {
-      weighted += scores[key] * weights[key];
-    }
-
-    return Math.round(weighted * 100);
+    return computeScore({
+      demand: num(opportunity.demandScore),
+      competition: num(opportunity.competitionScore),
+      profitability: num(opportunity.profitabilityScore),
+      feasibility: num(opportunity.feasibilityScore),
+      trend: num(opportunity.trendScore),
+      seasonality: num(opportunity.seasonalityScore),
+    }).composite;
   }
 
   async updateScore(userId: string, id: string, request?: any): Promise<Opportunity> {
@@ -1281,12 +1274,6 @@ export class OpportunitiesService {
     if (filters.isHidden !== undefined) where.isHidden = filters.isHidden;
     if (filters.hasPortfolio !== undefined) where.portfolioId = filters.hasPortfolio ? Not(null) : null;
     if (filters.hasBusiness !== undefined) where.businessId = filters.hasBusiness ? Not(null) : null;
-  }
-
-  private normalizeScore(score: number, min: number, max: number): number {
-    if (score <= min) return 0;
-    if (score >= max) return 1;
-    return (score - min) / (max - min);
   }
 
   private sanitizeForHistory(opportunity: Opportunity): any {
