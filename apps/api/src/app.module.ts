@@ -23,6 +23,8 @@ import { OpportunityHistory } from './modules/opportunities/entities/opportunity
 import { OpportunityScan } from './modules/opportunities/entities/opportunity-scan.entity';
 import { Product } from './modules/products/entities/product.entity';
 import { ProductHistory } from './modules/products/entities/product-history.entity';
+import { Notification } from './modules/notifications/entities/notification.entity';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -49,6 +51,7 @@ import { ProductHistory } from './modules/products/entities/product-history.enti
             OpportunityScan,
             Product,
             ProductHistory,
+            Notification,
           ],
           synchronize: isDevelopment,
           logging: isDevelopment,
@@ -61,6 +64,7 @@ import { ProductHistory } from './modules/products/entities/product-history.enti
     AuthModule,
     OpportunitiesModule,
     ProductsModule,
+    NotificationsModule,
     EgressModule,
   ],
   providers: [
