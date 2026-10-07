@@ -22,6 +22,7 @@ import { UpdateOpportunityDto } from './dto/update-opportunity.dto';
 import { OpportunityQueryDto } from './dto/opportunity-query.dto';
 import { CreateScanDto } from './dto/create-scan.dto';
 import { computeScore } from './scoring/scoring.service';
+import { mapSignalsToSubScores } from './scoring/signal-mapper';
 import {
   OpportunitySource,
   OpportunityStatus,
@@ -29,6 +30,7 @@ import {
   OpportunityPriority,
 } from './enums';
 import { EgressGatewayService } from '../../egress/egress-gateway.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
@@ -44,6 +46,7 @@ export class OpportunitiesService {
     private readonly opportunityScanRepository: Repository<OpportunityScan>,
     private readonly egressGateway: EgressGatewayService,
     private readonly configService: ConfigService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async create(userId: string, dto: CreateOpportunityDto): Promise<Opportunity> {
@@ -715,73 +718,87 @@ export class OpportunitiesService {
   }
 
   private async scanGoogleTrends(scan: OpportunityScan, userId: string, summary: any): Promise<void> {
-    try {
-      const query = scan.parameters?.query || 'micro business, side hustle, passive income';
-      const response = await this.egressGateway.searchGoogle(query, 10);
-
-      for (const item of response.data?.items || []) {
-        await this.upsertScannedOpportunity(
-          userId,
-          {
-            title: item.title || item.displayLink || 'Untitled',
-            description: item.snippet || '',
-            category: this.mapGoogleToCategory(item),
-            source: OpportunitySource.GOOGLE_SEARCH,
-            externalId: item.id || item.cacheId,
-            externalUrl: item.link,
-            tags: item.tags || [],
-            trendData: {
-              googleTrends: {
-                interestOverTime: [],
-                regionalInterest: [],
-                relatedQueries: [],
-                relatedTopics: [],
-              },
+    // Same fail-visible contract as Reddit: a blocked/failed call is a
+    // FAILURE recorded in summary.failures, never silently "0 results".
+    const query = scan.parameters?.query || 'micro business, side hustle, passive income';
+    const response = await this.egressGateway.searchGoogle(query, 10, userId);
+    if (!response.ok) {
+      summary.failures = summary.failures || [];
+      summary.failures.push({
+        source: OpportunitySource.GOOGLE_SEARCH,
+        target: query,
+        code: response.error?.code,
+        message: response.error?.message,
+      });
+      return;
+    }
+    for (const item of response.data?.items || []) {
+      await this.upsertScannedOpportunity(
+        userId,
+        {
+          title: item.title || item.displayLink || 'Untitled',
+          description: item.snippet || '',
+          category: this.mapGoogleToCategory(item),
+          source: OpportunitySource.GOOGLE_SEARCH,
+          externalId: item.id || item.cacheId,
+          externalUrl: item.link,
+          tags: item.tags || [],
+          trendData: {
+            googleTrends: {
+              interestOverTime: [],
+              regionalInterest: [],
+              relatedQueries: [],
+              relatedTopics: [],
             },
           },
-          summary,
-        );
-      }
-    } catch (error: any) {
-      this.logger.error(`Error scanning Google Trends: ${error.message}`, error.stack);
+        },
+        summary,
+      );
     }
   }
 
   private async scanGitHub(scan: OpportunityScan, userId: string, summary: any): Promise<void> {
-    try {
-      const language = scan.parameters?.query || 'javascript';
-      const response = await this.egressGateway.getGitHubTrending(language, 'weekly');
-
-      for (const item of response.data?.items || []) {
-        await this.upsertScannedOpportunity(
-          userId,
-          {
-            title: item.name || item.full_name || 'Untitled Repository',
-            description: item.description || '',
-            category: OpportunityCategory.SOFTWARE_TOOLS,
-            source: OpportunitySource.GITHUB,
-            externalId: item.id?.toString(),
-            externalUrl: item.html_url || item.url,
-            tags: item.topics?.length ? item.topics : item.language ? [item.language] : [],
-            trendData: {
-              socialMedia: {
-                github: {
-                  stars: item.stargazers_count || 0,
-                  forks: item.forks_count || 0,
-                  issues: item.open_issues_count || 0,
-                  growthRate:
-                    item.stargazers_count > 100
-                      ? 10
-                      : (item.stargazers_count || 0) / 10,
-                },
+    // Same fail-visible contract as Reddit: a blocked/failed call is a
+    // FAILURE recorded in summary.failures, never silently "0 results".
+    const language = scan.parameters?.query || 'javascript';
+    const response = await this.egressGateway.getGitHubTrending(language, 'weekly', userId);
+    if (!response.ok) {
+      summary.failures = summary.failures || [];
+      summary.failures.push({
+        source: OpportunitySource.GITHUB,
+        target: language,
+        code: response.error?.code,
+        message: response.error?.message,
+      });
+      return;
+    }
+    for (const item of response.data?.items || []) {
+      await this.upsertScannedOpportunity(
+        userId,
+        {
+          title: item.name || item.full_name || 'Untitled Repository',
+          description: item.description || '',
+          category: OpportunityCategory.SOFTWARE_TOOLS,
+          source: OpportunitySource.GITHUB,
+          externalId: item.id?.toString(),
+          externalUrl: item.html_url || item.url,
+          tags: item.topics?.length ? item.topics : item.language ? [item.language] : [],
+          trendData: {
+            socialMedia: {
+              github: {
+                stars: item.stargazers_count || 0,
+                forks: item.forks_count || 0,
+                issues: item.open_issues_count || 0,
+                growthRate:
+                  item.stargazers_count > 100
+                    ? 10
+                    : (item.stargazers_count || 0) / 10,
               },
             },
           },
-          summary,
-        );
-      }
-    } catch (error: any) {
-      this.logger.error(`Error scanning GitHub: ${error.message}`, error.stack);
+        },
+        summary,
+      );
     }
   }
 
@@ -800,6 +817,17 @@ export class OpportunitiesService {
       createdBy: userId,
       updatedBy: userId,
     }) as unknown as Opportunity;
+
+    // Auto-scoring (Feature 2 closed-loop): every scanned signal is scored
+    // by the pure engine the moment it lands. Only real signals produce
+    // sub-scores; everything else stays missing and is listed, never faked.
+    const subScores = mapSignalsToSubScores(incoming.trendData);
+    const scoring = computeScore(subScores);
+    const scoringExplanation = {
+      ...scoring,
+      computedAt: new Date().toISOString(),
+      auto: true,
+    };
 
     const existing = await this.opportunityRepository.findOne({
       where: {
@@ -820,6 +848,12 @@ export class OpportunitiesService {
         score: incoming.score,
         trendData: incoming.trendData,
         priority: incoming.priority,
+        demandScore: subScores.demand ?? existing.demandScore,
+        trendScore: subScores.trend ?? existing.trendScore,
+        metadata: {
+          ...(existing.metadata || {}),
+          scoring: scoringExplanation,
+        },
         updatedAt: new Date(),
         updatedBy: userId,
         version: (existing.version || 0) + 1,
@@ -827,6 +861,13 @@ export class OpportunitiesService {
       await this.opportunityRepository.save(existing);
       outcome = 'updated';
     } else {
+      incoming.demandScore = subScores.demand ?? incoming.demandScore;
+      incoming.trendScore = subScores.trend ?? incoming.trendScore;
+      incoming.score = scoring.composite;
+      incoming.metadata = {
+        ...(incoming.metadata || {}),
+        scoring: scoringExplanation,
+      };
       await this.opportunityRepository.save(incoming);
       outcome = 'created';
     }
@@ -1145,6 +1186,19 @@ export class OpportunitiesService {
     message: string,
   ): Promise<void> {
     this.logger.log(`Notification [${type}] for ${userId}: ${message}`);
+    // Persist a real, user-visible notification. Delivery failure must
+    // never fail the scan — log and continue.
+    try {
+      await this.notifications.create(userId, {
+        type: type === 'failure' ? 'scan_failed' : type === 'completion' ? 'scan_completed' : 'scan_update',
+        title: `Scan ${type}: ${scan.name || scan.id}`,
+        message,
+        entityType: 'opportunity_scan',
+        entityId: scan.id,
+      });
+    } catch (error: any) {
+      this.logger.warn(`Notification persistence failed: ${error.message}`);
+    }
     if (!scan.notificationsSent) scan.notificationsSent = [];
 
     scan.notificationsSent.push({
