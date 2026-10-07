@@ -273,7 +273,7 @@ export class OpportunitiesService {
 
   async calculateScore(opportunity: Opportunity): Promise<number> {
     // Single source of truth: the pure engine in ./scoring. The old local
-    // weights drifted from it — two engines meant two different answers for
+    // weights drifted from it â two engines meant two different answers for
     // the same opportunity, and updateScore/recalculateAllScores could
     // disagree with POST :id/score. Now they cannot, structurally.
     const num = (v: any): number | undefined => {
@@ -339,10 +339,10 @@ export class OpportunitiesService {
     return { updated, total: opportunities.length };
   }
 
-  // ─── Scoring engine (pure core in ./scoring) ────────────────────────────
+  // âââ Scoring engine (pure core in ./scoring) ââââââââââââââââââââââââââââ
   // Computes the composite 0-100 from the six sub-scores, persists it with a
   // full explanation (factors, weights, missing signals), and returns both.
-  // Missing sub-scores degrade to the neutral default and are listed —
+  // Missing sub-scores degrade to the neutral default and are listed â
   // never faked as real data.
   async scoreOpportunity(userId: string, id: string): Promise<any> {
     const opportunity = await this.opportunityRepository.findOne({
@@ -380,7 +380,7 @@ export class OpportunitiesService {
     dto: CreateScanDto,
     request?: any,
   ): Promise<OpportunityScan> {
-    // maxSignals has no dedicated column — pull it out of the DTO before
+    // maxSignals has no dedicated column â pull it out of the DTO before
     // create() so it never lands on the entity as a stray property, then
     // stash it into parameters so the budget survives reloads.
     const { maxSignals, ...scanFields } = dto;
@@ -428,7 +428,7 @@ export class OpportunitiesService {
     try {
       const results = await this.executeScan(scan, userId);
 
-      // Some sources fetched, others failed → the run is partial, and
+      // Some sources fetched, others failed â the run is partial, and
       // summary.failures (persisted with the scan) names exactly which.
       scan.status = results.summary?.failures?.length ? 'partial' : 'completed';
       scan.completedAt = new Date();
@@ -524,7 +524,7 @@ export class OpportunitiesService {
     );
     return {
       opportunitiesFound: found,
-      // Real outcomes from the upsert layer — previously "created" was
+      // Real outcomes from the upsert layer â previously "created" was
       // always equal to "found" and "updated" was always a hard-coded 0.
       opportunitiesCreated: summary.created || 0,
       opportunitiesUpdated: summary.updated || 0,
@@ -563,12 +563,12 @@ export class OpportunitiesService {
     }
   }
 
-  // ─── Reddit scanner (Phase A, Feature 1) ──────────────────────────────────
+  // âââ Reddit scanner (Phase A, Feature 1) ââââââââââââââââââââââââââââââââââ
   // Fail-visible contract: every egress envelope is checked. A subreddit
   // that cannot be fetched is recorded in summary.failures; if NO subreddit
   // yielded data the scan throws (runScan marks it failed); partial success
   // marks the run 'partial'. The user's maxSignals budget is enforced, and
-  // scores are normalized into the 0–100 domain — raw upvotes stay in
+  // scores are normalized into the 0â100 domain â raw upvotes stay in
   // trendData where they belong.
   private static readonly REDDIT_DEFAULT_SUBREDDITS = [
     'Entrepreneur',
@@ -587,7 +587,7 @@ export class OpportunitiesService {
     summary: any,
   ): Promise<void> {
     // Validate and dedupe subreddit targets. Invalid names are reported as
-    // warnings — never silently treated as "zero opportunities found".
+    // warnings â never silently treated as "zero opportunities found".
     const requested = scan.parameters?.query
       ? String(scan.parameters.query).split(',')
       : [...OpportunitiesService.REDDIT_DEFAULT_SUBREDDITS];
@@ -614,7 +614,7 @@ export class OpportunitiesService {
     if (!subreddits.length) {
       throw new Error(
         'Reddit scan has no valid subreddit targets' +
-          (invalid.length ? ' — all provided names were invalid' : ''),
+          (invalid.length ? ' â all provided names were invalid' : ''),
       );
     }
 
@@ -685,7 +685,7 @@ export class OpportunitiesService {
     }
 
     if (!fetchedAny) {
-      // Every subreddit failed to fetch — this is a failed scan, not a
+      // Every subreddit failed to fetch â this is a failed scan, not a
       // completed scan that "found nothing".
       const detail = (summary.failures || [])
         .map((f: any) => f.target + ': ' + (f.code || 'unknown'))
@@ -697,10 +697,10 @@ export class OpportunitiesService {
     }
   }
 
-  // Reddit engagement normalized into the 0–100 score domain:
-  // 20·log10(1 + upvotes + comments). Bounded (viral posts cannot exceed
-  // the column's 0–100 domain), monotonic, and explainable: ~100 upvotes ≈ 40,
-  // ~1,000 ≈ 60, ~10,000 ≈ 80, ~100,000 ≈ 100.
+  // Reddit engagement normalized into the 0â100 score domain:
+  // 20Â·log10(1 + upvotes + comments). Bounded (viral posts cannot exceed
+  // the column's 0â100 domain), monotonic, and explainable: ~100 upvotes â 40,
+  // ~1,000 â 60, ~10,000 â 80, ~100,000 â 100.
   private normalizeRedditEngagement(upvotes: number, comments: number): number {
     const safeUpvotes = Number.isFinite(upvotes) ? Math.max(0, upvotes) : 0;
     const safeComments = Number.isFinite(comments) ? Math.max(0, comments) : 0;
@@ -863,7 +863,10 @@ export class OpportunitiesService {
     } else {
       incoming.demandScore = subScores.demand ?? incoming.demandScore;
       incoming.trendScore = subScores.trend ?? incoming.trendScore;
-      incoming.score = scoring.composite;
+      // The score column keeps its scanner contract meaning (source-
+      // normalized 0-100 engagement) — the engine's composite and its full
+      // explanation live in metadata.scoring. Two different numbers, two
+      // different columns, never conflated.
       incoming.metadata = {
         ...(incoming.metadata || {}),
         scoring: scoringExplanation,
@@ -1187,7 +1190,7 @@ export class OpportunitiesService {
   ): Promise<void> {
     this.logger.log(`Notification [${type}] for ${userId}: ${message}`);
     // Persist a real, user-visible notification. Delivery failure must
-    // never fail the scan — log and continue.
+    // never fail the scan â log and continue.
     try {
       await this.notifications.create(userId, {
         type: type === 'failure' ? 'scan_failed' : type === 'completion' ? 'scan_completed' : 'scan_update',
@@ -1331,7 +1334,7 @@ export class OpportunitiesService {
   }
 
   private sanitizeForHistory(opportunity: Opportunity): any {
-    // Strip relation collections — history rows store a flat snapshot.
+    // Strip relation collections â history rows store a flat snapshot.
     const sanitized: any = { ...opportunity };
     delete sanitized.histories;
     delete sanitized.scans;
