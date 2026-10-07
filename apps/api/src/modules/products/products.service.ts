@@ -16,7 +16,7 @@ import { ProductHistory } from './entities/product-history.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductQueryDto } from './dto/product-query.dto';
-import { ProductStatus, ProductType } from './enums';
+import { ProductStatus } from './enums';
 
 // Allowed status transitions. A product cannot skip the value chain:
 // draft → validating → pre_launch → live → paused/discontinued → retired.
