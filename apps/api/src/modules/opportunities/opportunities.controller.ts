@@ -138,11 +138,6 @@ export class OpportunitiesController {
     return this.opportunitiesService.changePriority(req.user.id, id, body.priority, body.reason, req);
   }
 
-  @Post(':id/score')
-  updateScore(@Request() req: any, @Param('id', ParseUUIDPipe) id: string) {
-    return this.opportunitiesService.updateScore(req.user.id, id, req);
-  }
-
   @Post(':id/favorite')
   toggleFavorite(@Request() req: any, @Param('id', ParseUUIDPipe) id: string) {
     return this.opportunitiesService.toggleFavorite(req.user.id, id, req);
