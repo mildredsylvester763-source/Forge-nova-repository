@@ -33,12 +33,16 @@ function makeService() {
     getGitHubTrending: jest.fn(),
   };
   const configService = { get: jest.fn(), getOrThrow: jest.fn() };
+  const notifications = {
+    create: jest.fn(async (userId: string, input: any) => ({ id: 'n1', userId, ...input })),
+  };
   const service = new OpportunitiesService(
     opportunityRepository as unknown as Repository<any>,
     opportunityHistoryRepository as unknown as Repository<any>,
     opportunityScanRepository as unknown as Repository<any>,
     egressGateway as any,
     configService as any,
+    notifications as any,
   );
   return { service, opportunityRepository, opportunityScanRepository, egressGateway, saved };
 }
