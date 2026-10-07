@@ -53,6 +53,11 @@ export class ProductsController {
     return this.productsService.bulkDelete(req.user.id, body.ids);
   }
 
+  @Post('portfolio/decision')
+  decidePortfolio(@Request() req: any) {
+    return this.productsService.decidePortfolio(req.user.id);
+  }
+
   @Get(':id')
   findOne(@Request() req: any, @Param('id', ParseUUIDPipe) id: string) {
     return this.productsService.findOne(req.user.id, id);
@@ -80,6 +85,11 @@ export class ProductsController {
   @Post(':id/sale')
   recordSale(@Request() req: any, @Param('id', ParseUUIDPipe) id: string, @Body() body: { amount: number }) {
     return this.productsService.recordSale(req.user.id, id, body.amount);
+  }
+
+  @Post(':id/decision')
+  decideProduct(@Request() req: any, @Param('id', ParseUUIDPipe) id: string) {
+    return this.productsService.decideProduct(req.user.id, id);
   }
 
   @Delete(':id')
