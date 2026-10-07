@@ -806,7 +806,7 @@ export class OpportunitiesService {
       discoveredAt: data.discoveredAt || new Date(),
       createdBy: userId,
       updatedBy: userId,
-    }) as Opportunity;
+    }) as unknown as Opportunity;
 
     const existing = await this.opportunityRepository.findOne({
       where: {
@@ -1221,7 +1221,7 @@ export class OpportunitiesService {
     return OpportunityCategory.DIGITAL_PRODUCTS;
   }
 
-  private calculateRedditPriority(data: any): OpportunityPriority {
+  calculateRedditPriority(data: any): OpportunityPriority {
     const score = data.score || 0;
     const ratio = data.upvote_ratio || 0;
     const comments = data.num_comments || 0;
@@ -1235,7 +1235,7 @@ export class OpportunitiesService {
     return OpportunityPriority.VERY_LOW;
   }
 
-  private calculateGitHubPriority(item: any): OpportunityPriority {
+  calculateGitHubPriority(item: any): OpportunityPriority {
     const value = (item.stargazers_count || 0) + (item.forks_count || 0) * 0.5;
     if (value > 10000) return OpportunityPriority.CRITICAL;
     if (value > 5000) return OpportunityPriority.VERY_HIGH;
@@ -1245,7 +1245,7 @@ export class OpportunitiesService {
     return OpportunityPriority.VERY_LOW;
   }
 
-  private applyFilters(where: any, filters: any): void {
+  applyFilters(where: any, filters: any): void {
     if (filters.search) {
       where.title = ILike(`%${filters.search}%`);
     }
@@ -1290,7 +1290,10 @@ export class OpportunitiesService {
   }
 
   private sanitizeForHistory(opportunity: Opportunity): any {
-    const { user, ...sanitized } = opportunity;
+    // Strip relation collections — history rows store a flat snapshot.
+    const sanitized: any = { ...opportunity };
+    delete sanitized.histories;
+    delete sanitized.scans;
     return { ...sanitized, userId: opportunity.userId };
   }
 
