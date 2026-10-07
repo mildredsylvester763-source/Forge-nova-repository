@@ -3,7 +3,7 @@
 // ============================================================================
 // Unit tests with a faked repository — no database, no Nest container.
 
-import { NotificationsService, CreateNotificationInput } from './notifications.service';
+import { NotificationsService } from './notifications.service';
 
 function makeRepo() {
   const rows: any[] = [];
