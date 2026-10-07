@@ -17,6 +17,7 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductQueryDto } from './dto/product-query.dto';
 import { ProductStatus } from './enums';
+import { decide, rankByVerdict, DecisionInput } from './decision/decision.service';
 
 // Allowed status transitions. A product cannot skip the value chain:
 // draft → validating → pre_launch → live → paused/discontinued → retired.
@@ -277,6 +278,72 @@ export class ProductsService {
     return { deleted, failed, errors };
   }
 
+  // ─── Kill / scale / pivot decision engine (Feature 42) ─────────────────
+  // The pure rules live in ./decision; this is the honest data layer. The
+  // verdict is stamped into metadata.decision (auditable, fail-visible) and
+  // a DECISION history row is written — the owner can always see what the
+  // engine saw, not just what it concluded.
+
+  // Decimal columns come back as strings; missing values are 0 evidence,
+  // never NaN. The observation clock starts at product creation.
+  private toDecisionInput(product: Product): DecisionInput {
+    const num = (v: any): number => {
+      if (v === null || v === undefined) return 0;
+      const n = Number(v);
+      return Number.isFinite(n) ? n : 0;
+    };
+    const created = product.createdAt ? new Date(product.createdAt).getTime() : 0;
+    const ageDays = created > 0 ? Math.max(0, Math.floor((Date.now() - created) / 86400000)) : 0;
+    return {
+      status: product.status,
+      revenue: num(product.revenue),
+      orders: Number(product.orders) || 0,
+      averageOrderValue: num(product.averageOrderValue),
+      ageDays,
+    };
+  }
+
+  async decideProduct(userId: string, id: string) {
+    const product = await this.getOwnedProduct(userId, id);
+    const input = this.toDecisionInput(product);
+    const result = decide(input);
+    const decidedAt = new Date().toISOString();
+    product.metadata = {
+      ...(product.metadata || {}),
+      decision: { ...result, input, decidedAt },
+    };
+    await this.productRepository.save(product);
+    await this.createHistory(id, userId, 'DECISION', {
+      verdict: result.verdict,
+      confidence: result.confidence,
+      reasons: result.reasons,
+      input,
+    });
+    return { ...result, input, decidedAt, product };
+  }
+
+  // Portfolio-wide sweep: evaluates every product the user owns, ranks
+  // actionables first (SCALE, KILL, PIVOT, HOLD), and returns counts. It
+  // never writes — a portfolio view is a read, not a mutation.
+  async decidePortfolio(userId: string) {
+    const products = await this.productRepository.find({ where: { userId } });
+    const evaluated = products.map(product => ({
+      product,
+      result: decide(this.toDecisionInput(product)),
+    }));
+    const ranked = rankByVerdict(evaluated, e => e.result.verdict);
+    const results = ranked.map(e => ({
+      id: e.product.id,
+      name: e.product.name,
+      status: e.product.status,
+      verdict: e.result.verdict,
+      confidence: e.result.confidence,
+      reasons: e.result.reasons,
+    }));
+    const counts: Record<string, number> = { SCALE: 0, KILL: 0, PIVOT: 0, HOLD: 0 };
+    for (const e of evaluated) counts[e.result.verdict]++;
+    return { results, counts, total: products.length };
+  }
   // ─── Private helpers ────────────────────────────────────────────────────────
   private async getOwnedProduct(userId: string, id: string): Promise<Product> {
     const product = await this.productRepository.findOne({ where: { id, userId } });
@@ -309,7 +376,7 @@ export class ProductsService {
   private async createHistory(
     productId: string,
     userId: string,
-    action: 'CREATE' | 'UPDATE' | 'DELETE' | 'RESTORE' | 'STATUS_CHANGE',
+    action: 'CREATE' | 'UPDATE' | 'DELETE' | 'RESTORE' | 'STATUS_CHANGE' | 'DECISION',
     changes: Record<string, any>,
   ): Promise<ProductHistory> {
     const history = this.productHistoryRepository.create({
