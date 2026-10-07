@@ -7,7 +7,7 @@
 // lifecycle timestamps. Portfolio decision metrics (revenue, orders, AOV)
 // are maintained here so the kill/scale/pivot engine can query them cheaply.
 
-import { Injectable, Logger, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, ILike, Between, MoreThan, LessThan } from 'typeorm';
 import { randomUUID } from 'crypto';
@@ -32,7 +32,6 @@ const STATUS_TRANSITIONS: Record<ProductStatus, ProductStatus[]> = {
 
 @Injectable()
 export class ProductsService {
-  private readonly logger = new Logger(ProductsService.name);
 
   constructor(
     @InjectRepository(Product)
