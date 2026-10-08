@@ -29,8 +29,12 @@ describe('evaluateExperiment pinned vectors', () => {
   });
 
   it('refuses to judge when an arm has no visitors or conversions > visitors', () => {
+    // A zero-visitor arm has no computable rate.
     expect(evaluateExperiment(arm(0, 0), arm(V, 100), 0.1).verdict).toBe('inconclusive');
-    expect(evaluateExperiment(arm(V, 150), arm(V, 100), 0.1).verdict).toBe('inconclusive');
+    // 150 conversions on 100 visitors is impossible data — the engine must
+    // refuse, not "score" it. (The previous vector, arm(V, 150), was valid
+    // data — 150 conversions on 1000 visitors — and legitimately won.)
+    expect(evaluateExperiment(arm(100, 150), arm(V, 100), 0.1).verdict).toBe('inconclusive');
   });
 
   it('absolute win when baseline converted nobody', () => {
