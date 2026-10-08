@@ -35,9 +35,12 @@ jobs:
 
       # Jest failures are re-emitted as GitHub annotations (::error) so the
       # failing suites and case names are visible from the checks API —
-      # not only inside logs the API cannot reach.
+      # not only inside logs the API cannot reach. set +e is required:
+      # the default -e would exit at the failing npm test line and skip
+      # the annotation block entirely.
       - name: Run test suite
         run: |
+          set +e
           npm test -- --ci > /tmp/jest.log 2>&1
           status=$?
           if [ $status -ne 0 ]; then
