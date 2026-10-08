@@ -41,7 +41,7 @@ jobs:
           npm test -- --ci > /tmp/jest.log 2>&1
           status=$?
           if [ $status -ne 0 ]; then
-            { grep -E '^Test Suites:|^Tests:' /tmp/jest.log; grep -E '●' /tmp/jest.log | head -30; } | head -10 | while IFS= read -r line; do
+            { grep -E '^Test Suites:|^Tests:|^FAIL' /tmp/jest.log; grep -E '●|error TS|Cannot find|FATAL' /tmp/jest.log | head -20; tail -8 /tmp/jest.log; } | head -10 | sort -u | while IFS= read -r line; do
               echo "::error::JEST ${line}"
             done
             exit 1
