@@ -126,7 +126,7 @@ export class AlertsService {
 
     if (SPIN_UP_BLOCKED_STATUSES.includes(opportunity.status)) {
       throw new UnprocessableEntityException(
-        'Opportunity is ' + opportunity.status + ' — spin-up is only for pre-build opportunities',
+        'Opportunity is ' + opportunity.status + ' â spin-up is only for pre-build opportunities',
       );
     }
 
@@ -149,11 +149,11 @@ export class AlertsService {
       accountId: opportunity.accountId,
       opportunityId: opportunity.id,
       name: opportunity.title.slice(0, 255),
-      description: opportunity.description || null,
+      description: opportunity.description || undefined,
       slug,
       type: mapping.productType,
       status: ProductStatus.DRAFT,
-      tags: opportunity.tags || null,
+      tags: opportunity.tags || undefined,
       categories: [opportunity.category],
       metadata: {
         spinUp: {
