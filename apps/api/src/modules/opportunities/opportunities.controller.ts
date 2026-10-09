@@ -3,7 +3,7 @@
 // ============================================================================
 // Zero-trust entry points. Every route requires an authenticated user; the
 // userId is taken from the request context (set by the auth guard), NEVER
-// from the body or query ÃÂ¢ÃÂÃÂ cross-tenant access is structurally impossible.
+// from the body or query — cross-tenant access is structurally impossible.
 
 import {
   Controller,
