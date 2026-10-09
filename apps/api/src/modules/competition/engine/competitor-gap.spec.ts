@@ -60,7 +60,7 @@ describe('analyzeCompetitorGap pinned vectors', () => {
       [C({ name: 'a', price: 10, features: ['warranty'] }), C({ name: 'b', price: 20, features: ['warranty'] })],
     );
     expect(rep.headline).toContain('Widget');
-    expect(rep.headline).toContain('contested');
+    expect(rep.headline).toContain('wide open'); // 2 competitors = wide open by the count-first policy.
     expect(rep.gaps).toContain('warranty');
     expect(rep.edge).toContain('handmade');
   });
