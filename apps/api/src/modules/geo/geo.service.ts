@@ -9,17 +9,14 @@
 
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Opportunity } from '../opportunities/entities/opportunity.entity';
 import { OpportunityCategory } from '../opportunities/enums';
 import { buildHeatmap, GeoSignal } from './engine/geo-heat';
 
 // The shapes seen in the wild so far: an array of region entries, or a
 // straight record mapping region -> strength. Both are read; both count.
-function extractSignals(
-  opportunity: Opportunity,
-  categoryFilter: OpportunityCategory | undefined,
-): GeoSignal[] {
+function extractSignals(opportunity: Opportunity): GeoSignal[] {
   const geo = opportunity.geographicDemand;
   if (!geo || typeof geo !== 'object') return [];
 
@@ -76,7 +73,7 @@ export class GeoService {
     options: { category?: OpportunityCategory; minSamples?: number } = {},
   ) {
     const opportunities = await this.opportunityRepository.find({
-      where: { userId, deletedAt: IsNull() },
+      where: { userId },
       order: { updatedAt: 'DESC' },
       take: 500,
     });
@@ -89,7 +86,7 @@ export class GeoService {
       if (options.category && opportunity.category !== options.category) continue;
       if (!opportunity.geographicDemand) continue;
       considered++;
-      const extracted = extractSignals(opportunity, options.category);
+      const extracted = extractSignals(opportunity);
       if (extracted.length === 0) {
         // The payload existed but nothing in it was readable. Say so.
         unparsedCount++;
