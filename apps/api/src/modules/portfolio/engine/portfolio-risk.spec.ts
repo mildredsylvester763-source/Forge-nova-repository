@@ -15,9 +15,12 @@ describe('assessPortfolioRisk pinned vectors', () => {
     expect(r.warnings[0]).toContain('empty');
   });
 
-  it('a single live product is maximum concentration (100)', () => {
+  it('a single live product tops every measurable factor — 85, honestly', () => {
     const r = assessPortfolioRisk([P({ revenue: 500 })], []);
-    expect(r.riskScore).toBe(100);
+    // HHI 100 x 0.35 + top share 100 x 0.25 + breadth 100 x 0.25 = 85; the
+    // pursuit-overlap factor has no evidence (zero opportunities) and
+    // contributes 0 — the engine refuses a ceremonial 100 it cannot prove.
+    expect(r.riskScore).toBe(85);
     expect(r.verdict).toBe('concentrated');
     expect(r.topProductShare).toBe(100);
   });
