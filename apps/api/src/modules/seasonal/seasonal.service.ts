@@ -13,7 +13,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Opportunity } from '../opportunities/entities/opportunity.entity';
 import { OpportunityCategory } from '../opportunities/enums';
-import { buildCalendar, MONTH_COUNT, MONTH_NAMES, SeasonalCalendar } from './engine/seasonal-calendar';
+import { buildCalendar, MONTH_COUNT, SeasonalCalendar } from './engine/seasonal-calendar';
 
 // Read one opportunity's payload into 12 indices, or null when nothing in
 // it is readable. Accepted shapes:
@@ -169,7 +169,7 @@ export class SeasonalService {
     const entry = result.categories.find((c) => c.category === category);
     if (!entry) {
       throw new NotFoundException(
-        'No seasonal data for category ' + category + ' yet — run a scan first',
+        'No seasonal data for category ' + category + ' yet â run a scan first',
       );
     }
     return {
