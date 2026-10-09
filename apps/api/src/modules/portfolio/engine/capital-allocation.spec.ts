@@ -11,7 +11,7 @@ describe('allocateCapital pinned vectors', () => {
       C({ id: 'p', name: 'P', verdict: 'PIVOT', confidence: 80 }),
       C({ id: 'k', name: 'K', verdict: 'KILL', confidence: 90 }),
       C({ id: 'h', name: 'H', verdict: 'HOLD', confidence: 90 }),
-    ]);
+    ], { maxSharePerCandidate: 0.9 }); // cap lifted so the weight policy is visible before the structural cap binds
     const byId = Object.fromEntries(plan.allocations.map(a => [a.id, a.amount]));
     // Weights 0.8 vs 0.8×0.4=0.32, total 1.12 → 714.29 vs 285.71.
     expect(byId.s).toBeCloseTo(714.29, 1);
@@ -27,8 +27,12 @@ describe('allocateCapital pinned vectors', () => {
       C({ id: 'b', verdict: 'SCALE', confidence: 60 }),
     ]);
     const byId = Object.fromEntries(plan.allocations.map(a => [a.id, a.amount]));
-    expect(byId.a).toBe(500);
-    expect(byId.b).toBe(500);
+    // Equal candidates, equal money — but the default 40% structural cap binds
+    // first: 400 each, and the last 200 stays in reserve rather than letting
+    // either side absorb half the budget.
+    expect(byId.a).toBe(400);
+    expect(byId.b).toBe(400);
+    expect(plan.reserve).toBe(200);
   });
 
   it('enforces the single-candidate cap and routes overflow to the other candidate', () => {
