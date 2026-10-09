@@ -140,7 +140,26 @@ export function planTime(
     };
   });
 
-  const totalGranted = round2(allocations.reduce((a, x) => a + x.grantedHours, 0));
+  // Rounding each grant to cents can nudge the total a hair over capacity
+  // (six grants — half a cent). The contract says grants NEVER exceed
+  // capacity, so any excess comes off the largest grant — deterministically,
+  // ties broken by ref.
+  let grantedSum = allocations.reduce((a, x) => a + x.grantedHours, 0);
+  if (grantedSum > capacity + 1e-9) {
+    let excess = round2(grantedSum - capacity);
+    const bySize = [...allocations].sort(
+      (a, b) => b.grantedHours - a.grantedHours || (a.ref < b.ref ? -1 : 1),
+    );
+    for (const a of bySize) {
+      if (excess <= 0) break;
+      const trim = Math.min(excess, a.grantedHours);
+      a.grantedHours = round2(a.grantedHours - trim);
+      a.deficit = round2(Math.max(0, a.requestedHours - a.grantedHours));
+      excess = round2(excess - trim);
+    }
+    grantedSum = allocations.reduce((a, x) => a + x.grantedHours, 0);
+  }
+  const totalGranted = round2(grantedSum);
   const leftoverHours = round2(Math.max(0, capacity - totalGranted));
   if (!fits) {
     warnings.push('Overcommitted by ' + round2(totalRequested - capacity) + ' hours — the plan below is what capacity honestly allows.');
