@@ -32,6 +32,9 @@ import { PatternsModule } from './modules/patterns/patterns.module';
 import { PortfolioModule } from './modules/portfolio/portfolio.module';
 import { TimeBudget } from './modules/time-budget/entities/time-budget.entity';
 import { TimeBudgetModule } from './modules/time-budget/time-budget.module';
+import { GeoModule } from './modules/geo/geo.module';
+import { SeasonalModule } from './modules/seasonal/seasonal.module';
+import { AlertsModule } from './modules/alerts/alerts.module';
 
 @Module({
   imports: [
@@ -80,6 +83,9 @@ import { TimeBudgetModule } from './modules/time-budget/time-budget.module';
     PatternsModule,
     PortfolioModule,
     TimeBudgetModule,
+    GeoModule,
+    SeasonalModule,
+    AlertsModule,
   ],
   providers: [
     {
