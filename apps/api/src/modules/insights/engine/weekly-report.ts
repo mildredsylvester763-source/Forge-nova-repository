@@ -124,6 +124,9 @@ export function buildWeeklyReport(snap: ReportSnapshot): WeeklyReport {
   if (opportunities.length && !products.length) {
     actions.push('Pick the top-scored opportunity (' + (opportunities.sort((a, b) => num(b.score) - num(a.score))[0] || { title: 'the first one' }).title + ') and turn it into a draft this week.');
   }
+  if (!products.length && !opportunities.length) {
+    actions.push('Nothing built and nothing in the pipeline — run a scan, pick one opportunity, and ship the first draft this week.');
+  }
   if (!actions.length) {
     actions.push('No verdicts, no risks, no revenue to interpret. The honest move: run a decision pass on the portfolio and a scan for fresh opportunities.');
   }
