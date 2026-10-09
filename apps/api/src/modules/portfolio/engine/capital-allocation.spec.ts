@@ -18,7 +18,7 @@ describe('allocateCapital pinned vectors', () => {
     expect(byId.p).toBeCloseTo(285.71, 1);
     expect(byId.k).toBe(0);
     expect(byId.h).toBe(0);
-    expect(plan.allocations.find(a => a.id === 'k').reasons[0]).toContain('KILL');
+    expect(plan.allocations.find(a => a.id === 'k')!.reasons[0]).toContain('KILL');
   });
 
   it('splits equally between equal candidates — no favorites', () => {
@@ -40,7 +40,7 @@ describe('allocateCapital pinned vectors', () => {
     expect(byId.strong).toBe(600); // capped at 60%
     expect(byId.weak).toBe(400);   // overflow reflows
     expect(plan.reserve).toBe(0);
-    expect(plan.allocations.find(a => a.id === 'strong').reasons.some(r => r.includes('Capped'))).toBe(true);
+    expect(plan.allocations.find(a => a.id === 'strong')!.reasons.some(r => r.includes('Capped'))).toBe(true);
   });
 
   it('reserves everything when nothing earned capital', () => {
@@ -80,27 +80,24 @@ describe('allocateCapital invariants', () => {
   const rand = mulberry32(555555);
   const verdicts = ['KILL', 'SCALE', 'PIVOT', 'HOLD'] as const;
 
-  it('allocations + reserve always equal the budget exactly (500 seeded plans)', () => {
+  it('allocations + reserve always equal the budget, and no candidate exceeds its cap (500 seeded plans)', () => {
     for (let i = 0; i < 500; i++) {
       const budget = Math.floor(rand() * 10000);
+      const maxShare = 0.2 + rand() * 0.6;
       const candidates: AllocationCandidate[] = Array.from({ length: 1 + Math.floor(rand() * 6) }, (_, j) => C({
         id: 'c' + j,
         name: 'C' + j,
         verdict: verdicts[Math.floor(rand() * 4)],
         confidence: Math.floor(rand() * 101),
       }));
-      const plan = allocateCapital(budget, candidates, { maxSharePerCandidate: 0.2 + rand() * 0.6 });
+      const plan = allocateCapital(budget, candidates, { maxSharePerCandidate: maxShare });
       const sum = plan.allocations.reduce((a, x) => a + x.amount, 0) + plan.reserve;
       expect(Math.abs(sum - plan.budget)).toBeLessThanOrEqual(0.01);
       for (const a of plan.allocations) {
         expect(a.amount).toBeGreaterThanOrEqual(0);
-        if (a.amount > 0) {
-          expect(a.amount).toBeLessThanOrEqual(budget * plan.warnings.length === 0 ? Infinity : Infinity); // placeholder never false
-        }
+        expect(a.amount).toBeLessThanOrEqual(budget * maxShare + 0.01);
       }
-      if (a0(plan).maxSeen !== undefined) { /* no-op */ }
     }
-    function a0(_plan: any) { return {}; }
   });
 
   it('KILL and HOLD never receive capital in any plan', () => {
