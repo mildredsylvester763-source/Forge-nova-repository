@@ -56,7 +56,6 @@ export interface AllocationPlan {
 
 const PIVOT_WEIGHT_FACTOR = 0.4; // A pivot is a validation bet, not a commitment.
 const DEFAULT_MAX_SHARE = 0.4;   // No single product may absorb more than 40%.
-const MAX_ITERATIONS = 50;       // Redistribution converges in <= candidate count passes.
 
 function round2(v: number): number {
   return Math.round(v * 100) / 100;
@@ -106,52 +105,61 @@ export function allocateCapital(
     };
   }
 
-  // Weighted allocation with caps and iterative redistribution: overflow from
-  // capped candidates reflows to uncapped ones by weight, until stable.
+  // Weighted allocation under a structural cap: distribute the pool across
+  // eligible candidates by weight; anyone whose share exceeds the cap is
+  // fixed at the cap and the freed budget reflows to the rest, until nobody
+  // exceeds it. Whatever is left when no candidates remain unfixed is the
+  // reserve — never an over-allocation. (The first version of this
+  // reflow double-counted capped overflow and could exceed the budget; the
+  // seeded spec sweep caught it.)
   const cap = safeBudget * maxShare;
   const weights = new Map(eligible.map(c => [c.id, weightOf(c)]));
-  const totalWeight = [...weights.values()].reduce((a, b) => a + b, 0);
-  let remaining = safeBudget;
-  const raw = new Map<string, number>();
-  for (const c of eligible) {
-    const amount = (safeBudget * (weights.get(c.id) || 0)) / totalWeight;
-    raw.set(c.id, amount);
-  }
-
-  for (let iter = 0; iter < MAX_ITERATIONS; iter++) {
-    const uncappedIds: string[] = [];
-    let uncappedRawTotal = 0;
-    for (const c of eligible) {
-      const amount = raw.get(c.id) || 0;
-      if (amount >= cap - 1e-9) {
-        raw.set(c.id, cap);
-        remaining -= cap;
-      } else {
-        uncappedIds.push(c.id);
-        uncappedRawTotal += amount;
+  const amounts = new Map<string, number>();
+  const fixedAtCap = new Map<string, number>();
+  let unfixed = eligible.slice();
+  let pool = safeBudget;
+  while (unfixed.length) {
+    const unfixedWeight = unfixed.reduce((a, c) => a + (weights.get(c.id) || 0), 0);
+    const overCap = unfixed.filter(c => (pool * (weights.get(c.id) || 0)) / unfixedWeight > cap + 1e-9);
+    if (!overCap.length) {
+      for (const c of unfixed) {
+        amounts.set(c.id, (pool * (weights.get(c.id) || 0)) / unfixedWeight);
       }
+      break;
     }
-    if (!uncappedIds.length || remaining <= 1e-9) break;
-    // Redistribute what is left among the uncapped, proportionally to their
-    // current raw amounts (which already encode the weights).
-    const uncappedCurrentTotal = uncappedIds.reduce((a, id) => a + (raw.get(id) || 0), 0);
-    const scale = (uncappedCurrentTotal + remaining) / (uncappedCurrentTotal || 1);
-    for (const id of uncappedIds) {
-      raw.set(id, (raw.get(id) || 0) * scale);
+    for (const c of overCap) {
+      fixedAtCap.set(c.id, cap);
+      pool -= cap;
     }
-    remaining = safeBudget - [...raw.values()].reduce((a, b) => a + b, 0);
-    // Detect a stable state: nobody exceeds the cap anymore.
-    if ([...raw.values()].every(v => v <= cap + 1e-9)) break;
+    unfixed = unfixed.filter(c => !fixedAtCap.has(c.id));
   }
+  for (const [id, amount] of fixedAtCap) amounts.set(id, amount);
 
   // Final pass: enforce the cap once more, round, and collect the reserve.
   let allocatedTotal = 0;
   const finalAmounts = new Map<string, number>();
   for (const c of eligible) {
-    const amount = Math.min(cap, Math.max(0, raw.get(c.id) || 0));
+    const amount = Math.min(cap, Math.max(0, amounts.get(c.id) || 0));
     const rounded = round2(amount);
     finalAmounts.set(c.id, rounded);
     allocatedTotal += rounded;
+  }
+  // Rounding each amount to cents can nudge the total a hair over the
+  // budget (six amounts — half a cent). The contract says allocations plus
+  // reserve always equal the budget, so any excess comes off the largest
+  // allocation — deterministically, ties broken by id.
+  if (allocatedTotal > safeBudget + 1e-9) {
+    let excess = round2(allocatedTotal - safeBudget);
+    const bySize = [...eligible].sort(
+      (a, b) => (finalAmounts.get(b.id) || 0) - (finalAmounts.get(a.id) || 0) || (a.id < b.id ? -1 : 1),
+    );
+    for (const c of bySize) {
+      if (excess <= 0) break;
+      const trim = Math.min(excess, finalAmounts.get(c.id) || 0);
+      finalAmounts.set(c.id, round2((finalAmounts.get(c.id) || 0) - trim));
+      excess = round2(excess - trim);
+    }
+    allocatedTotal = [...finalAmounts.values()].reduce((a, b) => a + b, 0);
   }
   const reserve = round2(Math.max(0, safeBudget - allocatedTotal));
   if (reserve > 0) {
