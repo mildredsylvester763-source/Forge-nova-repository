@@ -121,7 +121,7 @@ export function analyzeCompetitorGap(me: MyProfile, competitors: CompetitorInput
   const tally = new Map<string, string[]>();
   for (const c of withFeatures) {
     const seen = new Set<string>();
-    for (const f of c.features) {
+    for (const f of c.features || []) {
       const key = norm(f);
       if (key && !seen.has(key)) {
         seen.add(key);
