@@ -94,7 +94,7 @@ describe('planTime invariants', () => {
       const requests: TimeRequest[] = Array.from({ length: 1 + Math.floor(rand() * 6) }, (_, j) => R({
         ref: 'r' + j,
         label: 'R' + j,
-        requestedHours: Math.floor(rand() * 25),
+        requestedHours: 1 + Math.floor(rand() * 24), // 1..24 — a zero-hour ask is an invalid request, not a plan
         priority: priorities[Math.floor(rand() * 4)],
       }));
       const plan = planTime(capacity, requests);
