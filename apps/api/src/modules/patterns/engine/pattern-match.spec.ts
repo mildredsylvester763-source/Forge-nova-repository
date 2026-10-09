@@ -32,7 +32,7 @@ describe('matchPatterns pinned vectors', () => {
       { category: 'consulting', source: 'reddit', tags: ['b2b', 'pricing', 'cold-outreach'] },
       [P({ category: 'consulting', source: 'reddit', tags: ['b2b', 'pricing', 'unrelated'] })],
     );
-    expect(r[0].score).toBe(100); // 40 + 20 + 20, not 120 — the cap holds.
+    expect(r[0].score).toBe(100); // 40 + 20 + 20, not 120 â the cap holds.
   });
 
   it('tag matching is case-insensitive and whitespace-trimmed', () => {
@@ -46,8 +46,8 @@ describe('matchPatterns pinned vectors', () => {
     expect(r).toHaveLength(0);
   });
 
-  it('FAILURE patterns match equally — relevance, not valence', () => {
-    const r = matchPatterns({ category: 'consulting' }, [P({ kind: 'failure', category: 'consulting' })]);
+  it('FAILURE patterns match equally â relevance, not valence', () => {
+    const r = matchPatterns({ category: 'consulting', tags: [] }, [P({ kind: 'failure', category: 'consulting' })]);
     expect(r[0].kind).toBe('failure');
     expect(r[0].score).toBe(40);
   });
