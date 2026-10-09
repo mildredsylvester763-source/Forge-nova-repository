@@ -169,7 +169,7 @@ export class SeasonalService {
     const entry = result.categories.find((c) => c.category === category);
     if (!entry) {
       throw new NotFoundException(
-        'No seasonal data for category ' + category + ' yet â run a scan first',
+        'No seasonal data for category ' + category + ' yet — run a scan first',
       );
     }
     return {
