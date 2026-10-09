@@ -19,7 +19,7 @@ import { allocateCapital } from './engine/capital-allocation';
 import { AllocateCapitalDto } from './dto/allocate-capital.dto';
 
 // Decimal columns come back as strings; missing values are 0 evidence,
-// never NaN â same law as the decision engine's own input mapper.
+// never NaN — same law as the decision engine's own input mapper.
 function num(v: any): number {
   if (v === null || v === undefined) return 0;
   const n = Number(v);
@@ -42,7 +42,7 @@ export class PortfolioService {
     private readonly opportunityRepository: Repository<Opportunity>,
   ) {}
 
-  // Feature 44 â portfolio risk & correlation analysis. Pure read.
+  // Feature 44 — portfolio risk & correlation analysis. Pure read.
   async getRisk(userId: string) {
     const products = await this.productRepository.find({ where: { userId } });
     const opportunities = await this.opportunityRepository.find({ where: { userId } });
@@ -63,7 +63,7 @@ export class PortfolioService {
     return { ...risk, evaluatedAt: new Date().toISOString() };
   }
 
-  // Feature 45 â capital allocation optimizer. Read-only: the plan is advice.
+  // Feature 45 — capital allocation optimizer. Read-only: the plan is advice.
   // Candidates are the user's own products, each judged fresh by the pure
   // decision engine; the allocator then distributes the budget across the
   // SCALE/PIVOT verdicts with per-candidate caps and a named reserve.
