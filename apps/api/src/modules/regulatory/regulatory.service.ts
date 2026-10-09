@@ -18,7 +18,7 @@ export class RegulatoryService {
     private readonly opportunityRepository: Repository<Opportunity>,
   ) {}
 
-  async assess(userId: string, country: string, category: string): Promise<RegulatoryAssessment> {
+  async assess(_userId: string, country: string, category: string): Promise<RegulatoryAssessment> {
     return assessRegulatoryRisk(country, category);
   }
 
