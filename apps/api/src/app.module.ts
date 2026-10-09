@@ -35,6 +35,7 @@ import { TimeBudgetModule } from './modules/time-budget/time-budget.module';
 import { GeoModule } from './modules/geo/geo.module';
 import { SeasonalModule } from './modules/seasonal/seasonal.module';
 import { AlertsModule } from './modules/alerts/alerts.module';
+import { BlueOceanModule } from './modules/blue-ocean/blue-ocean.module';
 
 @Module({
   imports: [
@@ -86,6 +87,7 @@ import { AlertsModule } from './modules/alerts/alerts.module';
     GeoModule,
     SeasonalModule,
     AlertsModule,
+    BlueOceanModule,
   ],
   providers: [
     {
