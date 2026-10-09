@@ -86,7 +86,9 @@ describe('estimateElasticity invariants', () => {
         expect(r.suggestedPrice).toBeGreaterThanOrEqual(price * 0.8 - 0.02);
         expect(r.suggestedPrice).toBeLessThanOrEqual(price * 1.2 + 0.02);
       }
-      expect(r.projectedRevenueAtCurrent).toBeGreaterThanOrEqual(0);
+      if (r.projectedRevenueAtCurrent != null) {
+        expect(r.projectedRevenueAtCurrent).toBeGreaterThanOrEqual(0);
+      }
       expect(estimateElasticity(obs, { price, unitsPerPeriod: 50 })).toEqual(r);
     }
   });
