@@ -172,7 +172,11 @@ const BY_COUNTRY: Record<string, Record<string, RegulatoryFlag[]>> = {
 const SEVERITY_ORDER: Record<FlagSeverity, number> = { critical: 0, warning: 1, info: 2 };
 
 export function assessRegulatoryRisk(country: string, category: string): RegulatoryAssessment {
-  const countryKey = String(country || '').trim().toUpperCase();
+  // EU members resolve to the shared EU rulebook — GDPR does not care which
+  // member state the seller sits in.
+  const EU_MEMBERS = ['DE','FR','IT','ES','NL','PL','SE','IE','BE','AT','PT','FI','DK','GR','CZ','RO','HU','HR','SK','SI','LT','LV','EE','BG','LU','CY','MT'];
+  const asked = String(country || '').trim().toUpperCase();
+  const countryKey = BY_COUNTRY[asked] ? asked : EU_MEMBERS.includes(asked) ? 'EU' : asked;
   const cls = classifyCategory(category);
   const warnings: string[] = [];
   const flags: RegulatoryFlag[] = [];
