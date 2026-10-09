@@ -6,7 +6,9 @@
 // gateway boundaries are mocked; every decision asserted is the service's own.
 
 import { Repository } from 'typeorm';
-import { OpportunitiesService } from './opportunities.service';
+import { OpportunityHistoryService } from './opportunity-history.service';
+import { OpportunityScoringService } from './opportunity-scoring.service';
+import { OpportunityScanService } from './opportunity-scan.service';
 import { OpportunitySource } from './enums';
 
 function makeService() {
@@ -32,17 +34,22 @@ function makeService() {
     getGoogleTrends: jest.fn(),
     getGitHubTrending: jest.fn(),
   };
-  const configService = { get: jest.fn(), getOrThrow: jest.fn() };
   const notifications = {
     create: jest.fn(async (userId: string, input: any) => ({ id: 'n1', userId, ...input })),
   };
-  const service = new OpportunitiesService(
-    opportunityRepository as unknown as Repository<any>,
+  const historyService = new OpportunityHistoryService(
     opportunityHistoryRepository as unknown as Repository<any>,
+  );
+  const scoringService = new OpportunityScoringService(
+    opportunityRepository as unknown as Repository<any>,
+    historyService,
+  );
+  const service = new OpportunityScanService(
+    opportunityRepository as unknown as Repository<any>,
     opportunityScanRepository as unknown as Repository<any>,
     egressGateway as any,
-    configService as any,
     notifications as any,
+    scoringService,
   );
   return { service, opportunityRepository, opportunityScanRepository, egressGateway, saved };
 }
