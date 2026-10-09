@@ -50,7 +50,6 @@ export interface CashFlowForecast {
 }
 
 const MIN_POINTS = 3; // Below this there is no trend, only anecdotes.
-const PERIOD_DAYS = 7; // Weekly buckets: the unit a micro-business plans in.
 
 function num(v: unknown): number {
   const n = Number(v);
