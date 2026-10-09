@@ -6,6 +6,11 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { OpportunitiesService } from './opportunities.service';
 import { OpportunitiesController } from './opportunities.controller';
+import { OpportunityCrudService } from './opportunity-crud.service';
+import { OpportunityScoringService } from './opportunity-scoring.service';
+import { OpportunityScanService } from './opportunity-scan.service';
+import { OpportunityHistoryService } from './opportunity-history.service';
+import { OpportunityStatsService } from './opportunity-stats.service';
 import { Opportunity } from './entities/opportunity.entity';
 import { OpportunityHistory } from './entities/opportunity-history.entity';
 import { OpportunityScan } from './entities/opportunity-scan.entity';
@@ -19,7 +24,14 @@ import { NotificationsModule } from '../notifications/notifications.module';
     NotificationsModule,
   ],
   controllers: [OpportunitiesController],
-  providers: [OpportunitiesService],
+  providers: [
+    OpportunityHistoryService,
+    OpportunityScoringService,
+    OpportunityCrudService,
+    OpportunityScanService,
+    OpportunityStatsService,
+    OpportunitiesService,
+  ],
   exports: [OpportunitiesService],
 })
 export class OpportunitiesModule {}
