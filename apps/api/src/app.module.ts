@@ -35,6 +35,11 @@ import { TimeBudgetModule } from './modules/time-budget/time-budget.module';
 import { GeoModule } from './modules/geo/geo.module';
 import { SeasonalModule } from './modules/seasonal/seasonal.module';
 import { AlertsModule } from './modules/alerts/alerts.module';
+import { CompetitionModule } from './modules/competition/competition.module';
+import { PricingModule } from './modules/pricing/pricing.module';
+import { RegulatoryModule } from './modules/regulatory/regulatory.module';
+import { InsightsModule } from './modules/insights/insights.module';
+import { FinanceModule } from './modules/finance/finance.module';
 import { BlueOceanModule } from './modules/blue-ocean/blue-ocean.module';
 
 @Module({
@@ -87,6 +92,11 @@ import { BlueOceanModule } from './modules/blue-ocean/blue-ocean.module';
     GeoModule,
     SeasonalModule,
     AlertsModule,
+    CompetitionModule,
+    PricingModule,
+    RegulatoryModule,
+    InsightsModule,
+    FinanceModule,
     BlueOceanModule,
   ],
   providers: [
