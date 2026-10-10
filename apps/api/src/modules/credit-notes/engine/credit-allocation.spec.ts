@@ -65,7 +65,13 @@ describe('remainingCredit', () => {
 describe('500-note seeded sweep', () => {
   it('conserves every cent and stays monotone in credit', () => {
     const rnd = mulberry32(777);
-    const statuses: InvoiceStatus[] = ['draft', 'sent', 'paid', 'void', 'overdue'];
+    const statuses: InvoiceStatus[] = [
+      InvoiceStatus.DRAFT,
+      InvoiceStatus.SENT,
+      InvoiceStatus.PAID,
+      InvoiceStatus.VOID,
+      InvoiceStatus.OVERDUE,
+    ];
     for (let i = 0; i < 500; i++) {
       const credit = Math.floor(rnd() * 50_000);
       const candidates = Array.from({ length: 1 + Math.floor(rnd() * 8) }, (_, j) => ({
