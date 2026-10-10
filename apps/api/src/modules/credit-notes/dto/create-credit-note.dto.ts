@@ -2,7 +2,7 @@
 // FILE: /apps/api/src/modules/credit-notes/dto/create-credit-note.dto.ts
 // ============================================================================
 
-import { IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 
 export class CreateCreditNoteDto {
   /** Face value in cents. Money is always integer cents, never floats. */
