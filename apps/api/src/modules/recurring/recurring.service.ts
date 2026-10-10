@@ -95,7 +95,7 @@ export class RecurringService {
     const profile = await this.findOne(userId, id);
     const now = new Date();
     const verdict = advance(profile, now);
-    if (!verdict.due) {
+    if (!verdict.due || verdict.runAt === null) {
       throw new ConflictException('profile is not due yet: ' + verdict.reason);
     }
     if (!Array.isArray(profile.template?.lineItems) || profile.template.lineItems.length === 0) {
@@ -130,7 +130,7 @@ export class RecurringService {
       }
       const invoice = await this.invoicesService.create(userId, profile.template as unknown as CreateInvoiceDto);
       const verdict = advance(profile, now);
-      profile.lastRunAt = verdict.runAt;
+      profile.lastRunAt = verdict.runAt !== null ? verdict.runAt : now;
       profile.nextRunAt = verdict.nextRunAt;
       await this.profileRepository.save(profile);
       created.push(invoice);
