@@ -12,7 +12,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
-  IsUuid,
+  IsUUID,
   Max,
   Min,
   ValidateNested,
@@ -42,7 +42,7 @@ export class CreateInvoiceDto {
   customerEmail?: string;
 
   @IsOptional()
-  @IsUuid()
+  @IsUUID()
   productId?: string;
 
   @IsOptional()
