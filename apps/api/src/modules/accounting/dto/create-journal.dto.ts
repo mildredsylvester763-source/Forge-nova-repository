@@ -2,7 +2,7 @@
 // FILE: /apps/api/src/modules/accounting/dto/create-journal.dto.ts
 // ============================================================================
 
-import { IsDateString, IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import { IsDateString, IsNotEmpty, IsString, IsUUID, MaxLength } from 'class-validator';
 import { IsIn, IsInt, IsOptional, Min, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ArrayMinSize, IsArray } from 'class-validator';
