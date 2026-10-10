@@ -43,6 +43,10 @@ import { FinanceModule } from './modules/finance/finance.module';
 import { BlueOceanModule } from './modules/blue-ocean/blue-ocean.module';
 import { Invoice } from './modules/invoices/entities/invoice.entity';
 import { InvoicesModule } from './modules/invoices/invoices.module';
+import { RecurringInvoiceProfile } from './modules/recurring/entities/recurring-invoice-profile.entity';
+import { RecurringModule } from './modules/recurring/recurring.module';
+import { CreditNote } from './modules/credit-notes/entities/credit-note.entity';
+import { CreditNotesModule } from './modules/credit-notes/credit-notes.module';
 
 @Module({
   imports: [
@@ -74,6 +78,8 @@ import { InvoicesModule } from './modules/invoices/invoices.module';
             Pattern,
             TimeBudget,
             Invoice,
+            RecurringInvoiceProfile,
+            CreditNote,
           ],
           synchronize: isDevelopment,
           logging: isDevelopment,
@@ -102,6 +108,8 @@ import { InvoicesModule } from './modules/invoices/invoices.module';
     FinanceModule,
     BlueOceanModule,
     InvoicesModule,
+    RecurringModule,
+    CreditNotesModule,
   ],
   providers: [
     {
