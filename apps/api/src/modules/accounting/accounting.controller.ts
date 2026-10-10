@@ -3,7 +3,7 @@
 // ============================================================================
 // Zero-trust entry points. Static segments before :id.
 
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post, Query, Request } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post, Request } from '@nestjs/common';
 import { AccountingService } from './accounting.service';
 import { CreateJournalDto } from './dto/create-journal.dto';
 import { AccountType } from './entities/ledger-account.entity';
@@ -32,7 +32,7 @@ export class AccountingController {
       ? (body.type as AccountType)
       : undefined;
     if (!body.code || !body.name || !type) {
-      throw new Error('code, name and a valid type are required');
+      throw new BadRequestException('code, name and a valid type are required');
     }
     return this.accountingService.createAccount(req.user.id, body.code, body.name, type);
   }
