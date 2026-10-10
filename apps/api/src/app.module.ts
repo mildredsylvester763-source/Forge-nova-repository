@@ -41,6 +41,8 @@ import { RegulatoryModule } from './modules/regulatory/regulatory.module';
 import { InsightsModule } from './modules/insights/insights.module';
 import { FinanceModule } from './modules/finance/finance.module';
 import { BlueOceanModule } from './modules/blue-ocean/blue-ocean.module';
+import { Invoice } from './modules/invoices/entities/invoice.entity';
+import { InvoicesModule } from './modules/invoices/invoices.module';
 
 @Module({
   imports: [
@@ -71,6 +73,7 @@ import { BlueOceanModule } from './modules/blue-ocean/blue-ocean.module';
             Experiment,
             Pattern,
             TimeBudget,
+            Invoice,
           ],
           synchronize: isDevelopment,
           logging: isDevelopment,
@@ -98,6 +101,7 @@ import { BlueOceanModule } from './modules/blue-ocean/blue-ocean.module';
     InsightsModule,
     FinanceModule,
     BlueOceanModule,
+    InvoicesModule,
   ],
   providers: [
     {
