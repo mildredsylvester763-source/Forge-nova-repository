@@ -2,7 +2,7 @@
 // FILE: /apps/api/src/modules/opportunities/opportunity-crud.service.ts
 // ============================================================================
 
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, Not, MoreThan, LessThan, Between, ILike } from 'typeorm';
 import { Opportunity } from './entities/opportunity.entity';
@@ -15,8 +15,6 @@ import { OpportunityHistoryService } from './opportunity-history.service';
 
 @Injectable()
 export class OpportunityCrudService {
-  private readonly logger = new Logger(OpportunityCrudService.name);
-
   constructor(
     @InjectRepository(Opportunity)
     private readonly opportunityRepository: Repository<Opportunity>,
