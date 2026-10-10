@@ -9,6 +9,8 @@ import { randomUUID } from 'crypto';
 import { Opportunity } from './entities/opportunity.entity';
 import { OpportunityScan } from './entities/opportunity-scan.entity';
 import { CreateScanDto } from './dto/create-scan.dto';
+import { computeScore } from './scoring/scoring.service';
+import { mapSignalsToSubScores } from './scoring/signal-mapper';
 import { OpportunitySource, OpportunityStatus, OpportunityCategory, OpportunityPriority } from './enums';
 import { EgressGatewayService } from '../../egress/egress-gateway.service';
 import { NotificationsService } from '../notifications/notifications.service';
