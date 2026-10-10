@@ -247,18 +247,18 @@ export class OpportunityScanService {
     // warnings — never silently treated as "zero opportunities found".
     const requested = scan.parameters?.query
       ? String(scan.parameters.query).split(',')
-      : [...OpportunitiesService.REDDIT_DEFAULT_SUBREDDITS];
+      : [...OpportunityScanService.REDDIT_DEFAULT_SUBREDDITS];
     const valid = new Set<string>();
     const invalid: string[] = [];
     for (const entry of requested) {
       const name = entry.trim();
       if (!name) continue;
-      if (!OpportunitiesService.REDDIT_SUBREDDIT_PATTERN.test(name)) {
+      if (!OpportunityScanService.REDDIT_SUBREDDIT_PATTERN.test(name)) {
         invalid.push(name);
         continue;
       }
       valid.add(name);
-      if (valid.size >= OpportunitiesService.REDDIT_MAX_SUBREDDITS) break;
+      if (valid.size >= OpportunityScanService.REDDIT_MAX_SUBREDDITS) break;
     }
     if (invalid.length) {
       summary.warnings = summary.warnings || [];
@@ -286,7 +286,7 @@ export class OpportunityScanService {
       // are genuinely per-user: one user's scan cannot starve another's.
       const response = await this.egressGateway.getRedditHot(
         subreddit,
-        OpportunitiesService.REDDIT_POSTS_PER_SUBREDDIT,
+        OpportunityScanService.REDDIT_POSTS_PER_SUBREDDIT,
         userId,
       );
       if (!response.ok) {
