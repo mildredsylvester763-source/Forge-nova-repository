@@ -36,9 +36,19 @@ export class InvoicesController {
     return this.invoicesService.findAll(req.user.id, this.parseStatus(status));
   }
 
+  @Get('dunning/summary')
+  dunningSummary(@Request() req: any) {
+    return this.invoicesService.dunningSummary(req.user.id);
+  }
+
   @Get(':id')
   findOne(@Request() req: any, @Param('id', ParseUUIDPipe) id: string) {
     return this.invoicesService.findOne(req.user.id, id);
+  }
+
+  @Get(':id/dunning')
+  dunning(@Request() req: any, @Param('id', ParseUUIDPipe) id: string) {
+    return this.invoicesService.dunning(req.user.id, id);
   }
 
   @Post(':id/send')
