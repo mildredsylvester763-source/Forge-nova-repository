@@ -12,5 +12,6 @@ import { InvoicesController } from './invoices.controller';
   imports: [TypeOrmModule.forFeature([Invoice])],
   controllers: [InvoicesController],
   providers: [InvoicesService],
+  exports: [InvoicesService],
 })
 export class InvoicesModule {}
