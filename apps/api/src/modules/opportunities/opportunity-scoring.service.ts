@@ -2,7 +2,7 @@
 // FILE: /apps/api/src/modules/opportunities/opportunity-scoring.service.ts
 // ============================================================================
 
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Opportunity } from './entities/opportunity.entity';
@@ -11,8 +11,6 @@ import { OpportunityHistoryService } from './opportunity-history.service';
 
 @Injectable()
 export class OpportunityScoringService {
-  private readonly logger = new Logger(OpportunityScoringService.name);
-
   constructor(
     @InjectRepository(Opportunity)
     private readonly opportunityRepository: Repository<Opportunity>,
@@ -127,7 +125,7 @@ export class OpportunityScoringService {
   }
 
 
-  private calculateScoreDistribution(opportunities: Opportunity[]): {
+  calculateScoreDistribution(opportunities: Opportunity[]): {
     min: number;
     max: number;
     average: number;
