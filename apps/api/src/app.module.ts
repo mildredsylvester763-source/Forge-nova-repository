@@ -49,6 +49,11 @@ import { CreditNote } from './modules/credit-notes/entities/credit-note.entity';
 import { CreditNotesModule } from './modules/credit-notes/credit-notes.module';
 import { Quote } from './modules/quotes/entities/quote.entity';
 import { QuotesModule } from './modules/quotes/quotes.module';
+import { LedgerAccount } from './modules/accounting/entities/ledger-account.entity';
+import { JournalEntry } from './modules/accounting/entities/journal-entry.entity';
+import { AccountingModule } from './modules/accounting/accounting.module';
+import { PaymentLink } from './modules/payment-links/entities/payment-link.entity';
+import { PaymentLinksModule } from './modules/payment-links/payment-links.module';
 
 @Module({
   imports: [
@@ -83,6 +88,9 @@ import { QuotesModule } from './modules/quotes/quotes.module';
             RecurringInvoiceProfile,
             CreditNote,
             Quote,
+            LedgerAccount,
+            JournalEntry,
+            PaymentLink,
           ],
           synchronize: isDevelopment,
           logging: isDevelopment,
@@ -114,6 +122,8 @@ import { QuotesModule } from './modules/quotes/quotes.module';
     RecurringModule,
     CreditNotesModule,
     QuotesModule,
+    AccountingModule,
+    PaymentLinksModule,
   ],
   providers: [
     {
