@@ -5,12 +5,13 @@
 // Derived states are honest projections, exactly like invoice overdue:
 //   expired  <- stored active + past expiresAt
 //   consumed <- stored active + uses exhausted (single-use or maxUses)
-// The stored status itself only holds 'active' or 'canceled'.
+// The stored status itself only holds 'active' or 'canceled', but the pure
+// engine tolerates a stored 'consumed' flag from legacy or hand-built data.
 
 export type EffectiveLinkStatus = 'active' | 'consumed' | 'expired' | 'canceled';
 
 export interface LinkLike {
-  status: 'active' | 'canceled';
+  status: 'active' | 'canceled' | 'consumed';
   singleUse: boolean;
   expiresAt?: Date | null;
   amountCents?: number | null;
@@ -19,8 +20,11 @@ export interface LinkLike {
 }
 
 export function effectiveLinkStatus(link: LinkLike, now: Date): EffectiveLinkStatus {
-  if (link.status === 'consumed' as never || link.status === 'canceled') {
-    return link.status === 'canceled' ? 'canceled' : 'consumed';
+  if (link.status === 'canceled') {
+    return 'canceled';
+  }
+  if (link.status === 'consumed') {
+    return 'consumed';
   }
   if (link.expiresAt && now.getTime() > link.expiresAt.getTime()) {
     return 'expired';
