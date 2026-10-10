@@ -19,6 +19,11 @@ import {
   dueDateFor,
   effectiveStatus,
 } from './engine/invoice-math';
+import {
+  DEFAULT_DUNNING_TERMS,
+  DunningResult,
+  computeDunning,
+} from './engine/invoice-dunning';
 
 @Injectable()
 export class InvoicesService {
@@ -113,6 +118,55 @@ export class InvoicesService {
   async remove(userId: string, id: string): Promise<void> {
     const invoice = await this.getOwned(userId, id);
     await this.invoiceRepository.softDelete({ id: invoice.id, userId });
+  }
+
+  /** Dunning projection for a single invoice: days overdue, fees, reminder ladder. */
+  async dunning(userId: string, id: string): Promise<DunningResult & { invoice: Invoice }> {
+    const invoice = this.projectOverdue([await this.getOwned(userId, id)])[0];
+    const result = computeDunning(
+      {
+        status: invoice.status,
+        totalCents: invoice.totalCents,
+        dueDate: invoice.dueDate,
+        paidAt: invoice.paidAt,
+      },
+      DEFAULT_DUNNING_TERMS,
+      new Date(),
+    );
+    return { invoice, ...result };
+  }
+
+  /** Every invoice with its dunning projection; the overdue rows carry the money view. */
+  async dunningSummary(userId: string): Promise<{
+    overdueCount: number;
+    outstandingCents: number;
+    lateFeesCents: number;
+    remindersDue: number;
+    invoices: { invoice: Invoice; dunning: DunningResult }[];
+  }> {
+    const invoices = await this.invoiceRepository.find({ where: { userId } });
+    const now = new Date();
+    const rows = this.projectOverdue(invoices).map((invoice) => ({
+      invoice,
+      dunning: computeDunning(
+        {
+          status: invoice.status,
+          totalCents: invoice.totalCents,
+          dueDate: invoice.dueDate,
+          paidAt: invoice.paidAt,
+        },
+        DEFAULT_DUNNING_TERMS,
+        now,
+      ),
+    }));
+    const overdue = rows.filter((row) => row.dunning.effectiveStatus === InvoiceStatus.OVERDUE);
+    return {
+      overdueCount: overdue.length,
+      outstandingCents: overdue.reduce((sum, row) => sum + row.invoice.totalCents, 0),
+      lateFeesCents: overdue.reduce((sum, row) => sum + row.dunning.lateFeeCents, 0),
+      remindersDue: overdue.reduce((sum, row) => sum + row.dunning.reminders.length, 0),
+      invoices: rows,
+    };
   }
 
   private async nextNumber(userId: string): Promise<string> {
