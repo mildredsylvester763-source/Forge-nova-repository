@@ -47,6 +47,8 @@ import { RecurringInvoiceProfile } from './modules/recurring/entities/recurring-
 import { RecurringModule } from './modules/recurring/recurring.module';
 import { CreditNote } from './modules/credit-notes/entities/credit-note.entity';
 import { CreditNotesModule } from './modules/credit-notes/credit-notes.module';
+import { Quote } from './modules/quotes/entities/quote.entity';
+import { QuotesModule } from './modules/quotes/quotes.module';
 
 @Module({
   imports: [
@@ -80,6 +82,7 @@ import { CreditNotesModule } from './modules/credit-notes/credit-notes.module';
             Invoice,
             RecurringInvoiceProfile,
             CreditNote,
+            Quote,
           ],
           synchronize: isDevelopment,
           logging: isDevelopment,
@@ -110,6 +113,7 @@ import { CreditNotesModule } from './modules/credit-notes/credit-notes.module';
     InvoicesModule,
     RecurringModule,
     CreditNotesModule,
+    QuotesModule,
   ],
   providers: [
     {
