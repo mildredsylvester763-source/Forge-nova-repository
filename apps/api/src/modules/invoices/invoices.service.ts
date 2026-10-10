@@ -116,7 +116,7 @@ export class InvoicesService {
   }
 
   private async nextNumber(userId: string): Promise<string> {
-    const latest = await this.invoiceRepository.findOne({
+    const [latest] = await this.invoiceRepository.find({
       where: { userId },
       order: { number: 'DESC' },
       take: 1,
