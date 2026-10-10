@@ -2,7 +2,7 @@
 // FILE: /apps/api/src/modules/invoices/engine/invoice-dunning.ts
 // ============================================================================
 // Pure dunning math: overdue projection, grace windows, late fees and the
-// reminder ladder. No database, no clock — `now` is always passed in by the
+// reminder ladder. No database, no clock — "now" is always passed in by the
 // service. Every refusal is named, never silent.
 
 import { InvoiceStatus } from '../enums';
@@ -60,7 +60,9 @@ export function computeDunning(
   terms: DunningTerms,
   now: Date,
 ): DunningResult {
-  const eff = effectiveStatus(input.status, now, input.dueDate, input.paidAt);
+  const dueDate = input.dueDate ?? undefined;
+  const paidAt = input.paidAt ?? undefined;
+  const eff = effectiveStatus(input.status, now, dueDate, paidAt);
   const chaseable = input.status === InvoiceStatus.SENT || input.status === InvoiceStatus.OVERDUE;
   const daysOverdue =
     chaseable && input.dueDate && !input.paidAt
@@ -104,7 +106,7 @@ export function computeDunning(
   const futureReminders: ReminderStage[] = [];
   if (chaseable && input.dueDate) {
     for (const offset of [...terms.reminderOffsets].sort((a, b) => a - b)) {
-      const dueOn = new Date(input.dueDate.getTime() + offset * DAY_MS);
+      const stageDueOn = new Date(input.dueDate.getTime() + offset * DAY_MS);
       const stage: ReminderStage = {
         offsetDays: offset,
         label:
@@ -113,9 +115,9 @@ export function computeDunning(
             : offset === 0
               ? 'due today'
               : 'overdue ' + offset + ' day(s)',
-        dueOn,
+        dueOn: stageDueOn,
       };
-      if (now.getTime() >= dueOn.getTime()) {
+      if (now.getTime() >= stageDueOn.getTime()) {
         reminders.push(stage);
       } else {
         futureReminders.push(stage);
