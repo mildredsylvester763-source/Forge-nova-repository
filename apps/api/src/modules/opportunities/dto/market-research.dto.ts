@@ -1,8 +1,4 @@
-import {
-  IsOptional, IsString, IsNumber, IsArray, IsBoolean, IsUrl, ValidateNested
-} from 'class-validator';
 import { Type } from 'class-transformer';
-import { FinancialProjectionsDto } from './financials.dto';
 
 export class CompetitorDto {
   @IsString()
