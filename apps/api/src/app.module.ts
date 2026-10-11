@@ -54,6 +54,8 @@ import { JournalEntry } from './modules/accounting/entities/journal-entry.entity
 import { AccountingModule } from './modules/accounting/accounting.module';
 import { PaymentLink } from './modules/payment-links/entities/payment-link.entity';
 import { PaymentLinksModule } from './modules/payment-links/payment-links.module';
+import { DunningLetter } from './modules/dunning-letters/entities/dunning-letter.entity';
+import { DunningLettersModule } from './modules/dunning-letters/dunning-letters.module';
 
 @Module({
   imports: [
@@ -91,6 +93,7 @@ import { PaymentLinksModule } from './modules/payment-links/payment-links.module
             LedgerAccount,
             JournalEntry,
             PaymentLink,
+            DunningLetter,
           ],
           synchronize: isDevelopment,
           logging: isDevelopment,
@@ -124,6 +127,7 @@ import { PaymentLinksModule } from './modules/payment-links/payment-links.module
     QuotesModule,
     AccountingModule,
     PaymentLinksModule,
+    DunningLettersModule,
   ],
   providers: [
     {
