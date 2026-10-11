@@ -164,8 +164,9 @@ describe('500-letter seeded sweep', () => {
       );
       if (isLetterRefusal(L)) {
         expect(L.reason.length).toBeGreaterThan(0);
-        expect(L.subject).toBeUndefined();
-        expect(L.body).toBeUndefined();
+        const shadow = L as unknown as Record<string, unknown>;
+        expect(shadow.subject).toBeUndefined();
+        expect(shadow.body).toBeUndefined();
       } else {
         expect(['gentle', 'polite', 'firm', 'urgent', 'final']).toContain(L.tone);
         expect(L.subject).toContain('INV-' + (1000 + i));
