@@ -1,3 +1,11 @@
+
+import {
+  IsOptional,
+  IsString,
+  IsNumber,
+  IsEnum,
+  IsArray,
+} from 'class-validator';
 import { RiskLevel } from '../enums';
 
 export class RiskDto {
