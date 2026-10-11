@@ -1,3 +1,13 @@
+
+import {
+  IsOptional,
+  IsString,
+  IsNumber,
+  IsArray,
+  IsBoolean,
+  IsDateString,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class NotificationDto {
