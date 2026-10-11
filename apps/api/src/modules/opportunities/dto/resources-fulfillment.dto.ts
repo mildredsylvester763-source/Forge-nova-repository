@@ -1,3 +1,12 @@
+
+import {
+  IsOptional,
+  IsString,
+  IsNumber,
+  IsArray,
+  IsUrl,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class RequiredResourcesDto {
