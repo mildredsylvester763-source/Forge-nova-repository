@@ -1,8 +1,4 @@
-import {
-  IsOptional, IsString, IsNumber, IsArray, IsUrl, IsDateString, ValidateNested, IsDateString as IsDate
-} from 'class-validator';
 import { Type } from 'class-transformer';
-import { PortfolioMetricsDto, NotificationDto } from './tracking.dto';
 
 export class DecisionDto {
   @IsString()
