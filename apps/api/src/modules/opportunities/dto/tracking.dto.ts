@@ -1,8 +1,4 @@
-import {
-  IsOptional, IsString, IsNumber, IsArray, IsBoolean, IsDateString, ValidateNested, IsDateString as IsDate
-} from 'class-validator';
 import { Type } from 'class-transformer';
-import { AiAnalysisDto } from './ai-analysis.dto';
 
 export class NotificationDto {
   @IsString()
