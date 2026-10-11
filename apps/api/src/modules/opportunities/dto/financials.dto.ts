@@ -1,8 +1,4 @@
-import {
-  IsOptional, IsNumber, ValidateNested
-} from 'class-validator';
 import { Type } from 'class-transformer';
-import { RequiredResourcesDto } from './resources-fulfillment.dto';
 
 export class FinancialProjectionsDto {
   @IsOptional()
