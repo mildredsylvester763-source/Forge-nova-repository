@@ -2,7 +2,7 @@ import {
   IsOptional, IsString, IsArray, ValidateNested
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { CompetitorDto } from './market-research';
+import { CompetitorDto } from './market-research.dto';
 
 export class TargetAudienceDto {
   @IsOptional()
