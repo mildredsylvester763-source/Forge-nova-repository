@@ -2,7 +2,7 @@ import {
   IsOptional, IsString, IsNumber, IsArray, IsUrl, ValidateNested
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { RiskDto } from './risk-actions';
+import { RiskDto } from './risk-actions.dto';
 
 export class RequiredResourcesDto {
   @IsOptional()
