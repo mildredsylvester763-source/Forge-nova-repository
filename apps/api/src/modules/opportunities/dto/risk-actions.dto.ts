@@ -2,7 +2,7 @@ import {
   IsOptional, IsString, IsNumber, IsEnum, IsArray
 } from 'class-validator';
 import { RiskLevel } from '../enums';
-import { DecisionDto } from './ai-analysis';
+import { DecisionDto } from './ai-analysis.dto';
 
 export class RiskDto {
   @IsString()
