@@ -56,6 +56,16 @@ import { PaymentLink } from './modules/payment-links/entities/payment-link.entit
 import { PaymentLinksModule } from './modules/payment-links/payment-links.module';
 import { DunningLetter } from './modules/dunning-letters/entities/dunning-letter.entity';
 import { DunningLettersModule } from './modules/dunning-letters/dunning-letters.module';
+import { AccountingPeriod } from './modules/accounting/entities/accounting-period.entity';
+import { Payment } from './modules/payments/entities/payment.entity';
+import { Receipt } from './modules/receipts/entities/receipt.entity';
+import { Expense } from './modules/expenses/entities/expense.entity';
+import { Contact } from './modules/contacts/entities/contact.entity';
+import { PaymentsModule } from './modules/payments/payments.module';
+import { ReceiptsModule } from './modules/receipts/receipts.module';
+import { ExpensesModule } from './modules/expenses/expenses.module';
+import { ContactsModule } from './modules/contacts/contacts.module';
+import { CustomerStatementsModule } from './modules/customer-statements/customer-statements.module';
 
 @Module({
   imports: [
@@ -94,6 +104,11 @@ import { DunningLettersModule } from './modules/dunning-letters/dunning-letters.
             JournalEntry,
             PaymentLink,
             DunningLetter,
+            AccountingPeriod,
+            Payment,
+            Receipt,
+            Expense,
+            Contact,
           ],
           synchronize: isDevelopment,
           logging: isDevelopment,
@@ -128,6 +143,11 @@ import { DunningLettersModule } from './modules/dunning-letters/dunning-letters.
     AccountingModule,
     PaymentLinksModule,
     DunningLettersModule,
+    PaymentsModule,
+    ReceiptsModule,
+    ExpensesModule,
+    ContactsModule,
+    CustomerStatementsModule,
   ],
   providers: [
     {
