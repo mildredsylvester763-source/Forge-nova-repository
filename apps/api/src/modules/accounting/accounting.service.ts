@@ -25,6 +25,10 @@ import {
   trialBalance,
   validateJournal,
 } from './engine/ledger-posting';
+import { AccountingPeriod } from './entities/accounting-period.entity';
+import { periodOverlaps } from './engine/fiscal-year';
+import { periodSummary, validateClose } from './engine/period-close';
+import { buildBalanceSheet, buildCashFlow, buildProfitAndLoss } from './engine/reports';
 
 /** The standard small-business chart seeded by POST /accounting/chart/seed. */
 export const CHART_SEED: { code: string; name: string; type: AccountType }[] = [
@@ -34,6 +38,7 @@ export const CHART_SEED: { code: string; name: string; type: AccountType }[] = [
   { code: '3000', name: "Owner's Equity", type: AccountType.EQUITY },
   { code: '4000', name: 'Sales Revenue', type: AccountType.REVENUE },
   { code: '4900', name: 'Sales Returns and Allowances', type: AccountType.EXPENSE },
+  { code: '6000', name: 'Operating Expenses', type: AccountType.EXPENSE },
 ];
 
 @Injectable()
@@ -47,6 +52,8 @@ export class AccountingService {
     private readonly invoiceRepository: Repository<Invoice>,
     @InjectRepository(CreditNote)
     private readonly noteRepository: Repository<CreditNote>,
+    @InjectRepository(AccountingPeriod)
+    private readonly periodRepository: Repository<AccountingPeriod>,
   ) {}
 
   // ---------------- chart of accounts ----------------
@@ -180,6 +187,7 @@ export class AccountingService {
       taxPayableId: need('2100'),
       cashId: need('1010'),
       returnsId: need('4900'),
+      operatingExpenseId: need('6000'),
     };
   }
 
@@ -236,7 +244,7 @@ export class AccountingService {
 
   private async postAuto(
     userId: string,
-    sourceType: 'invoice_issued' | 'invoice_payment' | 'credit_note_issued',
+    sourceType: 'invoice_issued' | 'invoice_payment' | 'credit_note_issued' | 'expense',
     sourceId: string,
     label: string,
     lines: { accountId: string; side: 'debit' | 'credit'; amountCents: number }[],
@@ -280,5 +288,110 @@ export class AccountingService {
       totalCents: verdict.debitCents,
     });
     return this.journalRepository.save(journal);
+  }
+
+  // ---------- expenses: money out posts to the ledger ----------
+
+  async postExpenseFor(
+    userId: string,
+    expenseId: string,
+    amountCents: number,
+    description: string,
+  ): Promise<JournalEntry> {
+    if (!Number.isInteger(amountCents) || amountCents <= 0) {
+      throw new BadRequestException('expense amount must be a positive integer number of cents');
+    }
+    const ids = await this.requirePostingAccounts(userId);
+    const lines = [
+      { accountId: ids.operatingExpenseId, side: 'debit' as const, amountCents },
+      { accountId: ids.cashId, side: 'credit' as const, amountCents },
+    ];
+    return this.postAuto(userId, 'expense', expenseId, description, lines, {
+      idempotencyKey: 'expense-' + expenseId,
+      description: 'Expense: ' + description,
+    });
+  }
+
+  // ---------- accounting periods ----------
+
+  async createPeriod(userId: string, name: string, startsAt: string, endsAt: string): Promise<AccountingPeriod> {
+    if (!name || !name.trim()) {
+      throw new BadRequestException('period needs a name');
+    }
+    const start = new Date(startsAt);
+    const end = new Date(endsAt);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      throw new BadRequestException('period needs valid ISO start and end dates');
+    }
+    if (end.getTime() <= start.getTime()) {
+      throw new BadRequestException('period end must be after its start');
+    }
+    const existing = await this.periodRepository.find({ where: { userId } });
+    const overlaps = periodOverlaps(
+      existing.map((p) => ({ startsAt: p.startsAt.toISOString(), endsAtExclusive: p.endsAt.toISOString() })),
+      start.toISOString(),
+      end.toISOString(),
+    );
+    if (overlaps.length > 0) {
+      throw new ConflictException('period overlaps existing period(s): ' + overlaps.join(', '));
+    }
+    const duplicate = await this.periodRepository.findOne({ where: { userId, name } });
+    if (duplicate) {
+      throw new ConflictException('period name ' + name + ' already exists');
+    }
+    return this.periodRepository.save(this.periodRepository.create({ userId, name, startsAt: start, endsAt: end }));
+  }
+
+  async listPeriods(userId: string): Promise<AccountingPeriod[]> {
+    return this.periodRepository.find({ where: { userId }, order: { startsAt: 'ASC' } });
+  }
+
+  async closePeriod(userId: string, periodId: string): Promise<AccountingPeriod> {
+    const period = await this.periodRepository.findOne({ where: { id: periodId, userId } });
+    if (!period) {
+      throw new NotFoundException('period ' + periodId + ' not found');
+    }
+    const now = new Date();
+    const verdict = validateClose(period, now);
+    if (!verdict.ok) {
+      throw new ConflictException(verdict.reason);
+    }
+    const journals = await this.journalRepository.find({ where: { userId } });
+    const summary = periodSummary(journals, period.startsAt, period.endsAt);
+    period.closedAt = now;
+    period.journalCount = summary.journalCount;
+    period.journalTotalCents = Object.values(summary.bySource).reduce((s, b) => s + b.totalCents, 0);
+    return this.periodRepository.save(period);
+  }
+
+  // ---------- financial statements ----------
+
+  private async reportInputs(userId: string, from?: string, to?: string) {
+    const accounts = await this.findAccounts(userId);
+    const journals = await this.journalRepository.find({ where: { userId } });
+    const start = from ? new Date(from) : undefined;
+    const end = to ? new Date(to) : undefined;
+    const inRange = journals.filter(
+      (j) => (!start || j.occurredAt >= start) && (!end || j.occurredAt < end),
+    );
+    return {
+      accounts: accounts.map((a) => ({ id: a.id, code: a.code, name: a.name, type: a.type })),
+      journals: inRange,
+    };
+  }
+
+  async profitAndLossFor(userId: string, from?: string, to?: string) {
+    const { accounts, journals } = await this.reportInputs(userId, from, to);
+    return buildProfitAndLoss(accounts, journals);
+  }
+
+  async balanceSheetFor(userId: string, from?: string, to?: string) {
+    const { accounts, journals } = await this.reportInputs(userId, from, to);
+    return buildBalanceSheet(accounts, journals);
+  }
+
+  async cashFlowFor(userId: string, from?: string, to?: string, cashCodes: string[] = ['1010']) {
+    const { journals } = await this.reportInputs(userId, from, to);
+    return buildCashFlow(journals, cashCodes);
   }
 }
