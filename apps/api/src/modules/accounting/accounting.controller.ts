@@ -3,7 +3,7 @@
 // ============================================================================
 // Zero-trust entry points. Static segments before :id.
 
-import { BadRequestException, Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post, Request } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post, Query, Request } from '@nestjs/common';
 import { AccountingService } from './accounting.service';
 import { CreateJournalDto } from './dto/create-journal.dto';
 import { AccountType } from './entities/ledger-account.entity';
@@ -62,6 +62,43 @@ export class AccountingController {
   @HttpCode(HttpStatus.OK)
   postInvoicePayment(@Request() req: any, @Param('invoiceId', ParseUUIDPipe) invoiceId: string) {
     return this.accountingService.postInvoicePaymentFor(req.user.id, invoiceId);
+  }
+
+  @Post('periods')
+  createPeriod(
+    @Request() req: any,
+    @Body() body: { name?: string; startsAt?: string; endsAt?: string },
+  ) {
+    if (!body.name || !body.startsAt || !body.endsAt) {
+      throw new BadRequestException('name, startsAt and endsAt are required');
+    }
+    return this.accountingService.createPeriod(req.user.id, body.name, body.startsAt, body.endsAt);
+  }
+
+  @Get('periods')
+  listPeriods(@Request() req: any) {
+    return this.accountingService.listPeriods(req.user.id);
+  }
+
+  @Post('periods/:id/close')
+  @HttpCode(HttpStatus.OK)
+  closePeriod(@Request() req: any, @Param('id', ParseUUIDPipe) id: string) {
+    return this.accountingService.closePeriod(req.user.id, id);
+  }
+
+  @Get('reports/profit-loss')
+  profitAndLoss(@Request() req: any, @Query('from') from?: string, @Query('to') to?: string) {
+    return this.accountingService.profitAndLossFor(req.user.id, from, to);
+  }
+
+  @Get('reports/balance-sheet')
+  balanceSheet(@Request() req: any, @Query('from') from?: string, @Query('to') to?: string) {
+    return this.accountingService.balanceSheetFor(req.user.id, from, to);
+  }
+
+  @Get('reports/cash-flow')
+  cashFlow(@Request() req: any, @Query('from') from?: string, @Query('to') to?: string) {
+    return this.accountingService.cashFlowFor(req.user.id, from, to);
   }
 
   @Post('post/credit-note/:noteId')
