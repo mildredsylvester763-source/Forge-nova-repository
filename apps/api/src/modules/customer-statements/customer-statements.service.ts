@@ -45,7 +45,7 @@ export class CustomerStatementsService {
           number: i.number,
           totalCents: i.totalCents,
           status: i.status,
-          dueAt: i.dueAt ?? null,
+          dueAt: i.dueDate ?? null,
         })),
         now,
       );
