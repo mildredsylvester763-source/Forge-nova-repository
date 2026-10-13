@@ -40,7 +40,7 @@ export class PaymentsService {
         id: i.id,
         number: i.number,
         totalCents: i.totalCents,
-        dueAt: i.dueAt ?? null,
+        dueAt: i.dueDate ?? null,
         status: i.status,
       })),
       dto.amountCents,
