@@ -26,7 +26,7 @@ export interface JournalLine {
   amountCents: number;
 }
 
-export type JournalSourceType = 'manual' | 'invoice_issued' | 'invoice_payment' | 'credit_note_issued';
+export type JournalSourceType = 'manual' | 'invoice_issued' | 'invoice_payment' | 'credit_note_issued' | 'expense';
 
 @Entity('journal_entries')
 @Index(['userId', 'idempotencyKey'])
@@ -41,7 +41,7 @@ export class JournalEntry {
   @Column()
   description: string;
 
-  @Column({ type: 'enum', enum: ['manual', 'invoice_issued', 'invoice_payment', 'credit_note_issued'] as const, default: 'manual' as const })
+  @Column({ type: 'enum', enum: ['manual', 'invoice_issued', 'invoice_payment', 'credit_note_issued', 'expense'] as const, default: 'manual' as const })
   sourceType: JournalSourceType;
 
   @Column({ type: 'uuid', nullable: true })
