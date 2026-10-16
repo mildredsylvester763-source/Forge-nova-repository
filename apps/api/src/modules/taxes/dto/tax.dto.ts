@@ -2,7 +2,7 @@
 // FILE: /apps/api/src/modules/taxes/dto/tax.dto.ts
 // ============================================================================
 
-import { IsIn, IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { IsIn, IsInt, IsNotEmpty, IsString, MaxLength, Min } from 'class-validator';
 
 export class VatDto {
   @IsInt()
