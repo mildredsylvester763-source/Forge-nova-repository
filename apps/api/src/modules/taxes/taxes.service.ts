@@ -26,7 +26,12 @@ export class TaxesService {
     if (!verdict.ok) {
       throw new BadRequestException(verdict.reason);
     }
-    const record = await this.persist(userId, 'vat', dto as unknown as Record<string, unknown>, verdict.value);
+    const record = await this.persist(
+      userId,
+      'vat',
+      dto as unknown as Record<string, unknown>,
+      verdict.value as unknown as Record<string, unknown>,
+    );
     return { recordId: record.id, ...verdict.value };
   }
 
@@ -35,7 +40,12 @@ export class TaxesService {
     if (!verdict.ok) {
       throw new BadRequestException(verdict.reason);
     }
-    const record = await this.persist(userId, 'withholding', dto as unknown as Record<string, unknown>, verdict.value);
+    const record = await this.persist(
+      userId,
+      'withholding',
+      dto as unknown as Record<string, unknown>,
+      verdict.value as unknown as Record<string, unknown>,
+    );
     return { recordId: record.id, ...verdict.value };
   }
 
@@ -48,7 +58,7 @@ export class TaxesService {
       userId,
       'filing',
       dto as unknown as Record<string, unknown>,
-      verdict.value,
+      verdict.value as unknown as Record<string, unknown>,
       dto.periodLabel,
     );
     return { recordId: record.id, ...verdict.value };
