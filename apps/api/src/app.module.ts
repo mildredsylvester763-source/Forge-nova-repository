@@ -66,6 +66,19 @@ import { ReceiptsModule } from './modules/receipts/receipts.module';
 import { ExpensesModule } from './modules/expenses/expenses.module';
 import { ContactsModule } from './modules/contacts/contacts.module';
 import { CustomerStatementsModule } from './modules/customer-statements/customer-statements.module';
+import { AgentCommand } from './modules/agent/entities/agent-command.entity';
+import { AgentModule } from './modules/agent/agent.module';
+import { Budget } from './modules/budgets/entities/budget.entity';
+import { BudgetsModule } from './modules/budgets/budgets.module';
+import { TaxRecord } from './modules/taxes/entities/tax-record.entity';
+import { TaxesModule } from './modules/taxes/taxes.module';
+import { AuditLog } from './modules/audit/entities/audit-log.entity';
+import { AuditModule } from './modules/audit/audit.module';
+import { Activity } from './modules/crm-activities/entities/activity.entity';
+import { ActivitiesModule } from './modules/crm-activities/activities.module';
+import { StockItem } from './modules/inventory/entities/stock-item.entity';
+import { StockMovement } from './modules/inventory/entities/stock-movement.entity';
+import { InventoryModule } from './modules/inventory/inventory.module';
 
 @Module({
   imports: [
@@ -109,6 +122,13 @@ import { CustomerStatementsModule } from './modules/customer-statements/customer
             Receipt,
             Expense,
             Contact,
+            AgentCommand,
+            Budget,
+            TaxRecord,
+            AuditLog,
+            Activity,
+            StockItem,
+            StockMovement,
           ],
           synchronize: isDevelopment,
           logging: isDevelopment,
@@ -148,6 +168,12 @@ import { CustomerStatementsModule } from './modules/customer-statements/customer
     ExpensesModule,
     ContactsModule,
     CustomerStatementsModule,
+    AgentModule,
+    BudgetsModule,
+    TaxesModule,
+    AuditModule,
+    ActivitiesModule,
+    InventoryModule,
   ],
   providers: [
     {
