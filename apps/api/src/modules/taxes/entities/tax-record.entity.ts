@@ -17,7 +17,7 @@ import {
 } from 'typeorm';
 
 @Entity('tax_records')
-@Index(['userId', 'kind', 'createdAt']])
+@Index(['userId', 'kind', 'createdAt'])
 export class TaxRecord {
   @PrimaryGeneratedColumn('uuid')
   id: string;
