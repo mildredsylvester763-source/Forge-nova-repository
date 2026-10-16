@@ -31,9 +31,14 @@ describe('budget-variance engine', () => {
   });
 
   it('refuses negative budget, negative actual, and zero-budget-with-spend by name', () => {
-    expect(budgetVariance(-1, 0).reason).toBe('budget-negative-amount');
-    expect(budgetVariance(100, -1).reason).toBe('actual-negative-amount');
+    const negBudget = budgetVariance(-1, 0);
+    expect(negBudget.ok).toBe(false);
+    if (!negBudget.ok) expect(negBudget.reason).toBe('budget-negative-amount');
+    const negActual = budgetVariance(100, -1);
+    expect(negActual.ok).toBe(false);
+    if (!negActual.ok) expect(negActual.reason).toBe('actual-negative-amount');
     const zero = budgetVariance(0, 500);
+    expect(zero.ok).toBe(false);
     if (!zero.ok) expect(zero.reason).toBe('budget-zero-division');
   });
 
