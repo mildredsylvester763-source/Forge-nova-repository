@@ -23,8 +23,9 @@ describe('agent-command engine', () => {
   });
 
   it('refuses empty and filler-only commands by name', () => {
-    expect(normalizeCommand('   ').ok).toBe(false);
-    expect(normalizeCommand('   ').reason).toBe('command-empty');
+    const empty = normalizeCommand('   ');
+    expect(empty.ok).toBe(false);
+    if (!empty.ok) expect(empty.reason).toBe('command-empty');
     const fillerOnly = normalizeCommand('please hi okay hey');
     expect(fillerOnly.ok).toBe(false);
     if (!fillerOnly.ok) expect(fillerOnly.reason).toBe('command-only-filler');
