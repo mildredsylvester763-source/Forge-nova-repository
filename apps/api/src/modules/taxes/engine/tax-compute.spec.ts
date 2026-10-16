@@ -32,8 +32,11 @@ describe('tax-compute engine', () => {
   });
 
   it('refuses negative amounts and out-of-range rates by name', () => {
-    expect(computeVat(-1, 750, 'exclusive').reason).toBe('vat-negative-amount');
+    const negative = computeVat(-1, 750, 'exclusive');
+    expect(negative.ok).toBe(false);
+    if (!negative.ok) expect(negative.reason).toBe('vat-negative-amount');
     const bad = computeVat(100, 10001, 'exclusive');
+    expect(bad.ok).toBe(false);
     if (!bad.ok) expect(bad.reason).toBe('vat-invalid-rate');
   });
 
