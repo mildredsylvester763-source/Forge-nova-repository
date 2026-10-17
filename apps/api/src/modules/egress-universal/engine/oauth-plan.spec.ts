@@ -11,6 +11,7 @@ import {
 
 const PKCE_PROVIDER = {
   authorizeUrl: 'https://auth.example.com/oauth/authorize',
+  tokenUrl: 'https://auth.example.com/oauth/token',
   scopes: ['read', 'write'],
   usePkce: true,
 };
@@ -76,7 +77,7 @@ describe('oauth-plan (authorization code + PKCE)', () => {
   });
 
   it('refuses PKCE challenges on non-PKCE providers', () => {
-    const noPkce = { authorizeUrl: 'https://auth.example.com/a', scopes: ['read'], usePkce: false };
+    const noPkce = { authorizeUrl: 'https://auth.example.com/a', tokenUrl: 'https://auth.example.com/t', scopes: ['read'], usePkce: false };
     const refuse = buildAuthorizePlan(noPkce, 'client-12345678', 'https://app.forgenova.com/cb', 'state1234567890abcdef', ['read'], 'A'.repeat(43));
     expect(refuse.ok).toBe(false);
     if (!refuse.ok) expect(refuse.reason).toBe('oauth-pkce-not-supported');
