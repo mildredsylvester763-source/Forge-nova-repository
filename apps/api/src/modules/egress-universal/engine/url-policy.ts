@@ -57,22 +57,55 @@ export function checkIpv4Literal(ip: string): Verdict<{ public: true }> {
 }
 
 // IPv6 literal guard: loopback, ULA, link-local, mapped-v4 private.
-export function checkIpv6Literal(ip: string): Verdict<{ public: true }> {
-  const v = ip.toLowerCase();
-  if (v === '::' || v === '::1') return { ok: false, reason: 'url-loopback-address' };
-  if (v.startsWith('fe80:') || v.startsWith('fe9') || v.startsWith('fea') || v.startsWith('feb')) {
-    return { ok: false, reason: 'url-link-local-address' };
+// Parses any IPv6 spelling — bracketed, compressed (::), or with an embedded
+// dotted quad — into eight numeric 16-bit groups. Returns null when the text
+// is not a valid IPv6 literal.
+function parseIpv6Literal(text: string): number[] | null {
+  let s = text.trim().toLowerCase();
+  if (s.startsWith('[') && s.endsWith(']')) s = s.slice(1, -1);
+  // ::ffff:127.0.0.1 → ::ffff:7f00:1 (the URL serializer's own spelling).
+  const dotted = s.match(/^(.*:)(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/);
+  if (dotted) {
+    const n = ipv4ToInt(dotted[2]);
+    if (n === null) return null;
+    s = dotted[1] + ((n >>> 16) & 0xffff).toString(16) + ':' + (n & 0xffff).toString(16);
   }
-  if (v.startsWith('fc') || v.startsWith('fd')) return { ok: false, reason: 'url-private-address' };
-  const mapped = v.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
-  if (mapped) return checkIpv4Literal(mapped[1]);
-  // WHATWG URL serializes IPv4-mapped IPv6 in hex form (e.g. ::ffff:7f00:1),
-  // never dotted — handle both spellings or the literal slips the wall.
-  const mappedHex = v.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
-  if (mappedHex) {
-    const hi = parseInt(mappedHex[1], 16);
-    const lo = parseInt(mappedHex[2], 16);
-    return checkIpv4Literal(((hi >>> 8) & 255) + '.' + (hi & 255) + '.' + ((lo >>> 8) & 255) + '.' + (lo & 255));
+  const halves = s.split('::');
+  if (halves.length > 2) return null;
+  let head: string[];
+  let tail: string[] = [];
+  if (halves.length === 2) {
+    head = halves[0] === '' ? [] : halves[0].split(':');
+    tail = halves[1] === '' ? [] : halves[1].split(':');
+  } else {
+    head = s.split(':');
+  }
+  const total = head.length + tail.length;
+  if (halves.length === 2 && total > 7) return null;
+  if (halves.length === 1 && head.length !== 8) return null;
+  const groupsText = halves.length === 2 ? [...head, ...new Array(8 - total).fill('0'), ...tail] : head;
+  const groups: number[] = [];
+  for (const g of groupsText) {
+    if (!/^[0-9a-f]{1,4}$/.test(g)) return null;
+    groups.push(parseInt(g, 16));
+  }
+  return groups.length === 8 ? groups : null;
+}
+
+export function checkIpv6Literal(ip: string): Verdict<{ public: true }> {
+  const groups = parseIpv6Literal(ip);
+  if (!groups) return { ok: false, reason: 'url-invalid-ipv6' };
+  const zeroRun = (from: number, to: number) => groups.slice(from, to).every((g) => g === 0);
+  if (groups.every((g) => g === 0)) return { ok: false, reason: 'url-unspecified-address' };
+  if (zeroRun(0, 7) && groups[7] === 1) return { ok: false, reason: 'url-loopback-address' };
+  if ((groups[0] & 0xff00) === 0xff00) return { ok: false, reason: 'url-reserved-address' };
+  if ((groups[0] & 0xffc0) === 0xfe80) return { ok: false, reason: 'url-link-local-address' };
+  if ((groups[0] & 0xfe00) === 0xfc00) return { ok: false, reason: 'url-private-address' };
+  // IPv4-mapped (::ffff:0:0/96): 80 zero bits, 0xffff, then the v4 address —
+  // in either dotted or hex spelling.
+  if (zeroRun(0, 5) && groups[5] === 0xffff) {
+    const v4 = ((groups[6] << 16) | groups[7]) >>> 0;
+    return checkIpv4Literal([(v4 >>> 24) & 255, (v4 >>> 16) & 255, (v4 >>> 8) & 255, v4 & 255].join('.'));
   }
   return { ok: true, value: { public: true } };
 }
