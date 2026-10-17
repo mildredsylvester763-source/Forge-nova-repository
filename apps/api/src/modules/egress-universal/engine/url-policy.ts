@@ -66,6 +66,14 @@ export function checkIpv6Literal(ip: string): Verdict<{ public: true }> {
   if (v.startsWith('fc') || v.startsWith('fd')) return { ok: false, reason: 'url-private-address' };
   const mapped = v.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
   if (mapped) return checkIpv4Literal(mapped[1]);
+  // WHATWG URL serializes IPv4-mapped IPv6 in hex form (e.g. ::ffff:7f00:1),
+  // never dotted — handle both spellings or the literal slips the wall.
+  const mappedHex = v.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  if (mappedHex) {
+    const hi = parseInt(mappedHex[1], 16);
+    const lo = parseInt(mappedHex[2], 16);
+    return checkIpv4Literal(((hi >>> 8) & 255) + '.' + (hi & 255) + '.' + ((lo >>> 8) & 255) + '.' + (lo & 255));
+  }
   return { ok: true, value: { public: true } };
 }
 
