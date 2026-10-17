@@ -78,10 +78,13 @@ describe('url-policy (SSRF wall)', () => {
     }
   });
 
-  it('refuses public encoded literals even when they normalize to public space', () => {
+  it('normalizes public encoded literals through the URL parser to dotted quad', () => {
+    // Node's WHATWG URL collapses 0x01020304 to 1.2.3.4 before we see the
+    // host; encoded literals that land in PUBLIC space are therefore accepted
+    // as their normalized public dotted quad (private/loopback ones refuse).
     const v = normalizeTarget('https://0x01020304/x');
-    expect(v.ok).toBe(false);
-    if (!v.ok) expect(v.reason).toBe('url-encoded-literal');
+    expect(v.ok).toBe(true);
+    if (v.ok) expect(v.value.host).toBe('1.2.3.4');
   });
 
   it('refuses IPv6 loopback, link-local, ULA and mapped-private literals', () => {
