@@ -36,9 +36,16 @@ describe('webhook-dispatch engine', () => {
   });
 
   it('backoff escalates and then refuses by name', () => {
-    expect(backoffSeconds(0).ok && backoffSeconds(0).value.seconds).toBe(60);
-    expect(backoffSeconds(2).ok && backoffSeconds(2).value.seconds).toBe(1800);
-    expect(backoffSeconds(4).ok && backoffSeconds(4).value.seconds).toBe(28800);
+    const b0 = backoffSeconds(0);
+    const b2 = backoffSeconds(2);
+    const b4 = backoffSeconds(4);
+    if (!b0.ok || !b2.ok || !b4.ok) {
+      expect(b0.ok && b2.ok && b4.ok).toBe(true);
+      return;
+    }
+    expect(b0.value.seconds).toBe(60);
+    expect(b2.value.seconds).toBe(1800);
+    expect(b4.value.seconds).toBe(28800);
     const done = backoffSeconds(5);
     expect(done.ok).toBe(false);
     if (!done.ok) expect(done.reason).toBe('webhook-retries-exhausted');
