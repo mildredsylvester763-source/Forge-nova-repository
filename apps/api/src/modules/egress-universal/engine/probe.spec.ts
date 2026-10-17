@@ -31,10 +31,14 @@ describe('probe (destination health)', () => {
   });
 
   it('schedules probe cadence by failure/success streaks', () => {
-    expect(nextProbeMinutes(1, 0).value.minutes).toBe(5);
-    expect(nextProbeMinutes(0, 0).value.minutes).toBe(60);
-    expect(nextProbeMinutes(0, 3).value.minutes).toBe(360);
-    expect(nextProbeMinutes(0, 10).value.minutes).toBe(1440);
+    const p1 = nextProbeMinutes(1, 0);
+    expect(p1.ok).toBe(true); if (p1.ok) expect(p1.value.minutes).toBe(5);
+    const p2 = nextProbeMinutes(0, 0);
+    expect(p2.ok).toBe(true); if (p2.ok) expect(p2.value.minutes).toBe(60);
+    const p3 = nextProbeMinutes(0, 3);
+    expect(p3.ok).toBe(true); if (p3.ok) expect(p3.value.minutes).toBe(360);
+    const p4 = nextProbeMinutes(0, 10);
+    expect(p4.ok).toBe(true); if (p4.ok) expect(p4.value.minutes).toBe(1440);
   });
 
   it('marks a destination down on the third consecutive failure', () => {
