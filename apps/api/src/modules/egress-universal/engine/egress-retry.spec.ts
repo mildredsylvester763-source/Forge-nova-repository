@@ -18,9 +18,12 @@ describe('egress-retry (outbound retry discipline)', () => {
 
   it('pins the attempt cap and backoff ladder', () => {
     expect(MAX_ATTEMPTS).toBe(4);
-    expect(backoffSeconds(0).value.seconds).toBe(1);
-    expect(backoffSeconds(1).value.seconds).toBe(3);
-    expect(backoffSeconds(2).value.seconds).toBe(10);
+    const b0 = backoffSeconds(0);
+    expect(b0.ok).toBe(true); if (b0.ok) expect(b0.value.seconds).toBe(1);
+    const b1 = backoffSeconds(1);
+    expect(b1.ok).toBe(true); if (b1.ok) expect(b1.value.seconds).toBe(3);
+    const b2 = backoffSeconds(2);
+    expect(b2.ok).toBe(true); if (b2.ok) expect(b2.value.seconds).toBe(10);
   });
 
   it('names exhaustion and invalid attempts', () => {
@@ -40,12 +43,17 @@ describe('egress-retry (outbound retry discipline)', () => {
   });
 
   it('classifies retryable statuses', () => {
-    expect(classifyForRetry(503, false).value).toBe('retry');
-    expect(classifyForRetry(429, false).value).toBe('retry');
-    expect(classifyForRetry(408, false).value).toBe('retry');
-    expect(classifyForRetry(200, false).value).toBe('no-retry');
-    expect(classifyForRetry(404, false).value).toBe('no-retry');
-    expect(classifyForRetry(200, true).value).toBe('retry');
+    const pin = (code: number, transport: boolean, want: string) => {
+      const v = classifyForRetry(code, transport);
+      expect(v.ok).toBe(true);
+      if (v.ok) expect(v.value).toBe(want);
+    };
+    pin(503, false, 'retry');
+    pin(429, false, 'retry');
+    pin(408, false, 'retry');
+    pin(200, false, 'no-retry');
+    pin(404, false, 'no-retry');
+    pin(200, true, 'retry');
     expect(classifyForRetry(99, false).ok).toBe(false);
   });
 
