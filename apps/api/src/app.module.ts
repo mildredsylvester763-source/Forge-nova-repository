@@ -198,4 +198,4 @@ import { IntegrationsModule } from './modules/integrations/integrations.module';
     { provide: APP_GUARD, useClass: GlobalAuthGuard },
   ],
 })
-export class AppModule {}	ÿ¿
+export class AppModule {}
