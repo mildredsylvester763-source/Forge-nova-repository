@@ -79,6 +79,11 @@ import { ActivitiesModule } from './modules/crm-activities/activities.module';
 import { StockItem } from './modules/inventory/entities/stock-item.entity';
 import { StockMovement } from './modules/inventory/entities/stock-movement.entity';
 import { InventoryModule } from './modules/inventory/inventory.module';
+import { ApiKey } from './modules/integrations/entities/api-key.entity';
+import { WebhookEndpoint } from './modules/integrations/entities/webhook-endpoint.entity';
+import { WebhookDelivery } from './modules/integrations/entities/webhook-delivery.entity';
+import { Integration } from './modules/integrations/entities/integration.entity';
+import { IntegrationsModule } from './modules/integrations/integrations.module';
 
 @Module({
   imports: [
@@ -129,6 +134,10 @@ import { InventoryModule } from './modules/inventory/inventory.module';
             Activity,
             StockItem,
             StockMovement,
+            ApiKey,
+            WebhookEndpoint,
+            WebhookDelivery,
+            Integration,
           ],
           synchronize: isDevelopment,
           logging: isDevelopment,
@@ -174,6 +183,7 @@ import { InventoryModule } from './modules/inventory/inventory.module';
     AuditModule,
     ActivitiesModule,
     InventoryModule,
+    IntegrationsModule,
   ],
   providers: [
     {
@@ -188,4 +198,4 @@ import { InventoryModule } from './modules/inventory/inventory.module';
     { provide: APP_GUARD, useClass: GlobalAuthGuard },
   ],
 })
-export class AppModule {}
+export class AppModule {}	ÿ¿
