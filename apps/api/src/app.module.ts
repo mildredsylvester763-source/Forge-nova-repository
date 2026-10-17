@@ -84,6 +84,10 @@ import { WebhookEndpoint } from './modules/integrations/entities/webhook-endpoin
 import { WebhookDelivery } from './modules/integrations/entities/webhook-delivery.entity';
 import { Integration } from './modules/integrations/entities/integration.entity';
 import { IntegrationsModule } from './modules/integrations/integrations.module';
+import { EgressConnection } from './modules/egress-universal/entities/egress-connection.entity';
+import { EgressCallLog } from './modules/egress-universal/entities/egress-call-log.entity';
+import { EgressQuota } from './modules/egress-universal/entities/egress-quota.entity';
+import { EgressUniversalModule } from './modules/egress-universal/egress-universal.module';
 
 @Module({
   imports: [
@@ -138,6 +142,9 @@ import { IntegrationsModule } from './modules/integrations/integrations.module';
             WebhookEndpoint,
             WebhookDelivery,
             Integration,
+            EgressConnection,
+            EgressCallLog,
+            EgressQuota,
           ],
           synchronize: isDevelopment,
           logging: isDevelopment,
@@ -184,6 +191,7 @@ import { IntegrationsModule } from './modules/integrations/integrations.module';
     ActivitiesModule,
     InventoryModule,
     IntegrationsModule,
+    EgressUniversalModule,
   ],
   providers: [
     {
