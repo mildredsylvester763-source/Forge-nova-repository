@@ -6,7 +6,7 @@
 // the user. Identity always comes from the key row, never the body.
 
 import { Body, Controller, HttpCode, Post, Request, UseGuards } from '@nestjs/common';
-import { Public } from '../../decorators/public.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 import { ApiKeyGuard } from './guards/api-key.guard';
 import { McpService } from './mcp.service';
 import { CallMcpDto } from './dto/integrations.dto';
