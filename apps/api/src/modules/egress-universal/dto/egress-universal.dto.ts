@@ -2,7 +2,7 @@
 // FILE: /apps/api/src/modules/egress-universal/dto/egress-universal.dto.ts
 // ============================================================================
 
-import { IsIn, IsInt, IsObject, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsIn, IsInt, IsObject, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 
 export class ConnectDestinationDto {
   @IsString()
@@ -58,4 +58,32 @@ export class UpdateConnectionPolicyDto {
   @Min(1)
   @Max(1000000)
   monthlyCallCap?: number;
+}
+
+// Connection metadata: tags and notes. Tags are validated and normalized by
+// the connection-meta engine (lowercase, deduplicated, bounded); the engine
+// refuses malformed input by name.
+export class UpdateConnectionMetaDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  label?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(12)
+  tags?: string[];
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  notes?: string;
+}
+
+// Credential rotation: replaces the sealed envelope with new credentials.
+// The engine re-validates them against the destination contract and
+// reseals; health resets to unknown until the next probe proves otherwise.
+export class RotateCredentialsDto {
+  @IsObject()
+  credentials: Record<string, string>;
 }
