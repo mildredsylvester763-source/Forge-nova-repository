@@ -1,0 +1,111 @@
+// ============================================================================
+// FILE: /apps/api/src/modules/egress-universal/engine/catalog/catalog-cloud.ts
+// ============================================================================
+// Cloud providers, storage, databases, CDNs, serverless and media processing.
+import { DestinationDefinition, D } from './destination-types';
+
+export const CLOUD: DestinationDefinition[] = [
+  // Cloud providers.
+  D('aws', 'Amazon Web Services', 'cloud', 'https://ce.us-east-1.amazonaws.com', 'api-key-header', ['apiKey'], '/health', 'Authorization', ['secretKey', 'region']),
+  D('gcp', 'Google Cloud Platform', 'cloud', 'https://cloudresourcemanager.googleapis.com', 'bearer', ['accessToken'], '/v1/health', undefined, ['refreshToken']),
+  D('azure', 'Microsoft Azure', 'cloud', 'https://management.azure.com', 'bearer', ['accessToken'], '/providers/Microsoft.Resources/health', undefined, ['refreshToken']),
+  D('alibaba-cloud', 'Alibaba Cloud', 'cloud', 'https://ecs.aliyuncs.com', 'api-key-header', ['apiKey'], '/health', 'Authorization', ['secretKey', 'region']),
+  D('tencent-cloud', 'Tencent Cloud', 'cloud', 'https://api.tencentcloudapi.com', 'api-key-header', ['secretKey'], '/health', 'Authorization'),
+  D('oracle-cloud', 'Oracle Cloud (OCI)', 'cloud', 'https://iaas.us-ashburn-1.oraclecloud.com', 'api-key-header', ['apiKey'], '/health', 'Authorization'),
+  D('digitalocean', 'DigitalOcean', 'cloud', 'https://api.digitalocean.com', 'bearer', ['accessToken'], '/v2/account'),
+  D('heroku', 'Heroku', 'cloud', 'https://api.heroku.com', 'bearer', ['accessToken'], '/apps'),
+  D('linode', 'Linode (Akamai)', 'cloud', 'https://api.linode.com', 'bearer', ['accessToken'], '/v4/account'),
+  D('vultr', 'Vultr', 'cloud', 'https://api.vultr.com', 'bearer', ['accessToken'], '/v2/account'),
+  D('hetzner', 'Hetzner Cloud', 'cloud', 'https://api.hetzner.cloud', 'bearer', ['accessToken'], '/v1/health'),
+  D('ovh', 'OVHcloud', 'cloud', 'https://eu.api.ovh.com', 'oauth-code', ['apiKey', 'secretKey'], '/v1/health'),
+  D('scaleway', 'Scaleway', 'cloud', 'https://api.scaleway.com', 'bearer', ['secretKey'], '/v1/health'),
+  D('upcloud', 'UpCloud', 'cloud', 'https://api.upcloud.com', 'basic', ['username', 'password'], '/1.3/account'),
+  D('rackspace', 'Rackspace', 'cloud', 'https://identity.api.rackspacecloud.com', 'oauth-code', ['username', 'apiKey'], '/v2.0/health'),
+
+  // Serverless and app platforms.
+  D('vercel', 'Vercel', 'cloud', 'https://api.vercel.com', 'bearer', ['accessToken'], '/v2/user'),
+  D('netlify', 'Netlify', 'cloud', 'https://api.netlify.com', 'bearer', ['accessToken'], '/api/v1/user', undefined, ['refreshToken']),
+  D('render', 'Render', 'cloud', 'https://api.render.com', 'bearer', ['apiKey'], '/v1/owners'),
+  D('flyio', 'Fly.io', 'cloud', 'https://api.machines.dev', 'bearer', ['accessToken'], '/v1/health'),
+  D('railway', 'Railway', 'cloud', 'https://backboard.railway.app', 'bearer', ['accessToken'], '/graphql/v2'),
+  D('koyeb', 'Koyeb', 'cloud', 'https://api.koyeb.com', 'bearer', ['accessToken'], '/v1/health'),
+  D('deno-deploy', 'Deno Deploy', 'cloud', 'https://api.deno.com', 'bearer', ['accessToken'], '/v1/health'),
+  D('val-town', 'Val Town', 'cloud', 'https://api.val.town', 'bearer', ['accessToken'], '/v1/health'),
+
+  // CDN and edge.
+  D('cloudflare', 'Cloudflare', 'cloud', 'https://api.cloudflare.com/client/v4', 'bearer', ['accessToken'], '/user/tokens/verify', undefined, ['refreshToken']),
+  D('fastly', 'Fastly', 'cloud', 'https://api.fastly.com', 'bearer', ['accessToken'], '/health'),
+  D('akamai', 'Akamai', 'cloud', 'https://api.ccu.akamai.com', 'bearer', ['accessToken'], '/v1/health'),
+  D('bunny-net', 'Bunny.net', 'cloud', 'https://api.bunny.net', 'api-key-header', ['apiKey'], '/edgezone/health', 'AccessKey'),
+
+  // Backend-as-a-Service and databases.
+  D('supabase', 'Supabase', 'database', 'https://api.supabase.com', 'bearer', ['accessToken'], '/v1/health', undefined, ['refreshToken']),
+  D('firebase', 'Firebase', 'database', 'https://firebase.googleapis.com', 'bearer', ['accessToken'], '/v1/health', undefined, ['refreshToken']),
+  D('appwrite', 'Appwrite', 'database', 'https://cloud.appwrite.io', 'api-key-header', ['apiKey'], '/v1/health', 'X-Appwrite-Project', ['domain']),
+  D('planetscale', 'PlanetScale', 'database', 'https://api.planetscale.com', 'bearer', ['accessToken'], '/v1/health', undefined, ['refreshToken']),
+  D('neon', 'Neon', 'database', 'https://console.neon.tech', 'bearer', ['apiKey'], '/api/v2/users/me'),
+  D('mongodb-atlas', 'MongoDB Atlas', 'database', 'https://cloud.mongodb.com', 'bearer', ['accessToken'], '/api/atlas/v2/health', undefined, ['refreshToken']),
+  D('cockroach-cloud', 'CockroachDB Cloud', 'database', 'https://cockroachlabs.cloud', 'bearer', ['accessToken'], '/api/v1/health'),
+  D('timescale', 'Timescale Cloud', 'database', 'https://tsdb.ninja', 'bearer', ['accessToken'], '/api/health'),
+  D('influxdata', 'InfluxData (InfluxDB Cloud)', 'database', 'https://us-east-1-1.aws.cloud2.influxdata.com', 'api-key-header', ['apiKey'], '/health', 'Authorization'),
+  D('redis-cloud', 'Redis Cloud', 'database', 'https://api.redislabs.com', 'bearer', ['secretKey'], '/v1/health'),
+  D('singlestore', 'SingleStore', 'database', 'https://api.singlestore.com', 'bearer', ['accessToken'], '/v1/health'),
+  D('yugabyte', 'Yugabyte Cloud', 'database', 'https://cloud.yugabyte.com', 'oauth-code', ['clientId', 'clientSecret'], '/api/v1/health'),
+  D('arangodb', 'ArangoDB Cloud', 'database', 'https://api.arangodb.cloud', 'bearer', ['accessToken'], '/v1/health'),
+  D('pocketbase-cloud', 'PocketHost', 'database', 'https://pockethost.io', 'bearer', ['accessToken'], '/api/health'),
+  D('backendless', 'Backendless', 'database', 'https://api.backendless.com', 'api-key-header', ['apiKey'], '/health', 'Authorization'),
+
+  // File storage.
+  D('dropbox', 'Dropbox', 'storage', 'https://api.dropboxapi.com', 'oauth-code', ['accessToken'], '/2/users/get_current_account', undefined, ['refreshToken']),
+  D('box', 'Box', 'storage', 'https://api.box.com', 'oauth-code', ['accessToken'], '/2.0/users/me', undefined, ['refreshToken']),
+  D('google-drive', 'Google Drive', 'storage', 'https://www.googleapis.com', 'bearer', ['accessToken'], '/drive/v3/about', undefined, ['refreshToken']),
+  D('google-workspace', 'Google Workspace (Admin)', 'productivity', 'https://admin.googleapis.com', 'bearer', ['accessToken'], '/admin/directory/v1/health', undefined, ['refreshToken']),
+  D('microsoft-365', 'Microsoft 365 (Graph)', 'productivity', 'https://graph.microsoft.com', 'bearer', ['accessToken'], '/v1/me', undefined, ['refreshToken']),
+  D('google-calendar', 'Google Calendar', 'scheduling', 'https://www.googleapis.com', 'bearer', ['accessToken'], '/calendar/v3/users/me/calendarList', undefined, ['refreshToken']),
+  D('google-sheets', 'Google Sheets', 'data', 'https://sheets.googleapis.com', 'bearer', ['accessToken'], '/v4/health', undefined, ['refreshToken']),
+  D('google-docs', 'Google Docs', 'productivity', 'https://docs.googleapis.com', 'bearer', ['accessToken'], '/v1/health', undefined, ['refreshToken']),
+  D('backblaze-b2', 'Backblaze B2', 'storage', 'https://api.backblazeb2.com', 'api-key-header', ['apiKey'], '/b2api/v3/health', 'Authorization', ['secretKey']),
+  D('wasabi', 'Wasabi', 'storage', 'https://s3.wasabisys.com', 'api-key-header', ['apiKey'], '/health', 'Authorization', ['secretKey']),
+  D('storj', 'Storj', 'storage', 'https://api.storj.io', 'api-key-header', ['apiKey'], '/v1/health', 'Authorization'),
+  D('pcloud', 'pCloud', 'storage', 'https://api.pcloud.com', 'bearer', ['accessToken'], '/userinfo'),
+  D('mega', 'MEGA', 'storage', 'https://g.api.mega.co.nz', 'api-key-header', ['apiKey'], '/health', 'Authorization'),
+  D('sugarsync', 'SugarSync', 'storage', 'https://api.sugarsync.com', 'basic', ['username', 'password'], '/health'),
+
+  // Media processing, images and delivery.
+  D('cloudinary', 'Cloudinary', 'images', 'https://api.cloudinary.com', 'bearer', ['apiKey'], '/v1_1/health', undefined, ['secretKey']),
+  D('imgix', 'Imgix', 'images', 'https://api.imgix.com', 'api-key-header', ['apiKey'], '/v1/health', 'Authorization'),
+  D('imagekit', 'ImageKit.io', 'images', 'https://api.imagekit.io', 'basic', ['username', 'password'], '/v1/health'),
+  D('uploadcare', 'Uploadcare', 'images', 'https://api.uploadcare.com', 'bearer', ['apiKey'], '/health/'),
+  D('filestack', 'Filestack', 'storage', 'https://www.filestackapi.com', 'api-key-header', ['apiKey'], '/health', 'Authorization'),
+  D('kraken-io', 'Kraken.io', 'images', 'https://api.kraken.io', 'basic', ['apiKey', 'secretKey'], '/v1/health'),
+  D('shotstack', 'Shotstack (Video)', 'media', 'https://api.shotstack.io', 'api-key-header', ['apiKey'], '/health', 'x-api-key'),
+  D('screenshotone', 'ScreenshotOne', 'images', 'https://api.screenshotone.com', 'query-param', ['apiKey'], '/health'),
+  D('urlbox', 'Urlbox', 'images', 'https://api.urlbox.com', 'query-param', ['apiKey'], '/health'),
+  D('cloudmersive', 'Cloudmersive', 'data', 'https://api.cloudmersive.com', 'api-key-header', ['apiKey'], '/v1/health', 'Apikey'),
+  D('craftmypdf', 'CraftMyPDF', 'productivity', 'https://api.craftmypdf.com', 'bearer', ['apiKey'], '/v1/health'),
+  D('pdfmonkey', 'PDFMonkey', 'productivity', 'https://api.pdfmonkey.io', 'bearer', ['apiKey'], '/v1/health'),
+  D('mindee', 'Mindee (OCR)', 'ai', 'https://api.mindee.net', 'api-key-header', ['apiKey'], '/v1/health', 'Authorization'),
+  D('ocr-space', 'OCR.space', 'ai', 'https://api.ocr.space', 'api-key-header', ['apiKey'], '/parse/imageurl', 'apikey'),
+  D('mathpix', 'Mathpix', 'ai', 'https://api.mathpix.com', 'api-key-header', ['appId', 'appToken'], '/v3/health', 'app_id'),
+
+  // CMS and headless content.
+  D('webflow', 'Webflow', 'cms', 'https://api.webflow.com', 'bearer', ['accessToken'], '/v2/health', undefined, ['refreshToken']),
+  D('contentful', 'Contentful', 'cms', 'https://cdn.contentful.com', 'bearer', ['accessToken'], '/spaces/health'),
+  D('sanity', 'Sanity', 'cms', 'https://api.sanity.io', 'bearer', ['accessToken'], '/v1/health', undefined, ['refreshToken']),
+  D('strapi-cloud', 'Strapi Cloud', 'cms', 'https://api.strapi.io', 'bearer', ['accessToken'], '/admin/health'),
+  D('prismic', 'Prismic', 'cms', 'https://prismic.io', 'bearer', ['accessToken'], '/v2/health'),
+  D('storyblok', 'Storyblok', 'cms', 'https://api.storyblok.com', 'api-key-header', ['apiKey'], '/v1/health', 'Authorization'),
+  D('ghost', 'Ghost (Admin API)', 'cms', 'https://{site}.ghost.io', 'api-key-header', ['apiKey'], '/ghost/api/admin/health', 'Authorization', ['site']),
+  D('directus', 'Directus Cloud', 'cms', 'https://directus.cloud', 'bearer', ['accessToken'], '/server/health'),
+  D('wordpress-com', 'WordPress.com', 'cms', 'https://public-api.wordpress.com', 'bearer', ['accessToken'], '/rest/v1.1/me', undefined, ['refreshToken']),
+  D('blogger', 'Blogger', 'cms', 'https://www.googleapis.com', 'bearer', ['accessToken'], '/blogger/v3/users/me', undefined, ['refreshToken']),
+  D('medium', 'Medium', 'cms', 'https://api.medium.com', 'bearer', ['accessToken'], '/v1/me'),
+  D('devto', 'DEV.to', 'cms', 'https://dev.to', 'api-key-header', ['apiKey'], '/api/articles/me', 'api-key'),
+  D('hashnode', 'Hashnode', 'cms', 'https://gql.hashnode.com', 'bearer', ['accessToken'], '/health'),
+  D('butter-cms', 'ButterCMS', 'cms', 'https://api.buttercms.com', 'query-param', ['apiKey'], '/v2/pages/health'),
+  D('algolia', 'Algolia', 'search', 'https://algolia.net', 'api-key-header', ['apiKey'], '/1/health', 'X-Algolia-API-Key', ['appId']),
+  D('meilisearch', 'Meilisearch Cloud', 'search', 'https://api.meilisearch.com', 'bearer', ['apiKey'], '/health'),
+  D('typesense', 'Typesense Cloud', 'search', 'https://typesense.cloud', 'api-key-header', ['apiKey'], '/health', 'X-TYPESENSE-API-KEY'),
+  D('elastic-cloud', 'Elastic Cloud', 'search', 'https://api.elastic-cloud.com', 'api-key-header', ['apiKey'], '/api/v1/health', 'Authorization'),
+  D('stoplight', 'Stoplight', 'devtools', 'https://api.stoplight.io', 'bearer', ['accessToken'], '/v1/health'),
+];
