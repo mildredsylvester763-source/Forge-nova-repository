@@ -8,23 +8,23 @@
 // a credential it cannot name. There is no artificial limit on catalog
 // size — new destinations are added by pinning, not by magic.
 //
-// The catalog is organized by category files under ./catalog/. This module
+// The catalog is organized by category files under ../catalog/. This module
 // aggregates them into one flat, ordered list. Category boundaries are
 // organizational only; lookup and validation treat every entry equally.
 
-export type { Verdict, AuthStyle, DestinationKind, DestinationDefinition } from './catalog/destination-types';
+export type { Verdict, AuthStyle, DestinationKind, DestinationDefinition } from '../catalog/destination-types';
 
-import { DestinationDefinition } from './catalog/destination-types';
-import { PAYMENTS } from './catalog/catalog-payments';
-import { COMMUNICATIONS } from './catalog/catalog-communications';
-import { BUSINESS } from './catalog/catalog-business';
-import { ECOMMERCE } from './catalog/catalog-ecommerce';
-import { CRM_MARKETING } from './catalog/catalog-crm-marketing';
-import { DEVTOOLS } from './catalog/catalog-devtools';
-import { CLOUD } from './catalog/catalog-cloud';
-import { AI_DATA } from './catalog/catalog-ai-data';
-import { MEDIA_SOCIAL } from './catalog/catalog-media-social';
-import { LIFESTYLE } from './catalog/catalog-lifestyle';
+import { DestinationDefinition } from '../catalog/destination-types';
+import { PAYMENTS } from '../catalog/catalog-payments';
+import { COMMUNICATIONS } from '../catalog/catalog-communications';
+import { BUSINESS } from '../catalog/catalog-business';
+import { ECOMMERCE } from '../catalog/catalog-ecommerce';
+import { CRM_MARKETING } from '../catalog/catalog-crm-marketing';
+import { DEVTOOLS } from '../catalog/catalog-devtools';
+import { CLOUD } from '../catalog/catalog-cloud';
+import { AI_DATA } from '../catalog/catalog-ai-data';
+import { MEDIA_SOCIAL } from '../catalog/catalog-media-social';
+import { LIFESTYLE } from '../catalog/catalog-lifestyle';
 
 export const DESTINATIONS: DestinationDefinition[] = [
   ...PAYMENTS,
