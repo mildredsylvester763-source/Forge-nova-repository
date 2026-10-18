@@ -93,6 +93,8 @@ import { TrainingDataset } from './modules/ai-training/entities/training-dataset
 import { AiTrainingModule } from './modules/ai-training/ai-training.module';
 import { EgressUniversalModule } from './modules/egress-universal/egress-universal.module';
 import { SystemModule } from './modules/system/system.module';
+import { LoyaltyModule } from './modules/loyalty/loyalty.module';
+import { ReferralsModule } from './modules/referrals/referrals.module';
 
 @Module({
   imports: [
@@ -153,6 +155,11 @@ import { SystemModule } from './modules/system/system.module';
             EgressOauthSession,
             TrainingAsset,
             TrainingDataset,
+            LoyaltyAccount,
+            LoyaltyEvent,
+            ReferralCode,
+            ReferralBinding,
+            ReferralReward,
           ],
           synchronize: isDevelopment,
           logging: isDevelopment,
@@ -202,6 +209,8 @@ import { SystemModule } from './modules/system/system.module';
     EgressUniversalModule,
     AiTrainingModule,
     SystemModule,
+    LoyaltyModule,
+    ReferralsModule,
   ],
   providers: [
     {
