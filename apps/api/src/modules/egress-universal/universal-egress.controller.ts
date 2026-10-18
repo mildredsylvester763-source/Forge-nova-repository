@@ -22,7 +22,9 @@ import { UniversalEgressService } from './universal-egress.service';
 import {
   ConnectDestinationDto,
   DispatchEgressDto,
+  UpdateConnectionMetaDto,
   UpdateConnectionPolicyDto,
+  RotateCredentialsDto,
 } from './dto/egress-universal.dto';
 import { Public } from '../../common/decorators/public.decorator';
 
@@ -88,6 +90,33 @@ export class UniversalEgressController {
     });
   }
 
+  // Connection metadata: tags and notes. The engine normalizes and bounds
+  // them; malformed input is refused by name.
+  @Patch('connections/:id/meta')
+  async updateMeta(
+    @Request() req: any,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateConnectionMetaDto,
+  ) {
+    return this.egress.updateConnectionMeta(req.user.id, id, {
+      label: dto.label,
+      tags: dto.tags,
+      notes: dto.notes,
+    });
+  }
+
+  // Credential rotation: replace the sealed envelope with new credentials.
+  // Health resets to unknown; the next probe must prove the rotation.
+  @Post('connections/:id/rotate')
+  @HttpCode(200)
+  async rotateCredentials(
+    @Request() req: any,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: RotateCredentialsDto,
+  ) {
+    return this.egress.rotateConnectionCredentials(req.user.id, id, dto.credentials);
+  }
+
   @Post('connections/:id/probe')
   @HttpCode(200)
   async probe(@Request() req: any, @Param('id', ParseUUIDPipe) id: string) {
@@ -139,9 +168,18 @@ export class UniversalEgressController {
   }
 
   // -------------------------------------------------------------- dispatch
+  // dryRun=true walks every gate with zero sockets and zero consumption:
+  // quota, breaker, rate limit, monthly cap, and the exact header key set.
   @Post('dispatch')
   @HttpCode(200)
-  async dispatch(@Request() req: any, @Body() dto: DispatchEgressDto) {
+  async dispatch(
+    @Request() req: any,
+    @Body() dto: DispatchEgressDto,
+    @Query('dryRun') dryRun?: string,
+  ) {
+    if (dryRun === 'true' || dryRun === '1') {
+      return this.egress.dispatchDryRun(req.user.id, dto.connectionId, dto.method, dto.path);
+    }
     return this.egress.dispatch(
       req.user.id,
       dto.connectionId,
