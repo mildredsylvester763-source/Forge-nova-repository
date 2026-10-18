@@ -75,6 +75,14 @@ export class EgressConnection {
   @Column({ type: 'text', default: '' })
   callsMonth: string;
 
+  // Connection metadata: a bounded lowercase tag vocabulary and free-form
+  // notes. Pure display/organization, never operational state.
+  @Column({ type: 'jsonb', default: [] })
+  tags: string[];
+
+  @Column({ type: 'text', default: '' })
+  notes: string;
+
   @CreateDateColumn()
   createdAt: Date;
 
