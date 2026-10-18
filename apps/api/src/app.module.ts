@@ -89,6 +89,7 @@ import { EgressCallLog } from './modules/egress-universal/entities/egress-call-l
 import { EgressQuota } from './modules/egress-universal/entities/egress-quota.entity';
 import { EgressOauthSession } from './modules/egress-universal/entities/egress-oauth-session.entity';
 import { EgressUniversalModule } from './modules/egress-universal/egress-universal.module';
+import { SystemModule } from './modules/system/system.module';
 
 @Module({
   imports: [
@@ -194,6 +195,7 @@ import { EgressUniversalModule } from './modules/egress-universal/egress-univers
     InventoryModule,
     IntegrationsModule,
     EgressUniversalModule,
+    SystemModule,
   ],
   providers: [
     {
