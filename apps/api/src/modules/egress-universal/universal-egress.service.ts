@@ -14,6 +14,7 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypt
 import { EgressConnection } from './entities/egress-connection.entity';
 import { EgressCallLog } from './entities/egress-call-log.entity';
 import { EgressQuota } from './entities/egress-quota.entity';
+import { EgressOauthSession } from './entities/egress-oauth-session.entity';
 import {
   listDestinations,
   lookupDestination,
@@ -26,10 +27,21 @@ import { buildEnvelope, parseEnvelope, fingerprintHex, redactCredentials, isSecr
 import { monthKey, consume, TIER_BUDGETS, QuotaTier } from './engine/quota';
 import { isIdempotent, backoffSeconds, jitteredDelay, classifyForRetry, nextStatus, MAX_ATTEMPTS } from './engine/egress-retry';
 import { classifyLatency, applyProbeResult } from './engine/probe';
+import { buildAuthorizePlan } from './engine/oauth-plan';
+import {
+  planOAuthSession,
+  sessionIsLive,
+  validateCallback,
+  buildTokenExchangeRequest,
+  parseTokenResponse,
+  buildRefreshRequest,
+} from './engine/oauth-session';
+import { lookupOAuthProvider, OAUTH_REDIRECT_PATH } from './catalog/oauth-providers';
 
 const CALL_TIMEOUT_MS = 15000;
 const PROBE_TIMEOUT_MS = 10000;
 const MAX_RESPONSE_CHARS = 100000;
+const OAUTH_EXCHANGE_TIMEOUT_MS = 15000;
 
 export interface EgressResponse {
   ok: boolean;
@@ -49,6 +61,8 @@ export class UniversalEgressService {
     private readonly calls: Repository<EgressCallLog>,
     @InjectRepository(EgressQuota)
     private readonly quotas: Repository<EgressQuota>,
+    @InjectRepository(EgressOauthSession)
+    private readonly oauthSessions: Repository<EgressOauthSession>,
     private readonly config: ConfigService,
   ) {}
 
@@ -396,6 +410,278 @@ export class UniversalEgressService {
       budget: TIER_BUDGETS[tier] ?? TIER_BUDGETS.free,
       used: quotaRow?.used ?? 0,
       remaining: (TIER_BUDGETS[tier] ?? TIER_BUDGETS.free) - (quotaRow?.used ?? 0),
+    };
+  }
+
+  // ------------------------------------------------------------ oauth flow
+  // The browser "tap to connect" plane. Forge Nova owns the developer app
+  // for each provider; the user supplies nothing but their provider login.
+  // state is a single-use secret; the PKCE verifier never leaves the
+  // server. All decisions come from the pure engines.
+
+  private oauthAppCredentials(provider: { envKey: string }): { clientId: string; clientSecret: string } {
+    const clientId =
+      process.env['OAUTH_' + provider.envKey + '_CLIENT_ID'] ?? '';
+    const clientSecret =
+      process.env['OAUTH_' + provider.envKey + '_CLIENT_SECRET'] ?? '';
+    if (!clientId || !clientSecret) {
+      throw new BadRequestException('oauth-client-not-configured:' + provider.envKey);
+    }
+    return { clientId, clientSecret };
+  }
+
+  private oauthRedirectUri(): string {
+    const origin =
+      this.config.get<string>('appPublicBaseUrl') ||
+      process.env.APP_PUBLIC_BASE_URL ||
+      'https://app.forgenova.com';
+    return origin.replace(/\/$/, '') + OAUTH_REDIRECT_PATH;
+  }
+
+  async beginOAuthConnection(
+    userId: string,
+    destinationId: string,
+  ): Promise<Record<string, unknown>> {
+    const dest = lookupDestination(destinationId);
+    if (!dest.ok) throw new BadRequestException(dest.reason);
+    const provider = lookupOAuthProvider(destinationId);
+    if (!provider) throw new BadRequestException('oauth-destination-not-oauth:' + destinationId);
+    const { clientId } = this.oauthAppCredentials(provider);
+
+    const state = randomBytes(24).toString('base64url');
+    const codeVerifier = randomBytes(48).toString('base64url');
+    const codeChallenge = createHash('sha256').update(codeVerifier).digest('base64url');
+    const now = Date.now();
+    const plan = planOAuthSession(state, codeVerifier, codeChallenge, now);
+    if (!plan.ok) throw new BadRequestException(plan.reason);
+
+    const redirectUri = this.oauthRedirectUri();
+    const authorize = buildAuthorizePlan(
+      { authorizeUrl: provider.authorizeUrl, tokenUrl: provider.tokenUrl, scopes: provider.scopes, usePkce: provider.usePkce },
+      clientId,
+      redirectUri,
+      state,
+      provider.scopes,
+      provider.usePkce ? codeChallenge : null,
+    );
+    if (!authorize.ok) throw new BadRequestException(authorize.reason);
+
+    await this.oauthSessions.save(
+      this.oauthSessions.create({
+        userId,
+        destinationId,
+        state,
+        codeVerifier,
+        codeChallenge,
+        redirectUri,
+        status: 'pending',
+      }),
+    );
+    return {
+      authorizeUrl: authorize.value.url,
+      state,
+      expiresAt: new Date(plan.value.expiresAtMs).toISOString(),
+    };
+  }
+
+  async completeOAuthCallback(
+    query: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
+    const cb = validateCallback(query);
+    if (!cb.ok) throw new BadRequestException(cb.reason);
+
+    const session = await this.oauthSessions.findOne({
+      where: { state: cb.value.state },
+    });
+    if (!session) throw new BadRequestException('oauth-session-not-found');
+    if (session.status !== 'pending') throw new BadRequestException('oauth-session-already-used');
+    const live = sessionIsLive(session.createdAt.getTime(), Date.now());
+    if (!live.ok) throw new BadRequestException(live.reason);
+    if (!live.value.live) throw new BadRequestException('oauth-session-expired');
+
+    const provider = lookupOAuthProvider(session.destinationId);
+    if (!provider) throw new BadRequestException('oauth-destination-not-oauth:' + session.destinationId);
+    const { clientId, clientSecret } = this.oauthAppCredentials(provider);
+
+    const exchange = buildTokenExchangeRequest(
+      provider.tokenUrl,
+      { usePkce: provider.usePkce, secretInBody: provider.secretInBody },
+      clientId,
+      clientSecret,
+      cb.value.code,
+      session.redirectUri,
+      provider.usePkce ? session.codeVerifier : null,
+    );
+    if (!exchange.ok) throw new BadRequestException(exchange.reason);
+
+    // The token endpoint is an outbound call like any other: SSRF wall first.
+    const target = normalizeTarget(exchange.value.url);
+    if (!target.ok) throw new BadRequestException(target.reason);
+
+    const headers: Record<string, string> = {
+      'content-type': 'application/x-www-form-urlencoded',
+      accept: 'application/json',
+    };
+    if (exchange.value.basicAuth) {
+      headers['authorization'] =
+        'Basic ' + Buffer.from(exchange.value.basicAuth.username + ':' + exchange.value.basicAuth.password).toString('base64');
+    }
+    const params = new URLSearchParams(exchange.value.body).toString();
+
+    let payload: unknown = null;
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), OAUTH_EXCHANGE_TIMEOUT_MS);
+      const response = await fetch(target.value.origin + target.value.path, {
+        method: 'POST',
+        signal: controller.signal,
+        headers,
+        body: params,
+      });
+      clearTimeout(timer);
+      const text = (await response.text()).slice(0, MAX_RESPONSE_CHARS);
+      try {
+        payload = JSON.parse(text);
+      } catch {
+        payload = text;
+      }
+    } catch {
+      throw new BadRequestException('oauth-token-exchange-transport-error');
+    }
+
+    const now = Date.now();
+    const parsed = parseTokenResponse(payload, now);
+    if (!parsed.ok) throw new BadRequestException(parsed.reason);
+
+    const credentials: Record<string, string> = { accessToken: parsed.value.accessToken };
+    if (parsed.value.refreshToken) credentials.refreshToken = parsed.value.refreshToken;
+
+    const dest = lookupDestination(session.destinationId);
+    if (!dest.ok) throw new BadRequestException(dest.reason);
+    const validated = validateCredentials(session.destinationId, credentials);
+    if (!validated.ok) throw new BadRequestException(validated.reason);
+    const base = resolveBaseUrl(session.destinationId, validated.value.credentials);
+    if (!base.ok) throw new BadRequestException(base.reason);
+    const baseTarget = normalizeTarget(base.value.baseUrl);
+    if (!baseTarget.ok) throw new BadRequestException(baseTarget.reason);
+
+    const fingerprints: Record<string, string> = {};
+    for (const key of Object.keys(validated.value.credentials)) {
+      const digest = createHash('sha256').update(validated.value.credentials[key]).digest('hex');
+      const fp = fingerprintHex(digest);
+      if (!fp.ok) throw new BadRequestException(fp.reason);
+      fingerprints[key] = fp.value.fp;
+    }
+
+    const existing = await this.connections.findOne({
+      where: { userId: session.userId, destinationId: session.destinationId },
+    });
+    const row =
+      existing ??
+      this.connections.create({
+        userId: session.userId,
+        destinationId: session.destinationId,
+        label: dest.value.name,
+      });
+    row.label = existing?.label ?? dest.value.name;
+    row.credentialsEnvelope = this.sealCredentials(validated.value.credentials);
+    row.credentialFingerprints = fingerprints;
+    row.baseUrl = base.value.baseUrl;
+    row.status = 'connected';
+    row.healthStatus = 'unknown';
+    row.consecutiveFailures = 0;
+    row.consecutiveSuccesses = 0;
+    const saved = await this.connections.save(row);
+
+    session.status = 'completed';
+    await this.oauthSessions.save(session);
+
+    return {
+      ok: true,
+      connectionId: saved.id,
+      destinationId: saved.destinationId,
+      label: saved.label,
+      baseUrl: saved.baseUrl,
+      status: saved.status,
+      expiresAt: parsed.value.expiresAtMs ? new Date(parsed.value.expiresAtMs).toISOString() : null,
+    };
+  }
+
+  async refreshConnectionOAuth(
+    userId: string,
+    connectionId: string,
+  ): Promise<Record<string, unknown>> {
+    const row = await this.connections.findOne({ where: { id: connectionId, userId } });
+    if (!row) throw new NotFoundException('egress-connection-not-found');
+    const provider = lookupOAuthProvider(row.destinationId);
+    if (!provider) throw new BadRequestException('oauth-destination-not-oauth:' + row.destinationId);
+    const { clientId, clientSecret } = this.oauthAppCredentials(provider);
+
+    const creds = this.openCredentials(row.credentialsEnvelope);
+    const refreshToken = creds.refreshToken ?? '';
+    const refreshReq = buildRefreshRequest(provider.tokenUrl, { secretInBody: provider.secretInBody }, clientId, clientSecret, refreshToken);
+    if (!refreshReq.ok) throw new BadRequestException(refreshReq.reason);
+
+    const target = normalizeTarget(refreshReq.value.url);
+    if (!target.ok) throw new BadRequestException(target.reason);
+
+    const headers: Record<string, string> = {
+      'content-type': 'application/x-www-form-urlencoded',
+      accept: 'application/json',
+    };
+    if (refreshReq.value.basicAuth) {
+      headers['authorization'] =
+        'Basic ' + Buffer.from(refreshReq.value.basicAuth.username + ':' + refreshReq.value.basicAuth.password).toString('base64');
+    }
+    const params = new URLSearchParams(refreshReq.value.body).toString();
+
+    let payload: unknown = null;
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), OAUTH_EXCHANGE_TIMEOUT_MS);
+      const response = await fetch(target.value.origin + target.value.path, {
+        method: 'POST',
+        signal: controller.signal,
+        headers,
+        body: params,
+      });
+      clearTimeout(timer);
+      const text = (await response.text()).slice(0, MAX_RESPONSE_CHARS);
+      try {
+        payload = JSON.parse(text);
+      } catch {
+        payload = text;
+      }
+    } catch {
+      throw new BadRequestException('oauth-refresh-transport-error');
+    }
+
+    const parsed = parseTokenResponse(payload, Date.now());
+    if (!parsed.ok) throw new BadRequestException(parsed.reason);
+
+    const nextCreds: Record<string, string> = { ...creds, accessToken: parsed.value.accessToken };
+    if (parsed.value.refreshToken) nextCreds.refreshToken = parsed.value.refreshToken;
+    const validated = validateCredentials(row.destinationId, nextCreds);
+    if (!validated.ok) throw new BadRequestException(validated.reason);
+
+    const fingerprints: Record<string, string> = {};
+    for (const key of Object.keys(validated.value.credentials)) {
+      const digest = createHash('sha256').update(validated.value.credentials[key]).digest('hex');
+      const fp = fingerprintHex(digest);
+      if (!fp.ok) throw new BadRequestException(fp.reason);
+      fingerprints[key] = fp.value.fp;
+    }
+
+    row.credentialsEnvelope = this.sealCredentials(validated.value.credentials);
+    row.credentialFingerprints = fingerprints;
+    row.status = 'connected';
+    const saved = await this.connections.save(row);
+    return {
+      ok: true,
+      connectionId: saved.id,
+      destinationId: saved.destinationId,
+      status: saved.status,
+      expiresAt: parsed.value.expiresAtMs ? new Date(parsed.value.expiresAtMs).toISOString() : null,
     };
   }
 }
