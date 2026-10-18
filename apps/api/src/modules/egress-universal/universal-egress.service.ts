@@ -2,9 +2,10 @@
 // FILE: /apps/api/src/modules/egress-universal/universal-egress.service.ts
 // ============================================================================
 // The universal outbound connection plane. Every external call flows
-// through here: SSRF wall -> quota -> sealed-credential auth header ->
-// bounded retry with full jitter -> redacted call log. No raw socket
-// anywhere else.
+// through here: SSRF wall -> quota -> per-destination circuit breaker ->
+// per-destination rate limit -> per-destination monthly cap -> sealed-
+// credential auth header -> bounded retry with full jitter -> redacted
+// call log. No raw socket anywhere else.
 
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -26,7 +27,7 @@ import { normalizeTarget } from './engine/url-policy';
 import { buildEnvelope, parseEnvelope, fingerprintHex, redactCredentials, isSecretHeader } from './engine/credential-vault';
 import { monthKey, consume, TIER_BUDGETS, QuotaTier } from './engine/quota';
 import { isIdempotent, backoffSeconds, jitteredDelay, classifyForRetry, nextStatus, MAX_ATTEMPTS } from './engine/egress-retry';
-import { classifyLatency, applyProbeResult } from './engine/probe';
+import { classifyLatency, applyProbeResult, nextProbeMinutes } from './engine/probe';
 import { buildAuthorizePlan } from './engine/oauth-plan';
 import {
   planOAuthSession,
@@ -36,12 +37,24 @@ import {
   parseTokenResponse,
   buildRefreshRequest,
 } from './engine/oauth-session';
+import { newBucket, takeToken, BucketState } from './engine/rate-limit';
+import { initialBreaker, canAttempt, recordResult, BreakerSnapshot, BREAKER_COOLDOWN_MS } from './engine/circuit-breaker';
+import { searchDestinations, DestinationQuery, QueryResult } from './engine/destination-query';
 import { lookupOAuthProvider, OAUTH_REDIRECT_PATH } from './catalog/oauth-providers';
 
 const CALL_TIMEOUT_MS = 15000;
 const PROBE_TIMEOUT_MS = 10000;
 const MAX_RESPONSE_CHARS = 100000;
 const OAUTH_EXCHANGE_TIMEOUT_MS = 15000;
+
+// Per-destination operational defaults: a 60-call burst, refilled at
+// 60/minute, and a breaker that trips after 5 consecutive dispatch
+// failures and stays open for one minute before the half-open probe.
+const RATE_BUCKET_CAPACITY = 60;
+const RATE_REFILL_PER_MINUTE = 60;
+const STATS_WINDOW = 1000;
+const POLICY_MAX_ATTEMPTS_CEILING = 4;
+const POLICY_MAX_CAP = 1000000;
 
 export interface EgressResponse {
   ok: boolean;
@@ -54,6 +67,13 @@ export interface EgressResponse {
 
 @Injectable()
 export class UniversalEgressService {
+  // In-memory operational state. Buckets and breakers are pure data; the
+  // engines own every decision, this Map only stores it. Keyed by
+  // userId + ':' + destinationId so one user's noisy destination never
+  // punishes another user's quiet one.
+  private readonly rateBuckets = new Map<string, BucketState>();
+  private readonly breakers = new Map<string, BreakerSnapshot>();
+
   constructor(
     @InjectRepository(EgressConnection)
     private readonly connections: Repository<EgressConnection>,
@@ -104,8 +124,13 @@ export class UniversalEgressService {
   }
 
   // ----------------------------------------------------------- connections
-  listDestinationCatalog(): DestinationDefinition[] {
-    return listDestinations();
+  listDestinationCatalog(query?: DestinationQuery): QueryResult<DestinationDefinition> | { items: DestinationDefinition[] } {
+    if (query && Object.values(query).some((v) => v !== undefined && v !== null && v !== '')) {
+      const result = searchDestinations(listDestinations(), query);
+      if (!result.ok) throw new BadRequestException(result.reason);
+      return result.value;
+    }
+    return { items: listDestinations() };
   }
 
   async listConnections(userId: string): Promise<Record<string, unknown>[]> {
@@ -126,6 +151,10 @@ export class UniversalEgressService {
         consecutiveFailures: row.consecutiveFailures,
         consecutiveSuccesses: row.consecutiveSuccesses,
         lastProbedAt: row.lastProbedAt,
+        maxAttempts: row.maxAttempts ?? null,
+        monthlyCallCap: row.monthlyCallCap ?? null,
+        monthlyCallsUsed: row.monthlyCallsUsed,
+        callsMonth: row.callsMonth,
         createdAt: row.createdAt,
         credentialFingerprints: fingerprints,
       };
@@ -185,6 +214,53 @@ export class UniversalEgressService {
     return { status: row.status };
   }
 
+  // ------------------------------------------------- per-connection policy
+  // The operational contract of one connection: retry ceiling and monthly
+  // call cap. Everything is explicit  nothing is guessed, nothing silent.
+  async updateConnectionPolicy(
+    userId: string,
+    connectionId: string,
+    patch: { label?: string; maxAttempts?: number; monthlyCallCap?: number },
+  ): Promise<Record<string, unknown>> {
+    const row = await this.connections.findOne({ where: { id: connectionId, userId } });
+    if (!row) throw new NotFoundException('egress-connection-not-found');
+
+    if (patch.label !== undefined) {
+      if (typeof patch.label !== 'string' || patch.label.trim().length === 0 || patch.label.length > 120) {
+        throw new BadRequestException('policy-invalid-label');
+      }
+      row.label = patch.label;
+    }
+    if (patch.maxAttempts !== undefined) {
+      if (!Number.isInteger(patch.maxAttempts) || patch.maxAttempts < 1 || patch.maxAttempts > POLICY_MAX_ATTEMPTS_CEILING) {
+        throw new BadRequestException('policy-invalid-max-attempts');
+      }
+      row.maxAttempts = patch.maxAttempts;
+    }
+    if (patch.monthlyCallCap !== undefined) {
+      if (!Number.isInteger(patch.monthlyCallCap) || patch.monthlyCallCap < 1 || patch.monthlyCallCap > POLICY_MAX_CAP) {
+        throw new BadRequestException('policy-invalid-monthly-cap');
+      }
+      row.monthlyCallCap = patch.monthlyCallCap;
+      const month = monthKey(new Date().toISOString());
+      if (!month.ok) throw new BadRequestException(month.reason);
+      if (row.callsMonth !== month.value.key) {
+        row.callsMonth = month.value.key;
+        row.monthlyCallsUsed = 0;
+      }
+    }
+
+    const saved = await this.connections.save(row);
+    return {
+      id: saved.id,
+      label: saved.label,
+      maxAttempts: saved.maxAttempts ?? null,
+      monthlyCallCap: saved.monthlyCallCap ?? null,
+      monthlyCallsUsed: saved.monthlyCallsUsed,
+      callsMonth: saved.callsMonth,
+    };
+  }
+
   // ------------------------------------------------------------------ probe
   async probeConnection(userId: string, connectionId: string): Promise<Record<string, unknown>> {
     const row = await this.connections.findOne({ where: { id: connectionId, userId } });
@@ -233,6 +309,96 @@ export class UniversalEgressService {
     };
   }
 
+  // Probe cadence: the engine decides when a connection is next due. A
+  // never-probed connection is always due.
+  private probeCadenceMinutes(row: EgressConnection): number {
+    const cadence = nextProbeMinutes(row.consecutiveFailures ?? 0, row.consecutiveSuccesses ?? 0);
+    return cadence.ok ? cadence.value.minutes : 60;
+  }
+
+  private connectionIsDue(row: EgressConnection, nowMs: number): boolean {
+    if (!row.lastProbedAt) return true;
+    return nowMs >= row.lastProbedAt.getTime() + this.probeCadenceMinutes(row) * 60000;
+  }
+
+  // Bulk probe: every connected connection in one call. onlyDue restricts
+  // it to connections whose probe cadence has elapsed (the scheduled-probe
+  // plane: cron hits this endpoint and only stale connections are asked).
+  async probeAllConnections(userId: string, onlyDue: boolean): Promise<Record<string, unknown>> {
+    const rows = await this.connections.find({ where: { userId, status: 'connected' } });
+    const nowMs = Date.now();
+    const results: Record<string, unknown>[] = [];
+    let skipped = 0;
+    for (const row of rows) {
+      if (onlyDue && !this.connectionIsDue(row, nowMs)) {
+        skipped += 1;
+        continue;
+      }
+      try {
+        const probed = await this.probeConnection(userId, row.id);
+        results.push({
+          connectionId: row.id,
+          destinationId: row.destinationId,
+          ...probed,
+        });
+      } catch (e: unknown) {
+        results.push({
+          connectionId: row.id,
+          destinationId: row.destinationId,
+          error: e instanceof Error ? e.message : 'probe-error',
+        });
+      }
+    }
+    const errored = results.filter((r) => typeof r.error === 'string').length;
+    return {
+      probed: results.length - errored,
+      errored,
+      skipped,
+      results,
+    };
+  }
+
+  // Connection health dashboard: one honest picture of every connection.
+  async connectionHealthDashboard(userId: string): Promise<Record<string, unknown>> {
+    const rows = await this.connections.find({ where: { userId }, order: { createdAt: 'DESC' } });
+    const nowMs = Date.now();
+    const counts: Record<string, number> = { healthy: 0, degraded: 0, down: 0, unknown: 0, disconnected: 0 };
+    const connections: Record<string, unknown>[] = [];
+    let dueForProbe = 0;
+    for (const row of rows) {
+      if (row.status !== 'connected') {
+        counts.disconnected += 1;
+      } else if (row.healthStatus in counts) {
+        counts[row.healthStatus] += 1;
+      } else {
+        counts.unknown += 1;
+      }
+      const due = row.status === 'connected' && this.connectionIsDue(row, nowMs);
+      if (due) dueForProbe += 1;
+      connections.push({
+        id: row.id,
+        destinationId: row.destinationId,
+        label: row.label,
+        status: row.status,
+        healthStatus: row.healthStatus,
+        consecutiveFailures: row.consecutiveFailures,
+        consecutiveSuccesses: row.consecutiveSuccesses,
+        lastProbedAt: row.lastProbedAt,
+        nextProbeInMinutes: row.status === 'connected' ? this.probeCadenceMinutes(row) : null,
+        dueForProbe: due,
+        monthlyCallCap: row.monthlyCallCap ?? null,
+        monthlyCallsUsed: row.monthlyCallsUsed,
+        callsMonth: row.callsMonth,
+      });
+    }
+    return {
+      total: rows.length,
+      counts,
+      dueForProbe,
+      connections,
+    };
+  }
+
   private authHeaders(row: EgressConnection): Record<string, string> {
     const dest = lookupDestination(row.destinationId);
     if (!dest.ok) throw new BadRequestException(dest.reason);
@@ -274,6 +440,74 @@ export class UniversalEgressService {
     });
   }
 
+  // Call-log statistics over the most recent window: totals, outcomes,
+  // latency, and per-destination breakdowns. Aggregated from the audit
+  // log  nothing is estimated, nothing invented.
+  async callStats(userId: string): Promise<Record<string, unknown>> {
+    const rows = await this.calls.find({
+      where: { userId },
+      order: { createdAt: 'DESC' },
+      take: STATS_WINDOW,
+    });
+    const connectionRows = await this.connections.find({ where: { userId } });
+    const destinationOf = new Map<string, string>();
+    for (const c of connectionRows) destinationOf.set(c.id, c.destinationId);
+
+    let total = 0;
+    let succeeded = 0;
+    let latencyTotalMs = 0;
+    let latencyMaxMs = 0;
+    const byOutcome: Record<string, number> = {};
+    const perDestination = new Map<string, { calls: number; succeeded: number; latencyTotalMs: number; lastCalledAt: Date | null }>();
+    let firstAt: Date | null = null;
+    let lastAt: Date | null = null;
+
+    for (const row of rows) {
+      total += 1;
+      const okCall = row.statusCode !== null && row.statusCode >= 200 && row.statusCode < 300;
+      if (okCall) succeeded += 1;
+      const outcome = row.outcome ?? 'unknown';
+      byOutcome[outcome] = (byOutcome[outcome] ?? 0) + 1;
+      latencyTotalMs += row.latencyMs ?? 0;
+      latencyMaxMs = Math.max(latencyMaxMs, row.latencyMs ?? 0);
+      if (!firstAt || row.createdAt < firstAt) firstAt = row.createdAt;
+      if (!lastAt || row.createdAt > lastAt) lastAt = row.createdAt;
+      const destinationId = destinationOf.get(row.connectionId) ?? 'unknown';
+      const bucket = perDestination.get(destinationId) ?? { calls: 0, succeeded: 0, latencyTotalMs: 0, lastCalledAt: null };
+      bucket.calls += 1;
+      if (okCall) bucket.succeeded += 1;
+      bucket.latencyTotalMs += row.latencyMs ?? 0;
+      if (!bucket.lastCalledAt || row.createdAt > bucket.lastCalledAt) bucket.lastCalledAt = row.createdAt;
+      perDestination.set(destinationId, bucket);
+    }
+
+    const destinations: Record<string, unknown>[] = [];
+    for (const [destinationId, bucket] of perDestination) {
+      destinations.push({
+        destinationId,
+        calls: bucket.calls,
+        succeeded: bucket.succeeded,
+        successRate: bucket.calls === 0 ? 0 : bucket.succeeded / bucket.calls,
+        avgLatencyMs: bucket.calls === 0 ? 0 : Math.round(bucket.latencyTotalMs / bucket.calls),
+        lastCalledAt: bucket.lastCalledAt,
+      });
+    }
+    destinations.sort((a, b) => (b.calls as number) - (a.calls as number));
+
+    return {
+      window: rows.length,
+      total,
+      succeeded,
+      successRate: total === 0 ? 0 : succeeded / total,
+      avgLatencyMs: total === 0 ? 0 : Math.round(latencyTotalMs / total),
+      maxLatencyMs: latencyMaxMs,
+      byOutcome,
+      firstCalledAt: firstAt,
+      lastCalledAt: lastAt,
+      perDestination: destinations,
+    };
+  }
+
   async dispatch(
     userId: string,
     connectionId: string,
@@ -293,9 +527,11 @@ export class UniversalEgressService {
     const target = normalizeTarget(url);
     if (!target.ok) throw new BadRequestException(target.reason);
 
-    // Quota gate.
-    const month = monthKey(new Date().toISOString());
+    const nowMs = Date.now();
+    const month = monthKey(new Date(nowMs).toISOString());
     if (!month.ok) throw new BadRequestException(month.reason);
+
+    // Quota gate (plan tier).
     const quotaRow =
       (await this.quotas.findOne({ where: { userId, month: month.value.key } })) ??
       (await this.quotas.save(this.quotas.create({ userId, month: month.value.key, tier: 'free', used: 0 })));
@@ -305,6 +541,35 @@ export class UniversalEgressService {
     quotaRow.used = granted.value.used;
     await this.quotas.save(quotaRow);
 
+    // Per-destination monthly cap gate.
+    const monthlyCap = row.monthlyCallCap ?? null;
+    if (monthlyCap !== null) {
+      if (row.callsMonth !== month.value.key) {
+        row.callsMonth = month.value.key;
+        row.monthlyCallsUsed = 0;
+      }
+      if (row.monthlyCallsUsed >= monthlyCap) {
+        throw new BadRequestException('destination-quota-exceeded');
+      }
+    }
+
+    // Circuit breaker gate: a destination that just failed repeatedly is
+    // refused by name until its cooldown elapses.
+    const breakerKey = userId + ':' + row.destinationId;
+    const breakerSnapshot = this.breakers.get(breakerKey) ?? initialBreaker();
+    const attemptDecision = canAttempt(breakerSnapshot, nowMs, BREAKER_COOLDOWN_MS);
+    if (!attemptDecision.ok) throw new BadRequestException(attemptDecision.reason);
+
+    // Per-destination rate limit gate (token bucket).
+    const rateKey = userId + ':' + row.destinationId;
+    const existingBucket = this.rateBuckets.get(rateKey);
+    const freshBucket = newBucket(RATE_BUCKET_CAPACITY, nowMs);
+    const bucket = existingBucket ?? (freshBucket.ok ? freshBucket.value : null);
+    if (!bucket) throw new BadRequestException('rate-limit-bucket-init-failed');
+    const token = takeToken(bucket, RATE_BUCKET_CAPACITY, RATE_REFILL_PER_MINUTE, nowMs, 1);
+    if (!token.ok) throw new BadRequestException(token.reason);
+    this.rateBuckets.set(rateKey, token.value.state);
+
     // Build headers: auth headers + caller extras (secret extras redacted in logs).
     const headers = this.authHeaders(row);
     for (const key of Object.keys(extraHeaders ?? {})) {
@@ -313,15 +578,19 @@ export class UniversalEgressService {
     let finalUrl = target.value.origin + target.value.path;
     if (dest.value.authStyle === 'query-param') {
       const creds = this.openCredentials(row.credentialsEnvelope);
-      const token = creds.apiToken ?? creds.botToken ?? '';
+      const token2 = creds.apiToken ?? creds.botToken ?? '';
       const joiner = finalUrl.includes('?') ? '&' : '?';
-      finalUrl = token ? finalUrl + joiner + 'api_token=' + encodeURIComponent(token) : finalUrl;
+      finalUrl = token2 ? finalUrl + joiner + 'api_token=' + encodeURIComponent(token2) : finalUrl;
     }
 
     const redactedHeaders: Record<string, string> = {};
     for (const key of Object.keys(headers)) {
       redactedHeaders[key] = isSecretHeader(key) ? 'redacted' : headers[key];
     }
+
+    // Per-connection retry policy: the ceiling defaults to the engine
+    // maximum and can be tightened per connection.
+    const attemptCeiling = row.maxAttempts ?? MAX_ATTEMPTS;
 
     const started = Date.now();
     let attempts = 0;
@@ -330,7 +599,7 @@ export class UniversalEgressService {
     let errorText: string | null = null;
     let responseBody: string | Record<string, unknown> | null = null;
 
-    while (attempts < MAX_ATTEMPTS) {
+    while (attempts < attemptCeiling) {
       attempts += 1;
       let retryClass: 'retry' | 'no-retry' = 'no-retry';
       try {
@@ -362,13 +631,23 @@ export class UniversalEgressService {
         retryClass = cls.value;
       }
       if (succeeded || retryClass === 'no-retry' || !isIdempotent(method)) break;
-      if (attempts >= MAX_ATTEMPTS) break;
+      if (attempts >= attemptCeiling) break;
       const backoff = backoffSeconds(attempts - 1);
       if (backoff.ok) {
         await new Promise((resolve) => setTimeout(resolve, jitteredDelay(backoff.value.seconds, Math.random())));
       } else {
         break;
       }
+    }
+
+    // Record the verdict into the breaker state machine.
+    const breakerNext = recordResult(breakerSnapshot, succeeded, Date.now());
+    if (breakerNext.ok) this.breakers.set(breakerKey, breakerNext.value);
+
+    // Count the call against the per-destination monthly cap.
+    if (monthlyCap !== null) {
+      row.monthlyCallsUsed = (row.monthlyCallsUsed ?? 0) + 1;
+      await this.connections.save(row);
     }
 
     const latencyMs = Date.now() - started;
