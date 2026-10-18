@@ -90,6 +90,11 @@ import { EgressQuota } from './modules/egress-universal/entities/egress-quota.en
 import { EgressOauthSession } from './modules/egress-universal/entities/egress-oauth-session.entity';
 import { TrainingAsset } from './modules/ai-training/entities/training-asset.entity';
 import { TrainingDataset } from './modules/ai-training/entities/training-dataset.entity';
+import { LoyaltyAccount } from './modules/loyalty/entities/loyalty-account.entity';
+import { LoyaltyEvent } from './modules/loyalty/entities/loyalty-event.entity';
+import { ReferralCode } from './modules/referrals/entities/referral-code.entity';
+import { ReferralBinding } from './modules/referrals/entities/referral-binding.entity';
+import { ReferralReward } from './modules/referrals/entities/referral-reward.entity';
 import { AiTrainingModule } from './modules/ai-training/ai-training.module';
 import { EgressUniversalModule } from './modules/egress-universal/egress-universal.module';
 import { SystemModule } from './modules/system/system.module';
