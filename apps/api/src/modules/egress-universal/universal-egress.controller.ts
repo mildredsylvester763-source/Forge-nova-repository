@@ -13,21 +13,43 @@ import {
   HttpCode,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Query,
   Request,
 } from '@nestjs/common';
 import { UniversalEgressService } from './universal-egress.service';
-import { ConnectDestinationDto, DispatchEgressDto } from './dto/egress-universal.dto';
+import {
+  ConnectDestinationDto,
+  DispatchEgressDto,
+  UpdateConnectionPolicyDto,
+} from './dto/egress-universal.dto';
 import { Public } from '../../common/decorators/public.decorator';
 
 @Controller('egress-universal')
 export class UniversalEgressController {
   constructor(private readonly egress: UniversalEgressService) {}
 
+  // The catalog offer: all 888 destinations, or a searched / filtered /
+  // paginated window of it. Unknown filters are refused by name.
   @Get('destinations')
-  async listDestinations() {
-    return { destinations: this.egress.listDestinationCatalog() };
+  async listDestinations(
+    @Query('search') search?: string,
+    @Query('kind') kind?: string,
+    @Query('authStyle') authStyle?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    const result = this.egress.listDestinationCatalog({ search, kind, authStyle, limit, offset });
+    if ('total' in result) {
+      return {
+        total: result.total,
+        limit: result.limit,
+        offset: result.offset,
+        destinations: result.items,
+      };
+    }
+    return { total: result.items.length, destinations: result.items };
   }
 
   @Post('connections')
@@ -51,10 +73,42 @@ export class UniversalEgressController {
     return this.egress.disconnectConnection(req.user.id, id);
   }
 
+  // The per-connection operational contract: retry ceiling, monthly call
+  // cap, label. Every field optional; engine defaults apply elsewhere.
+  @Patch('connections/:id/policy')
+  async updatePolicy(
+    @Request() req: any,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateConnectionPolicyDto,
+  ) {
+    return this.egress.updateConnectionPolicy(req.user.id, id, {
+      label: dto.label,
+      maxAttempts: dto.maxAttempts,
+      monthlyCallCap: dto.monthlyCallCap,
+    });
+  }
+
   @Post('connections/:id/probe')
   @HttpCode(200)
   async probe(@Request() req: any, @Param('id', ParseUUIDPipe) id: string) {
     return this.egress.probeConnection(req.user.id, id);
+  }
+
+  // Bulk probe: every connected connection in one call. onlyDue=true
+  // probes just the connections whose cadence has elapsed — the plane a
+  // scheduler hits periodically (scheduled probes without a hidden daemon).
+  @Post('connections/probe-all')
+  @HttpCode(200)
+  async probeAll(@Request() req: any, @Query('onlyDue') onlyDue?: string) {
+    const due = onlyDue === 'true' || onlyDue === '1';
+    return this.egress.probeAllConnections(req.user.id, due);
+  }
+
+  // The health dashboard: counts, per-connection health, cadence, and
+  // which connections are due for their next probe.
+  @Get('connections/health')
+  async health(@Request() req: any) {
+    return this.egress.connectionHealthDashboard(req.user.id);
   }
 
   // ----------------------------------------------------------- oauth plane
@@ -102,6 +156,13 @@ export class UniversalEgressController {
   async listCalls(@Request() req: any, @Query('limit') limit?: string) {
     const parsed = limit ? Number(limit) : 20;
     return { calls: await this.egress.listCalls(req.user.id, Number.isFinite(parsed) ? parsed : 20) };
+  }
+
+  // Call-log statistics over the recent window: outcomes, latency, and a
+  // per-destination breakdown — aggregated from the append-only audit log.
+  @Get('calls/stats')
+  async callStats(@Request() req: any) {
+    return this.egress.callStats(req.user.id);
   }
 
   @Get('quota')
