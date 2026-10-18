@@ -464,7 +464,8 @@ export class UniversalEgressService {
 
     for (const row of rows) {
       total += 1;
-      const okCall = row.statusCode !== null && row.statusCode >= 200 && row.statusCode < 300;
+      const statusCode = row.statusCode ?? null;
+      const okCall = statusCode !== null && statusCode >= 200 && statusCode < 300;
       if (okCall) succeeded += 1;
       const outcome = row.outcome ?? 'unknown';
       byOutcome[outcome] = (byOutcome[outcome] ?? 0) + 1;
