@@ -1,4 +1,4 @@
-import { IsInt, IsString, IsUuid, Min, MinLength } from 'class-validator';
+import { IsInt, IsString, Min, MinLength } from 'class-validator';
 
 export class ApplyReferralDto {
   @IsString()
@@ -7,7 +7,8 @@ export class ApplyReferralDto {
 }
 
 export class RewardReferralDto {
-  @IsUuid()
+  @IsString()
+  @MinLength(1)
   refereeId: string;
 
   @IsInt()
