@@ -87,6 +87,7 @@ import { IntegrationsModule } from './modules/integrations/integrations.module';
 import { EgressConnection } from './modules/egress-universal/entities/egress-connection.entity';
 import { EgressCallLog } from './modules/egress-universal/entities/egress-call-log.entity';
 import { EgressQuota } from './modules/egress-universal/entities/egress-quota.entity';
+import { EgressOauthSession } from './modules/egress-universal/entities/egress-oauth-session.entity';
 import { EgressUniversalModule } from './modules/egress-universal/egress-universal.module';
 
 @Module({
@@ -145,6 +146,7 @@ import { EgressUniversalModule } from './modules/egress-universal/egress-univers
             EgressConnection,
             EgressCallLog,
             EgressQuota,
+            EgressOauthSession,
           ],
           synchronize: isDevelopment,
           logging: isDevelopment,
