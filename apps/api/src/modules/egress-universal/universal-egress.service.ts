@@ -40,6 +40,7 @@ import {
 import { newBucket, takeToken, BucketState } from './engine/rate-limit';
 import { initialBreaker, canAttempt, recordResult, BreakerSnapshot, BREAKER_COOLDOWN_MS } from './engine/circuit-breaker';
 import { searchDestinations, DestinationQuery, QueryResult } from './engine/destination-query';
+import { normalizeTags, validateNotes } from './engine/connection-meta';
 import { lookupOAuthProvider, OAUTH_REDIRECT_PATH } from './catalog/oauth-providers';
 
 const CALL_TIMEOUT_MS = 15000;
@@ -155,6 +156,8 @@ export class UniversalEgressService {
         monthlyCallCap: row.monthlyCallCap ?? null,
         monthlyCallsUsed: row.monthlyCallsUsed,
         callsMonth: row.callsMonth,
+        tags: row.tags ?? [],
+        notes: row.notes ?? '',
         createdAt: row.createdAt,
         credentialFingerprints: fingerprints,
       };
@@ -258,6 +261,89 @@ export class UniversalEgressService {
       monthlyCallCap: saved.monthlyCallCap ?? null,
       monthlyCallsUsed: saved.monthlyCallsUsed,
       callsMonth: saved.callsMonth,
+    };
+  }
+
+  // ------------------------------------------------- connection metadata
+  // Tags and notes: organization, not operational state. The engine owns
+  // every normalization decision; malformed input is refused by name.
+  async updateConnectionMeta(
+    userId: string,
+    connectionId: string,
+    patch: { label?: string; tags?: string[]; notes?: string },
+  ): Promise<Record<string, unknown>> {
+    const row = await this.connections.findOne({ where: { id: connectionId, userId } });
+    if (!row) throw new NotFoundException('egress-connection-not-found');
+
+    if (patch.label !== undefined) {
+      if (typeof patch.label !== 'string' || patch.label.trim().length === 0 || patch.label.length > 120) {
+        throw new BadRequestException('meta-invalid-label');
+      }
+      row.label = patch.label;
+    }
+    if (patch.tags !== undefined) {
+      const tags = normalizeTags(patch.tags);
+      if (!tags.ok) throw new BadRequestException(tags.reason);
+      row.tags = tags.value;
+    }
+    if (patch.notes !== undefined) {
+      const notes = validateNotes(patch.notes);
+      if (!notes.ok) throw new BadRequestException(notes.reason);
+      row.notes = notes.value;
+    }
+
+    const saved = await this.connections.save(row);
+    return {
+      id: saved.id,
+      label: saved.label,
+      tags: saved.tags ?? [],
+      notes: saved.notes ?? '',
+    };
+  }
+
+  // Credential rotation: replace the sealed envelope with new credentials.
+  // The destination contract re-validates them; fingerprints are rebuilt;
+  // health resets to unknown — the next probe must prove the rotation.
+  async rotateConnectionCredentials(
+    userId: string,
+    connectionId: string,
+    credentials: Record<string, string>,
+  ): Promise<Record<string, unknown>> {
+    const row = await this.connections.findOne({ where: { id: connectionId, userId } });
+    if (!row) throw new NotFoundException('egress-connection-not-found');
+
+    const dest = lookupDestination(row.destinationId);
+    if (!dest.ok) throw new BadRequestException(dest.reason);
+    const validated = validateCredentials(row.destinationId, credentials);
+    if (!validated.ok) throw new BadRequestException(validated.reason);
+    const base = resolveBaseUrl(row.destinationId, validated.value.credentials);
+    if (!base.ok) throw new BadRequestException(base.reason);
+    const baseTarget = normalizeTarget(base.value.baseUrl);
+    if (!baseTarget.ok) throw new BadRequestException(baseTarget.reason);
+
+    const fingerprints: Record<string, string> = {};
+    for (const key of Object.keys(validated.value.credentials)) {
+      const digest = createHash('sha256').update(validated.value.credentials[key]).digest('hex');
+      const fp = fingerprintHex(digest);
+      if (!fp.ok) throw new BadRequestException(fp.reason);
+      fingerprints[key] = fp.value.fp;
+    }
+
+    row.credentialsEnvelope = this.sealCredentials(validated.value.credentials);
+    row.credentialFingerprints = fingerprints;
+    row.baseUrl = base.value.baseUrl;
+    row.status = 'connected';
+    row.healthStatus = 'unknown';
+    row.consecutiveFailures = 0;
+    row.consecutiveSuccesses = 0;
+    const saved = await this.connections.save(row);
+    return {
+      ok: true,
+      connectionId: saved.id,
+      destinationId: saved.destinationId,
+      status: saved.status,
+      healthStatus: saved.healthStatus,
+      credentialFingerprints: fingerprints,
     };
   }
 
@@ -432,6 +518,94 @@ export class UniversalEgressService {
   }
 
   // --------------------------------------------------------------- dispatch
+  // The exact header set one dispatch would send: auth headers plus the
+  // caller's extras (extras lowercased to match). Used by dispatch and by
+  // the dry run — one code path, zero drift.
+  private dispatchHeaders(
+    row: EgressConnection,
+    extraHeaders: Record<string, string> | undefined,
+  ): Record<string, string> {
+    const headers = this.authHeaders(row);
+    for (const key of Object.keys(extraHeaders ?? {})) {
+      headers[key.toLowerCase()] = (extraHeaders as Record<string, string>)[key];
+    }
+    return headers;
+  }
+
+  // Dry run: the full gate walk with zero sockets and zero consumption.
+  // No quota is spent, no token is taken, no breaker verdict is recorded,
+  // no call is logged. Every gate reports what it WOULD do — honest
+  // preview, never a guess.
+  async dispatchDryRun(
+    userId: string,
+    connectionId: string,
+    method: string,
+    path: string,
+  ): Promise<Record<string, unknown>> {
+    const row = await this.connections.findOne({ where: { id: connectionId, userId } });
+    if (!row) throw new NotFoundException('egress-connection-not-found');
+    if (row.status !== 'connected') throw new BadRequestException('egress-connection-not-connected');
+    const dest = lookupDestination(row.destinationId);
+    if (!dest.ok) throw new BadRequestException(dest.reason);
+    const url = row.baseUrl.replace(/\/$/, '') + (path.startsWith('/') ? path : '/' + path);
+    const target = normalizeTarget(url);
+    if (!target.ok) throw new BadRequestException(target.reason);
+
+    const nowMs = Date.now();
+    const month = monthKey(new Date(nowMs).toISOString());
+    if (!month.ok) throw new BadRequestException(month.reason);
+
+    const quotaRow = await this.quotas.findOne({ where: { userId, month: month.value.key } });
+    const tier = ((['free', 'basic', 'pro'].includes(quotaRow?.tier ?? 'free') ? quotaRow?.tier ?? 'free' : 'free') as QuotaTier);
+
+    const breakerKey = userId + ':' + row.destinationId;
+    const breakerSnapshot = this.breakers.get(breakerKey) ?? initialBreaker();
+    const breakerDecision = canAttempt(breakerSnapshot, nowMs, BREAKER_COOLDOWN_MS);
+
+    const rateKey = userId + ':' + row.destinationId;
+    const bucket = this.rateBuckets.get(rateKey);
+
+    const monthlyCap = row.monthlyCallCap ?? null;
+    const monthAligned = row.callsMonth === month.value.key;
+    const capWouldBlock =
+      monthlyCap !== null && monthAligned && row.monthlyCallsUsed >= monthlyCap;
+
+    const headerKeys = Object.keys(this.dispatchHeaders(row, undefined)).map((k) =>
+      isSecretHeader(k) ? k + ':redacted' : k,
+    );
+
+    return {
+      dryRun: true,
+      connectionId: row.id,
+      destinationId: row.destinationId,
+      method,
+      target: { origin: target.value.origin, path: target.value.path },
+      headerKeys,
+      quota: {
+        month: month.value.key,
+        tier,
+        budget: TIER_BUDGETS[tier] ?? TIER_BUDGETS.free,
+        used: quotaRow?.used ?? 0,
+      },
+      breaker: {
+        state: breakerSnapshot.state,
+        allowed: breakerDecision.ok ? breakerDecision.value.allowed : false,
+        refusal: breakerDecision.ok ? null : breakerDecision.reason,
+      },
+      rateLimit: {
+        tokens: bucket?.tokens ?? RATE_BUCKET_CAPACITY,
+        capacity: RATE_BUCKET_CAPACITY,
+        refillPerMinute: RATE_REFILL_PER_MINUTE,
+      },
+      monthlyCap: {
+        cap: monthlyCap,
+        used: monthAligned ? row.monthlyCallsUsed : 0,
+        month: month.value.key,
+        wouldBlock: capWouldBlock,
+      },
+    };
+  }
+
   async listCalls(userId: string, limit: number): Promise<EgressCallLog[]> {
     return this.calls.find({
       where: { userId },
@@ -517,7 +691,7 @@ export class UniversalEgressService {
     body: Record<string, unknown> | undefined,
     extraHeaders: Record<string, string> | undefined,
   ): Promise<EgressResponse> {
-    const row = await this.connections.findOne({ where: { id: connectionId, userId } });
+    let row = await this.connections.findOne({ where: { id: connectionId, userId } });
     if (!row) throw new NotFoundException('egress-connection-not-found');
     if (row.status !== 'connected') throw new BadRequestException('egress-connection-not-connected');
 
@@ -572,10 +746,7 @@ export class UniversalEgressService {
     this.rateBuckets.set(rateKey, token.value.state);
 
     // Build headers: auth headers + caller extras (secret extras redacted in logs).
-    const headers = this.authHeaders(row);
-    for (const key of Object.keys(extraHeaders ?? {})) {
-      headers[key.toLowerCase()] = (extraHeaders as Record<string, string>)[key];
-    }
+    const headers = this.dispatchHeaders(row, extraHeaders);
     let finalUrl = target.value.origin + target.value.path;
     if (dest.value.authStyle === 'query-param') {
       const creds = this.openCredentials(row.credentialsEnvelope);
@@ -592,6 +763,11 @@ export class UniversalEgressService {
     // Per-connection retry policy: the ceiling defaults to the engine
     // maximum and can be tightened per connection.
     const attemptCeiling = row.maxAttempts ?? MAX_ATTEMPTS;
+
+    // OAuth 401 auto-recovery: at most ONE silent refresh-and-retry per
+    // dispatch. A refreshed access token heals the call in place; a second
+    // 401 is a real verdict and flows through the normal retry logic.
+    let refreshedOnce = false;
 
     const started = Date.now();
     let attempts = 0;
@@ -630,6 +806,27 @@ export class UniversalEgressService {
         const cls = classifyForRetry(599, true);
         if (!cls.ok) throw new BadRequestException(cls.reason);
         retryClass = cls.value;
+      }
+      if (
+        statusCode === 401 &&
+        dest.value.authStyle === 'oauth-code' &&
+        !refreshedOnce
+      ) {
+        refreshedOnce = true;
+        try {
+          await this.refreshConnectionOAuth(userId, row.id);
+          const freshRow = await this.connections.findOne({ where: { id: connectionId, userId } });
+          if (freshRow) {
+            row = freshRow;
+            const freshHeaders = this.dispatchHeaders(row, extraHeaders);
+            for (const key of Object.keys(headers)) delete headers[key];
+            for (const key of Object.keys(freshHeaders)) headers[key] = freshHeaders[key];
+          }
+          attempts -= 1;
+          continue;
+        } catch {
+          // Refresh failed: the 401 stands as the real verdict below.
+        }
       }
       if (succeeded || retryClass === 'no-retry' || !isIdempotent(method)) break;
       if (attempts >= attemptCeiling) break;
