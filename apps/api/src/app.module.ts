@@ -88,6 +88,9 @@ import { EgressConnection } from './modules/egress-universal/entities/egress-con
 import { EgressCallLog } from './modules/egress-universal/entities/egress-call-log.entity';
 import { EgressQuota } from './modules/egress-universal/entities/egress-quota.entity';
 import { EgressOauthSession } from './modules/egress-universal/entities/egress-oauth-session.entity';
+import { TrainingAsset } from './modules/ai-training/entities/training-asset.entity';
+import { TrainingDataset } from './modules/ai-training/entities/training-dataset.entity';
+import { AiTrainingModule } from './modules/ai-training/ai-training.module';
 import { EgressUniversalModule } from './modules/egress-universal/egress-universal.module';
 import { SystemModule } from './modules/system/system.module';
 
@@ -148,6 +151,8 @@ import { SystemModule } from './modules/system/system.module';
             EgressCallLog,
             EgressQuota,
             EgressOauthSession,
+            TrainingAsset,
+            TrainingDataset,
           ],
           synchronize: isDevelopment,
           logging: isDevelopment,
@@ -195,6 +200,7 @@ import { SystemModule } from './modules/system/system.module';
     InventoryModule,
     IntegrationsModule,
     EgressUniversalModule,
+    AiTrainingModule,
     SystemModule,
   ],
   providers: [
