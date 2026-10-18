@@ -6,11 +6,12 @@ import {
   lookupDestination,
   validateCredentials,
   resolveBaseUrl,
+  type DestinationDefinition,
 } from './destination-catalog';
 
-describe('destination-catalog (32 outbound destinations)', () => {
-  it('ships 32 destinations', () => {
-    expect(listDestinations().length).toBe(32);
+describe('destination-catalog (888 outbound destinations)', () => {
+  it('ships 888 destinations', () => {
+    expect(listDestinations().length).toBe(888);
   });
 
   it('includes key destinations', () => {
@@ -20,6 +21,36 @@ describe('destination-catalog (32 outbound destinations)', () => {
     expect(ids.has('slack')).toBe(true);
     expect(ids.has('custom-http')).toBe(true);
     expect(ids.has('whatsapp-cloud')).toBe(true);
+    expect(ids.has('openai')).toBe(true);
+    expect(ids.has('twilio')).toBe(true);
+    expect(ids.has('google-maps')).toBe(true);
+  });
+
+  it('has globally unique destination ids', () => {
+    const all = listDestinations();
+    const ids = new Set(all.map((d) => d.id));
+    expect(ids.size).toBe(all.length);
+  });
+
+  it('has valid shape for every destination (sweep)', () => {
+    const kinds = new Set<DestinationDefinition['kind']>([
+      'messaging','email','open-banking','ecommerce','crm','support','storage','productivity',
+      'chat','social','finance','data','custom','payments','crypto','accounting','billing','hr',
+      'recruiting','legal','kyc','esign','scheduling','devtools','observability','security','qa',
+      'identity','shipping','marketplace','reviews','marketing','ads','surveys','forms','analytics',
+      'cloud','database','cms','ai','search','automation','notifications','conferencing','translation',
+      'media','music','podcasts','images','games','sports','travel','health','energy','iot','location',
+      'weather','education','government','realestate',
+    ]);
+    for (const d of listDestinations()) {
+      expect(d.baseUrl.startsWith('https://')).toBe(true);
+      expect(d.healthPath.startsWith('/')).toBe(true);
+      expect(d.requiredCredentials.length).toBeGreaterThan(0);
+      expect(kinds.has(d.kind)).toBe(true);
+      for (const rc of d.requiredCredentials) {
+        expect(d.optionalCredentials.includes(rc)).toBe(false);
+      }
+    }
   });
 
   it('looks up destinations and refuses unknown ids', () => {
