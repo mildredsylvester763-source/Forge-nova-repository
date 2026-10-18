@@ -1,7 +1,9 @@
 // ============================================================================
 // FILE: /apps/api/src/modules/egress-universal/universal-egress.controller.ts
 // ============================================================================
-// Zero-trust: identity always comes from req.user, never the body.
+// Zero-trust: identity always comes from req.user, never the body. The one
+// exception is the OAuth callback: the provider redirect carries no JWT —
+// the single-use, 10-minute state secret is the bearer there.
 
 import {
   Body,
@@ -17,6 +19,7 @@ import {
 } from '@nestjs/common';
 import { UniversalEgressService } from './universal-egress.service';
 import { ConnectDestinationDto, DispatchEgressDto } from './dto/egress-universal.dto';
+import { Public } from '../../common/decorators/public.decorator';
 
 @Controller('egress-universal')
 export class UniversalEgressController {
@@ -54,6 +57,34 @@ export class UniversalEgressController {
     return this.egress.probeConnection(req.user.id, id);
   }
 
+  // ----------------------------------------------------------- oauth plane
+  // Step 1 (authenticated): create a pending session, return the provider
+  // authorize URL. Step 2 (public): the provider redirects here with
+  // state + code; the single-use state secret binds it to the user.
+  @Post('connections/oauth/:destinationId/begin')
+  @HttpCode(200)
+  async beginOauth(@Request() req: any, @Param('destinationId') destinationId: string) {
+    return this.egress.beginOAuthConnection(req.user.id, destinationId);
+  }
+
+  @Public()
+  @Get('callback')
+  async oauthCallback(
+    @Query('state') state?: string,
+    @Query('code') code?: string,
+    @Query('error') error?: string,
+    @Query('error_description') error_description?: string,
+  ) {
+    return this.egress.completeOAuthCallback({ state, code, error, error_description });
+  }
+
+  @Post('connections/:id/refresh')
+  @HttpCode(200)
+  async refreshOauth(@Request() req: any, @Param('id', ParseUUIDPipe) id: string) {
+    return this.egress.refreshConnectionOAuth(req.user.id, id);
+  }
+
+  // -------------------------------------------------------------- dispatch
   @Post('dispatch')
   @HttpCode(200)
   async dispatch(@Request() req: any, @Body() dto: DispatchEgressDto) {
