@@ -102,7 +102,7 @@ export function takeToken(
   if (tokens >= cost) {
     return { ok: true, value: { state: { tokens: tokens - cost, lastRefillMs: nowMs }, retryAfterMs: null } };
   }
-  const missing = cost - tokens;
-  const retryAfterMs = Math.ceil((missing * 60000) / refillPerMinute);
+  // Refusal is by name; the caller's wait is derivable from the refill
+  // rate (cost - tokens tokens short at refillPerMinute per minute).
   return { ok: false, reason: 'rate-limit-exceeded' };
 }
