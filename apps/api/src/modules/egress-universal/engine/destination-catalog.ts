@@ -14,7 +14,7 @@
 
 export type { Verdict, AuthStyle, DestinationKind, DestinationDefinition } from '../catalog/destination-types';
 
-import { DestinationDefinition } from '../catalog/destination-types';
+import { Verdict, DestinationDefinition } from '../catalog/destination-types';
 import { PAYMENTS } from '../catalog/catalog-payments';
 import { COMMUNICATIONS } from '../catalog/catalog-communications';
 import { BUSINESS } from '../catalog/catalog-business';
