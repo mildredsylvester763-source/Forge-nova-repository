@@ -26,7 +26,7 @@ describe('engine/system-inventory (deployment manifest and health)', () => {
   });
 
   it('refuses malformed counts by name', () => {
-    expect(buildInventoryReport(null).ok).toBe(false);
+    expect(buildInventoryReport(null as unknown as Record<string, unknown>).ok).toBe(false);
     expect(buildInventoryReport({ connections: -1, destinationsOffered: 888, callLogs: 0, oauthProviders: 25 }).ok).toBe(false);
     expect(buildInventoryReport({ connections: 1.5, destinationsOffered: 888, callLogs: 0, oauthProviders: 25 }).ok).toBe(false);
     expect(buildInventoryReport({ destinationsOffered: 888, callLogs: 0, oauthProviders: 25 }).ok).toBe(false);
