@@ -2,7 +2,7 @@
 // FILE: /apps/api/src/modules/egress-universal/dto/egress-universal.dto.ts
 // ============================================================================
 
-import { IsIn, IsObject, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsIn, IsInt, IsObject, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 
 export class ConnectDestinationDto {
   @IsString()
@@ -37,4 +37,25 @@ export class DispatchEgressDto {
   @IsOptional()
   @IsObject()
   headers?: Record<string, string>;
+}
+
+// The per-connection operational contract. Every field is optional; the
+// engine defaults apply wherever a field is absent.
+export class UpdateConnectionPolicyDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  label?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(4)
+  maxAttempts?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(1000000)
+  monthlyCallCap?: number;
 }
