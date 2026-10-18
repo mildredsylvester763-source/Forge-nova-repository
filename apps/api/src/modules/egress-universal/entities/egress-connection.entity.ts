@@ -5,7 +5,9 @@
 // A universal outbound connection: one row per user per external system.
 // Credentials live ONLY as a sealed AES-256-GCM envelope; the fingerprints
 // jsonb carries short display fingerprints so logs can identify a
-// credential without ever recovering it.
+// credential without ever recovering it. The policy columns carry the
+// per-connection operational contract: retry ceiling, monthly call cap,
+// and the month the cap counter belongs to.
 
 import {
   Column,
@@ -56,6 +58,22 @@ export class EgressConnection {
 
   @Column({ type: 'timestamptz', nullable: true })
   lastProbedAt?: Date;
+
+  // Per-connection retry policy: ceiling on attempts per dispatch call.
+  // Null means the engine default (MAX_ATTEMPTS).
+  @Column({ type: 'int', nullable: true })
+  maxAttempts?: number | null;
+
+  // Per-destination monthly quota: cap on dispatch calls within callsMonth.
+  // Null means uncapped (the plan-tier quota still applies).
+  @Column({ type: 'int', nullable: true })
+  monthlyCallCap?: number | null;
+
+  @Column({ type: 'int', default: 0 })
+  monthlyCallsUsed: number;
+
+  @Column({ type: 'text', default: '' })
+  callsMonth: string;
 
   @CreateDateColumn()
   createdAt: Date;
