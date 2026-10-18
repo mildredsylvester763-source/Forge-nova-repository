@@ -46,7 +46,7 @@ export function newBucket(capacity: number, nowMs: number): Verdict<BucketState>
 
 function validateState(state: BucketState): Verdict<null | BucketState> {
   if (!state || typeof state !== 'object') return { ok: false, reason: 'rate-limit-invalid-state' };
-  if (typeof state.tokens !== 'number' || !Number.isFinite(state.tokens) || state.tokens < 0) {
+  if (typeof state.tokens !== 'number' || !Number.isInteger(state.tokens) || state.tokens < 0) {
     return { ok: false, reason: 'rate-limit-invalid-tokens' };
   }
   if (!Number.isInteger(state.lastRefillMs) || state.lastRefillMs < 0) {
