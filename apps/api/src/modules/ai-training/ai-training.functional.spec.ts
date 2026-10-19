@@ -19,6 +19,10 @@ class RepoDouble<T extends { id?: string }> {
     return { ...partial } as T;
   }
   async save(row: T): Promise<T> {
+    // TypeORM fills @CreateDateColumn/@UpdateDateColumn on insert; the double
+    // must be behavior-true to those columns or snapshot lineage breaks.
+    if (!(row as any).createdAt) (row as any).createdAt = new Date();
+    if (!(row as any).updatedAt) (row as any).updatedAt = new Date();
     if (!row.id) {
       row.id = 'row-' + ++this.seq;
       this.rows.push(row);
