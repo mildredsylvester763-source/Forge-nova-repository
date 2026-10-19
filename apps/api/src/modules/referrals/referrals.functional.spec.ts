@@ -16,28 +16,33 @@ import { ReferralBinding } from './entities/referral-binding.entity';
 import { ReferralReward } from './entities/referral-reward.entity';
 import { CODE_ALPHABET } from './engine/referral-engine';
 
-type AnyRow = Record<string, unknown> & { id?: string };
-
-function fakeRepo<T extends AnyRow>(): { repo: Repository<T>; rows: T[] } {
+// An in-memory stand-in for a TypeORM repository. Same methods the
+// service actually calls: create, save, findOne, find.
+function fakeRepo<T>(): { repo: Repository<T>; rows: T[] } {
   const rows: T[] = [];
   let counter = 0;
   const repo = {
     create: (partial: Partial<T>): T => ({ ...partial }) as T,
     save: async (entity: T): Promise<T> => {
-      if (!entity.id) {
+      const record = entity as Record<string, unknown>;
+      if (!record['id']) {
         counter += 1;
-        entity.id = 'row-' + counter;
+        record['id'] = 'row-' + counter;
         rows.push(entity);
       }
       return entity;
     },
     findOne: async (opts: { where: Record<string, unknown> }): Promise<T | null> =>
       rows.find((r) =>
-        Object.keys(opts.where).every((k) => r[k] === opts.where[k]),
+        Object.keys(opts.where).every(
+          (k) => (r as Record<string, unknown>)[k] === opts.where[k],
+        ),
       ) ?? null,
     find: async (opts: { where: Record<string, unknown> }): Promise<T[]> =>
       rows.filter((r) =>
-        Object.keys(opts.where ?? {}).every((k) => r[k] === opts.where[k]),
+        Object.keys(opts.where ?? {}).every(
+          (k) => (r as Record<string, unknown>)[k] === opts.where[k],
+        ),
       ),
   } as unknown as Repository<T>;
   return { repo, rows };
@@ -46,10 +51,10 @@ function fakeRepo<T extends AnyRow>(): { repo: Repository<T>; rows: T[] } {
 interface Harness {
   referrals: ReferralsService;
   loyalty: LoyaltyService;
-  codes: AnyRow[];
-  bindings: AnyRow[];
-  rewards: AnyRow[];
-  loyaltyEvents: AnyRow[];
+  codes: ReferralCode[];
+  bindings: ReferralBinding[];
+  rewards: ReferralReward[];
+  loyaltyEvents: LoyaltyEvent[];
 }
 
 function buildHarness(): Harness {
@@ -58,16 +63,8 @@ function buildHarness(): Harness {
   const rewards = fakeRepo<ReferralReward>();
   const acc = fakeRepo<LoyaltyAccount>();
   const ev = fakeRepo<LoyaltyEvent>();
-  const loyalty = new LoyaltyService(
-    acc.repo as unknown as Repository<LoyaltyAccount>,
-    ev.repo as unknown as Repository<LoyaltyEvent>,
-  );
-  const referrals = new ReferralsService(
-    codes.repo as unknown as Repository<ReferralCode>,
-    bindings.repo as unknown as Repository<ReferralBinding>,
-    rewards.repo as unknown as Repository<ReferralReward>,
-    loyalty,
-  );
+  const loyalty = new LoyaltyService(acc.repo, ev.repo);
+  const referrals = new ReferralsService(codes.repo, bindings.repo, rewards.repo, loyalty);
   return {
     referrals,
     loyalty,
@@ -104,8 +101,8 @@ describe('referral functional flows', () => {
     const { referrals, bindings } = buildHarness();
     const code = await referrals.generateCode('user-alice');
     const binding = await referrals.apply(code.code, 'user-carol');
-    expect((binding as any).referrerId).toBe('user-alice');
-    expect((binding as any).status).toBe('bound');
+    expect(binding.referrerId).toBe('user-alice');
+    expect(binding.status).toBe('bound');
     await expect(referrals.apply(code.code, 'user-carol')).rejects.toThrow(
       'referral-already-bound',
     );
@@ -138,15 +135,14 @@ describe('referral functional flows', () => {
     const code = await h.referrals.generateCode('user-alice');
     await h.referrals.apply(code.code, 'user-carol');
     const reward = await h.referrals.reward('user-carol', 5000);
-    expect((reward as any).points).toBe(500);
-    expect((reward as any).purchaseCents).toBe(5000);
+    expect(reward.points).toBe(500);
+    expect(reward.purchaseCents).toBe(5000);
     // The 500 points actually landed in Alice is wallet.
     const wallet = await h.loyalty.getAccount('user-alice');
     expect(wallet.pointsBalance).toBe(500);
     expect(wallet.lifetimePoints).toBe(500);
     // The binding flipped to rewarded.
-    const binding = h.bindings[0];
-    expect((binding as any).status).toBe('rewarded');
+    expect(h.bindings[0].status).toBe('rewarded');
   });
 
   it('a second reward attempt for the same customer is refused, no double points', async () => {
@@ -191,7 +187,7 @@ describe('referral functional flows', () => {
     await h.referrals.apply(codeA.code, 'user-dave');
     await h.referrals.reward('user-carol', 1000);
     const list = await h.referrals.list('user-alice');
-    expect((list.code as any).code).toBe(codeA.code);
+    expect(list.code?.code).toBe(codeA.code);
     expect(list.bindings.length).toBe(2);
     expect(list.rewards.length).toBe(1);
     // Bob sees only his own empty book.
