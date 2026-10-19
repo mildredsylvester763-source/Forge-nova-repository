@@ -9,6 +9,7 @@
 
 import { TrainingAsset, TrainingAssetKind, TrainingClassification } from './entities/training-asset.entity';
 import { TrainingDataset } from './entities/training-dataset.entity';
+import { TrainingRun } from './entities/training-run.entity';
 import { AiTrainingService } from './ai-training.service';
 
 // ---- minimal TypeORM repository double (behavior-true, no DB needed) ----
@@ -74,8 +75,9 @@ class RepoDouble<T extends { id?: string }> {
 function makeService() {
   const assets = new RepoDouble<TrainingAsset>();
   const datasets = new RepoDouble<TrainingDataset>();
-  const svc = new AiTrainingService(assets as any, datasets as any);
-  return { svc, assets, datasets };
+  const runs = new RepoDouble<TrainingRun>();
+  const svc = new AiTrainingService(assets as any, datasets as any, runs as any);
+  return { svc, assets, datasets, runs };
 }
 
 const USER = '11111111-1111-4111-8111-111111111111';
