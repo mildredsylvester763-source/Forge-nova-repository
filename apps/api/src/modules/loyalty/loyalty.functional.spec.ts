@@ -12,42 +12,46 @@ import { LoyaltyService } from './loyalty.service';
 import { LoyaltyAccount } from './entities/loyalty-account.entity';
 import { LoyaltyEvent } from './entities/loyalty-event.entity';
 
-type AnyRow = Record<string, unknown> & { id?: string };
-
 // An in-memory stand-in for a TypeORM repository. Same methods the
 // service actually calls: create, save, findOne, find.
-function fakeRepo<T extends AnyRow>(): { repo: Repository<T>; rows: T[] } {
+function fakeRepo<T>(): { repo: Repository<T>; rows: T[] } {
   const rows: T[] = [];
   let counter = 0;
   const repo = {
     create: (partial: Partial<T>): T => ({ ...partial }) as T,
     save: async (entity: T): Promise<T> => {
-      if (!entity.id) {
+      const record = entity as Record<string, unknown>;
+      if (!record['id']) {
         counter += 1;
-        entity.id = 'row-' + counter;
+        record['id'] = 'row-' + counter;
         rows.push(entity);
       }
       return entity;
     },
     findOne: async (opts: { where: Record<string, unknown> }): Promise<T | null> =>
       rows.find((r) =>
-        Object.keys(opts.where).every((k) => r[k] === opts.where[k]),
+        Object.keys(opts.where).every(
+          (k) => (r as Record<string, unknown>)[k] === opts.where[k],
+        ),
       ) ?? null,
     find: async (opts: { where: Record<string, unknown> }): Promise<T[]> =>
       rows.filter((r) =>
-        Object.keys(opts.where ?? {}).every((k) => r[k] === opts.where[k]),
+        Object.keys(opts.where ?? {}).every(
+          (k) => (r as Record<string, unknown>)[k] === opts.where[k],
+        ),
       ),
   } as unknown as Repository<T>;
   return { repo, rows };
 }
 
-function buildService(): { service: LoyaltyService; accounts: AnyRow[]; events: AnyRow[] } {
+function buildService(): {
+  service: LoyaltyService;
+  accounts: LoyaltyAccount[];
+  events: LoyaltyEvent[];
+} {
   const acc = fakeRepo<LoyaltyAccount>();
   const ev = fakeRepo<LoyaltyEvent>();
-  const service = new LoyaltyService(
-    acc.repo as unknown as Repository<LoyaltyAccount>,
-    ev.repo as unknown as Repository<LoyaltyEvent>,
-  );
+  const service = new LoyaltyService(acc.repo, ev.repo);
   return { service, accounts: acc.rows, events: ev.rows };
 }
 
