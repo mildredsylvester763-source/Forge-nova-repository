@@ -159,8 +159,8 @@ describe('training-run-engine (AI-013/014/017)', () => {
     });
 
     it('refuses ghost and corrupt runs by name', () => {
-      expect(reasonOf(compareExperiments({ a: { runId: '', finalLoss: 1 }, b: { runId: 'b', finalLoss: 1 } } as any))).toBe('compare-missing-run');
-      expect(reasonOf(compareExperiments({ a: { runId: 'a', finalLoss: NaN }, b: { runId: 'b', finalLoss: 1 } }))).toBe('compare-invalid-loss:a');
+      expect(reasonOf(compareExperiments({ a: { runId: '', finalLoss: 1, steps: 1 }, b: { runId: 'b', finalLoss: 1, steps: 1 } } as any))).toBe('compare-missing-run');
+      expect(reasonOf(compareExperiments({ a: { runId: 'a', finalLoss: NaN, steps: 1 }, b: { runId: 'b', finalLoss: 1, steps: 1 } }))).toBe('compare-invalid-loss:a');
     });
   });
 
