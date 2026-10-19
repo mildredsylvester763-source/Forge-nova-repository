@@ -15,8 +15,14 @@ import {
   PLAN_DEFAULTS,
   Checkpoint,
   MetricPoint,
+  Verdict,
 } from './training-run-engine';
 
+
+/** Narrowing helper: strict TS forbids reading .reason on the ok-union. */
+function reasonOf<T>(v: Verdict<T>): string {
+  return v.ok ? '' : v.reason;
+}
 describe('training-run-engine (AI-013/014/017)', () => {
   // ---- AI-013: run planning ----
   describe('buildPlan', () => {
@@ -54,11 +60,11 @@ describe('training-run-engine (AI-013/014/017)', () => {
     });
 
     it('pins epoch and batch bounds', () => {
-      expect(buildPlan({ datasetFingerprint: 'dsfp_1', itemCount: 10, epochs: 0, budget: 10, costPerStep: 1 }).reason).toBe('plan-invalid-epochs');
-      expect(buildPlan({ datasetFingerprint: 'dsfp_1', itemCount: 10, epochs: 101, budget: 10, costPerStep: 1 }).reason).toBe('plan-invalid-epochs');
-      expect(buildPlan({ datasetFingerprint: 'dsfp_1', itemCount: 10, epochs: 1.5, budget: 10, costPerStep: 1 }).reason).toBe('plan-invalid-epochs');
-      expect(buildPlan({ datasetFingerprint: 'dsfp_1', itemCount: 10, batchSize: 0, budget: 10, costPerStep: 1 }).reason).toBe('plan-invalid-batch-size');
-      expect(buildPlan({ datasetFingerprint: 'dsfp_1', itemCount: 10, batchSize: 513, budget: 10, costPerStep: 1 }).reason).toBe('plan-invalid-batch-size');
+      expect(reasonOf(buildPlan({ datasetFingerprint: 'dsfp_1', itemCount: 10, epochs: 0, budget: 10, costPerStep: 1 }))).toBe('plan-invalid-epochs');
+      expect(reasonOf(buildPlan({ datasetFingerprint: 'dsfp_1', itemCount: 10, epochs: 101, budget: 10, costPerStep: 1 }))).toBe('plan-invalid-epochs');
+      expect(reasonOf(buildPlan({ datasetFingerprint: 'dsfp_1', itemCount: 10, epochs: 1.5, budget: 10, costPerStep: 1 }))).toBe('plan-invalid-epochs');
+      expect(reasonOf(buildPlan({ datasetFingerprint: 'dsfp_1', itemCount: 10, batchSize: 0, budget: 10, costPerStep: 1 }))).toBe('plan-invalid-batch-size');
+      expect(reasonOf(buildPlan({ datasetFingerprint: 'dsfp_1', itemCount: 10, batchSize: 513, budget: 10, costPerStep: 1 }))).toBe('plan-invalid-batch-size');
     });
 
     it('refuses over-budget plans loudly, never silently trims', () => {
@@ -68,8 +74,8 @@ describe('training-run-engine (AI-013/014/017)', () => {
     });
 
     it('refuses free training and missing budget by name', () => {
-      expect(buildPlan({ datasetFingerprint: 'dsfp_1', itemCount: 10, budget: 10, costPerStep: 0 }).reason).toBe('plan-invalid-cost');
-      expect(buildPlan({ datasetFingerprint: 'dsfp_1', itemCount: 10, budget: 0, costPerStep: 1 }).reason).toBe('plan-no-budget');
+      expect(reasonOf(buildPlan({ datasetFingerprint: 'dsfp_1', itemCount: 10, budget: 10, costPerStep: 0 }))).toBe('plan-invalid-cost');
+      expect(reasonOf(buildPlan({ datasetFingerprint: 'dsfp_1', itemCount: 10, budget: 0, costPerStep: 1 }))).toBe('plan-no-budget');
     });
 
     it('is deterministic: identical input yields identical plan', () => {
@@ -92,16 +98,16 @@ describe('training-run-engine (AI-013/014/017)', () => {
     });
 
     it('refuses teleports and revives by name', () => {
-      expect(canTransition({ from: 'planned', to: 'succeeded' }).reason).toBe('run-illegal-transition:planned->succeeded');
-      expect(canTransition({ from: 'planned', to: 'paused' }).reason).toBe('run-illegal-transition:planned->paused');
-      expect(canTransition({ from: 'succeeded', to: 'running' }).reason).toBe('run-illegal-transition:succeeded->running');
-      expect(canTransition({ from: 'failed', to: 'running' }).reason).toBe('run-illegal-transition:failed->running');
-      expect(canTransition({ from: 'canceled', to: 'planned' }).reason).toBe('run-illegal-transition:canceled->planned');
+      expect(reasonOf(canTransition({ from: 'planned', to: 'succeeded' }))).toBe('run-illegal-transition:planned->succeeded');
+      expect(reasonOf(canTransition({ from: 'planned', to: 'paused' }))).toBe('run-illegal-transition:planned->paused');
+      expect(reasonOf(canTransition({ from: 'succeeded', to: 'running' }))).toBe('run-illegal-transition:succeeded->running');
+      expect(reasonOf(canTransition({ from: 'failed', to: 'running' }))).toBe('run-illegal-transition:failed->running');
+      expect(reasonOf(canTransition({ from: 'canceled', to: 'planned' }))).toBe('run-illegal-transition:canceled->planned');
     });
 
     it('refuses unknown states by name', () => {
-      expect(canTransition({ from: 'dreaming' as any, to: 'running' }).reason).toBe('run-unknown-state:dreaming');
-      expect(canTransition({ from: 'planned', to: 'rebooted' as any }).reason).toBe('run-unknown-state:rebooted');
+      expect(reasonOf(canTransition({ from: 'dreaming' as any, to: 'running' }))).toBe('run-unknown-state:dreaming');
+      expect(reasonOf(canTransition({ from: 'planned', to: 'rebooted' as any }))).toBe('run-unknown-state:rebooted');
     });
   });
 
@@ -114,23 +120,23 @@ describe('training-run-engine (AI-013/014/017)', () => {
 
     it('refuses resume for any state but paused', () => {
       for (const s of ['planned', 'running', 'succeeded', 'failed', 'canceled'] as const) {
-        expect(computeResume({ state: s, checkpoint: cp, planSteps: 10 }).reason).toBe('resume-not-paused:' + s);
+        expect(reasonOf(computeResume({ state: s, checkpoint: cp, planSteps: 10 }))).toBe('resume-not-paused:' + s);
       }
     });
 
     it('refuses resume without a checkpoint', () => {
-      expect(computeResume({ state: 'paused', checkpoint: null, planSteps: 10 }).reason).toBe('resume-no-checkpoint');
+      expect(reasonOf(computeResume({ state: 'paused', checkpoint: null, planSteps: 10 }))).toBe('resume-no-checkpoint');
     });
 
     it('refuses malformed checkpoints by name', () => {
-      expect(computeResume({ state: 'paused', checkpoint: { ...cp, step: -1 }, planSteps: 10 }).reason).toBe('resume-checkpoint-invalid:step');
-      expect(computeResume({ state: 'paused', checkpoint: { ...cp, step: 1.5 }, planSteps: 10 }).reason).toBe('resume-checkpoint-invalid:step');
-      expect(computeResume({ state: 'paused', checkpoint: { ...cp, sequence: 0 }, planSteps: 10 }).reason).toBe('resume-checkpoint-invalid:sequence');
+      expect(reasonOf(computeResume({ state: 'paused', checkpoint: { ...cp, step: -1 }, planSteps: 10 }))).toBe('resume-checkpoint-invalid:step');
+      expect(reasonOf(computeResume({ state: 'paused', checkpoint: { ...cp, step: 1.5 }, planSteps: 10 }))).toBe('resume-checkpoint-invalid:step');
+      expect(reasonOf(computeResume({ state: 'paused', checkpoint: { ...cp, sequence: 0 }, planSteps: 10 }))).toBe('resume-checkpoint-invalid:sequence');
     });
 
     it('refuses checkpoints past the plan (nothing left to run)', () => {
-      expect(computeResume({ state: 'paused', checkpoint: { ...cp, step: 10 }, planSteps: 10 }).reason).toBe('resume-checkpoint-past-plan:10>=10');
-      expect(computeResume({ state: 'paused', checkpoint: cp, planSteps: 0 }).reason).toBe('resume-checkpoint-past-plan:no-plan');
+      expect(reasonOf(computeResume({ state: 'paused', checkpoint: { ...cp, step: 10 }, planSteps: 10 }))).toBe('resume-checkpoint-past-plan:10>=10');
+      expect(reasonOf(computeResume({ state: 'paused', checkpoint: cp, planSteps: 0 }))).toBe('resume-checkpoint-past-plan:no-plan');
     });
   });
 
@@ -153,8 +159,8 @@ describe('training-run-engine (AI-013/014/017)', () => {
     });
 
     it('refuses ghost and corrupt runs by name', () => {
-      expect(compareExperiments({ a: { runId: '', finalLoss: 1 }, b: { runId: 'b', finalLoss: 1 } } as any).reason).toBe('compare-missing-run');
-      expect(compareExperiments({ a: { runId: 'a', finalLoss: NaN }, b: { runId: 'b', finalLoss: 1 } }).reason).toBe('compare-invalid-loss:a');
+      expect(reasonOf(compareExperiments({ a: { runId: '', finalLoss: 1 }, b: { runId: 'b', finalLoss: 1 } } as any))).toBe('compare-missing-run');
+      expect(reasonOf(compareExperiments({ a: { runId: 'a', finalLoss: NaN }, b: { runId: 'b', finalLoss: 1 } }))).toBe('compare-invalid-loss:a');
     });
   });
 
@@ -169,12 +175,12 @@ describe('training-run-engine (AI-013/014/017)', () => {
     });
 
     it('refuses empty and disordered series by name', () => {
-      expect(validateMetricSeries([]).reason).toBe('metrics-empty');
-      expect(validateMetricSeries([{ step: 1, loss: 1 }, { step: 1, loss: 1 }]).reason).toBe('metrics-step-disorder:step 1');
-      expect(validateMetricSeries([{ step: 5, loss: 1 }, { step: 3, loss: 1 }]).reason).toBe('metrics-step-disorder:step 3');
-      expect(validateMetricSeries([{ step: -1, loss: 1 }]).reason).toBe('metrics-step-disorder:step -1');
-      expect(validateMetricSeries([{ step: 0, loss: NaN }]).reason).toBe('metrics-invalid-loss:step 0');
-      expect(validateMetricSeries([{ step: 0, loss: 1, evalScore: Infinity }]).reason).toBe('metrics-invalid-eval:step 0');
+      expect(reasonOf(validateMetricSeries([]))).toBe('metrics-empty');
+      expect(reasonOf(validateMetricSeries([{ step: 1, loss: 1 }, { step: 1, loss: 1 }]))).toBe('metrics-step-disorder:step 1');
+      expect(reasonOf(validateMetricSeries([{ step: 5, loss: 1 }, { step: 3, loss: 1 }]))).toBe('metrics-step-disorder:step 3');
+      expect(reasonOf(validateMetricSeries([{ step: -1, loss: 1 }]))).toBe('metrics-step-disorder:step -1');
+      expect(reasonOf(validateMetricSeries([{ step: 0, loss: NaN }]))).toBe('metrics-invalid-loss:step 0');
+      expect(reasonOf(validateMetricSeries([{ step: 0, loss: 1, evalScore: Infinity }]))).toBe('metrics-invalid-eval:step 0');
     });
   });
 
