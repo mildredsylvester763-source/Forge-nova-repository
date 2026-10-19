@@ -6,7 +6,7 @@
 // generation, binding races, self-referral attempts, reward double-claim
 // attempts, and points landing in the referrer is wallet.
 
-import { Repository } from 'typeorm';
+import { ObjectLiteral, Repository } from 'typeorm';
 import { ReferralsService } from './referrals.service';
 import { LoyaltyService } from '../loyalty/loyalty.service';
 import { LoyaltyAccount } from '../loyalty/entities/loyalty-account.entity';
@@ -18,7 +18,7 @@ import { CODE_ALPHABET } from './engine/referral-engine';
 
 // An in-memory stand-in for a TypeORM repository. Same methods the
 // service actually calls: create, save, findOne, find.
-function fakeRepo<T>(): { repo: Repository<T>; rows: T[] } {
+function fakeRepo<T extends ObjectLiteral>(): { repo: Repository<T>; rows: T[] } {
   const rows: T[] = [];
   let counter = 0;
   const repo = {
