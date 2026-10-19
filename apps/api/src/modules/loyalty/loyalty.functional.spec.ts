@@ -7,14 +7,14 @@
 // of ledgers between users, grant flow, and history.
 
 import { BadRequestException } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { ObjectLiteral, Repository } from 'typeorm';
 import { LoyaltyService } from './loyalty.service';
 import { LoyaltyAccount } from './entities/loyalty-account.entity';
 import { LoyaltyEvent } from './entities/loyalty-event.entity';
 
 // An in-memory stand-in for a TypeORM repository. Same methods the
 // service actually calls: create, save, findOne, find.
-function fakeRepo<T>(): { repo: Repository<T>; rows: T[] } {
+function fakeRepo<T extends ObjectLiteral>(): { repo: Repository<T>; rows: T[] } {
   const rows: T[] = [];
   let counter = 0;
   const repo = {
