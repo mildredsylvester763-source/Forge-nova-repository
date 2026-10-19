@@ -17,6 +17,10 @@ import {
 function reasonOf<T>(v: Verdict<T>): string {
   return v.ok ? '' : v.reason;
 }
+function valueOf<T>(v: Verdict<T>): T {
+  if (!v.ok) throw new Error('unreachable');
+  return v.value;
+}
 describe('cost-reproducibility-engine (AI-019/020)', () => {
   describe('openCostLedger', () => {
     it('opens a ledger with a positive budget', () => {
@@ -38,7 +42,7 @@ describe('cost-reproducibility-engine (AI-019/020)', () => {
       const r1 = recordCost(led.value, { step: 0, units: 3 });
       expect(r1.ok).toBe(true);
       if (r1.ok) expect(r1.value.spent).toBe(3);
-      const r2 = recordCost(r1.value, { step: 1, units: 6 });
+      const r2 = recordCost(valueOf(r1), { step: 1, units: 6 });
       expect(r2.ok).toBe(true);
       if (r2.ok) {
         expect(r2.value.spent).toBe(9);
