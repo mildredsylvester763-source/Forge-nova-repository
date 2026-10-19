@@ -199,3 +199,4 @@ describe('referral functional flows', () => {
     expect(bobList.bindings.length).toBe(0);
     expect(bobList.rewards.length).toBe(0);
   });
+});
