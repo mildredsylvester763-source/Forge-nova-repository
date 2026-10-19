@@ -90,6 +90,7 @@ import { EgressQuota } from './modules/egress-universal/entities/egress-quota.en
 import { EgressOauthSession } from './modules/egress-universal/entities/egress-oauth-session.entity';
 import { TrainingAsset } from './modules/ai-training/entities/training-asset.entity';
 import { TrainingDataset } from './modules/ai-training/entities/training-dataset.entity';
+import { TrainingRun } from './modules/ai-training/entities/training-run.entity';
 import { LoyaltyAccount } from './modules/loyalty/entities/loyalty-account.entity';
 import { LoyaltyEvent } from './modules/loyalty/entities/loyalty-event.entity';
 import { ReferralCode } from './modules/referrals/entities/referral-code.entity';
@@ -160,6 +161,7 @@ import { ReferralsModule } from './modules/referrals/referrals.module';
             EgressOauthSession,
             TrainingAsset,
             TrainingDataset,
+            TrainingRun,
             LoyaltyAccount,
             LoyaltyEvent,
             ReferralCode,
