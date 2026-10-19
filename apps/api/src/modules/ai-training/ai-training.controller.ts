@@ -9,7 +9,11 @@ import {
   ParseUUIDPipe, HttpCode, HttpStatus,
 } from '@nestjs/common';
 import { AiTrainingService } from './ai-training.service';
-import { CreateTrainingAssetDto, BuildDatasetDto } from './dto/ai-training.dto';
+import {
+  CreateTrainingAssetDto, BuildDatasetDto,
+  CreateTrainingRunDto, TransitionRunDto, RecordRunCheckpointDto,
+  RecordRunCostDto, RecordRunMetricDto, CompareRunsDto,
+} from './dto/ai-training.dto';
 
 @Controller('ai-training')
 export class AiTrainingController {
@@ -68,5 +72,72 @@ export class AiTrainingController {
   @Get('datasets/:id')
   getDataset(@Request() req: any, @Param('id', ParseUUIDPipe) id: string) {
     return this.aiTrainingService.getDataset(req.user.id, id);
+  }
+
+  // --- Training runs (AI-013/014/017/018/019/020) ---
+
+  @Post('runs')
+  @HttpCode(HttpStatus.CREATED)
+  createRun(@Request() req: any, @Body() dto: CreateTrainingRunDto) {
+    return this.aiTrainingService.createRun(req.user.id, dto);
+  }
+
+  @Get('runs')
+  listRuns(
+    @Request() req: any,
+    @Query('page') page = 1,
+    @Query('limit') limit = 20,
+    @Query('state') state?: string,
+    @Query('datasetId') datasetId?: string,
+  ) {
+    return this.aiTrainingService.listRuns(req.user.id, {
+      page: Number(page), limit: Number(limit), state, datasetId,
+    });
+  }
+
+  @Post('runs/compare')
+  compareRuns(@Request() req: any, @Body() dto: CompareRunsDto) {
+    return this.aiTrainingService.compareRuns(req.user.id, dto);
+  }
+
+  @Get('runs/:id')
+  getRun(@Request() req: any, @Param('id', ParseUUIDPipe) id: string) {
+    return this.aiTrainingService.getRun(req.user.id, id);
+  }
+
+  @Post('runs/:id/transition')
+  transitionRun(
+    @Request() req: any,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: TransitionRunDto,
+  ) {
+    return this.aiTrainingService.transitionRun(req.user.id, id, dto);
+  }
+
+  @Post('runs/:id/checkpoint')
+  recordRunCheckpoint(
+    @Request() req: any,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: RecordRunCheckpointDto,
+  ) {
+    return this.aiTrainingService.recordRunCheckpoint(req.user.id, id, dto);
+  }
+
+  @Post('runs/:id/cost')
+  recordRunCost(
+    @Request() req: any,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: RecordRunCostDto,
+  ) {
+    return this.aiTrainingService.recordRunCost(req.user.id, id, dto);
+  }
+
+  @Post('runs/:id/metrics')
+  recordRunMetric(
+    @Request() req: any,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: RecordRunMetricDto,
+  ) {
+    return this.aiTrainingService.recordRunMetric(req.user.id, id, dto);
   }
 }
