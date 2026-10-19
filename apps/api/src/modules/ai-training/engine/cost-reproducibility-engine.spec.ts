@@ -9,8 +9,14 @@ import {
   recordCost,
   reproducibilityFingerprint,
   RunConfig,
+  Verdict,
 } from './cost-reproducibility-engine';
 
+
+/** Narrowing helper: strict TS forbids reading .reason on the ok-union. */
+function reasonOf<T>(v: Verdict<T>): string {
+  return v.ok ? '' : v.reason;
+}
 describe('cost-reproducibility-engine (AI-019/020)', () => {
   describe('openCostLedger', () => {
     it('opens a ledger with a positive budget', () => {
@@ -19,9 +25,9 @@ describe('cost-reproducibility-engine (AI-019/020)', () => {
     });
 
     it('refuses zero, negative and missing budgets by name', () => {
-      expect(openCostLedger(0).reason).toBe('cost-no-budget');
-      expect(openCostLedger(-5).reason).toBe('cost-no-budget');
-      expect(openCostLedger(NaN).reason).toBe('cost-no-budget');
+      expect(reasonOf(openCostLedger(0))).toBe('cost-no-budget');
+      expect(reasonOf(openCostLedger(-5))).toBe('cost-no-budget');
+      expect(reasonOf(openCostLedger(NaN))).toBe('cost-no-budget');
     });
   });
 
@@ -60,17 +66,17 @@ describe('cost-reproducibility-engine (AI-019/020)', () => {
       expect(r2?.ok).toBe(true);
       const over = r2 && r2.ok ? recordCost(r2.value, { step: 2, units: 2 }) : null;
       expect(over?.ok).toBe(false);
-      expect(over && !over.ok ? over.reason : '').toMatch(/^cost-budget-exceeded:/);
+      expect(reasonOf(over as any)).toMatch(/^cost-budget-exceeded:/);
     });
 
     it('refuses malformed events and missing ledgers by name', () => {
       const led = openCostLedger(10);
       if (!led.ok) throw new Error('unreachable');
-      expect(recordCost(led.value, { step: -1, units: 1 }).reason).toBe('cost-event-invalid-step');
-      expect(recordCost(led.value, { step: 0.5, units: 1 } as any).reason).toBe('cost-event-invalid-step');
-      expect(recordCost(led.value, { step: 0, units: 0 }).reason).toBe('cost-event-invalid-units');
-      expect(recordCost(led.value, { step: 0, units: -1 }).reason).toBe('cost-event-invalid-units');
-      expect(recordCost(undefined as any, { step: 0, units: 1 }).reason).toBe('cost-no-ledger');
+      expect(reasonOf(recordCost(led.value, { step: -1, units: 1 }))).toBe('cost-event-invalid-step');
+      expect(reasonOf(recordCost(led.value, { step: 0.5, units: 1 } as any))).toBe('cost-event-invalid-step');
+      expect(reasonOf(recordCost(led.value, { step: 0, units: 0 }))).toBe('cost-event-invalid-units');
+      expect(reasonOf(recordCost(led.value, { step: 0, units: -1 }))).toBe('cost-event-invalid-units');
+      expect(reasonOf(recordCost(undefined as any, { step: 0, units: 1 }))).toBe('cost-no-ledger');
     });
   });
 
@@ -109,12 +115,12 @@ describe('cost-reproducibility-engine (AI-019/020)', () => {
     });
 
     it('refuses incomplete configs by name', () => {
-      expect(reproducibilityFingerprint(null as any).reason).toBe('run-config-missing');
-      expect(reproducibilityFingerprint({ codeVersion: 'x', seed: 1, environment: 'y' } as any).reason).toBe('run-config-no-dataset');
-      expect(reproducibilityFingerprint({ datasetFingerprint: 'd', codeVersion: 'x', seed: -1, environment: 'y' } as any).reason).toBe('run-config-invalid-seed');
-      expect(reproducibilityFingerprint({ datasetFingerprint: 'd', codeVersion: 'x', seed: 1.5, environment: 'y' } as any).reason).toBe('run-config-invalid-seed');
-      expect(reproducibilityFingerprint({ datasetFingerprint: 'd', seed: 1, environment: 'y' } as any).reason).toBe('run-config-no-code-version');
-      expect(reproducibilityFingerprint({ datasetFingerprint: 'd', codeVersion: 'x', seed: 1 } as any).reason).toBe('run-config-no-environment');
+      expect(reasonOf(reproducibilityFingerprint(null as any))).toBe('run-config-missing');
+      expect(reasonOf(reproducibilityFingerprint({ codeVersion: 'x', seed: 1, environment: 'y' } as any))).toBe('run-config-no-dataset');
+      expect(reasonOf(reproducibilityFingerprint({ datasetFingerprint: 'd', codeVersion: 'x', seed: -1, environment: 'y' } as any))).toBe('run-config-invalid-seed');
+      expect(reasonOf(reproducibilityFingerprint({ datasetFingerprint: 'd', codeVersion: 'x', seed: 1.5, environment: 'y' } as any))).toBe('run-config-invalid-seed');
+      expect(reasonOf(reproducibilityFingerprint({ datasetFingerprint: 'd', seed: 1, environment: 'y' } as any))).toBe('run-config-no-code-version');
+      expect(reasonOf(reproducibilityFingerprint({ datasetFingerprint: 'd', codeVersion: 'x', seed: 1 } as any))).toBe('run-config-no-environment');
     });
   });
 
