@@ -2,12 +2,14 @@
 # This workflow is the automated ground truth for every push to main:
 # the API must typecheck cleanly under strict TypeScript and pass its
 # full test suite before a change is considered done.
+# The identical gate also runs on the mistral branch so branch work is
+# verified with the same strictness before it is ever considered for main.
 
 name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, mistral]
   pull_request:
     branches: [main]
 
