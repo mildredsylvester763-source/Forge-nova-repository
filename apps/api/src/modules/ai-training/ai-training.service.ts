@@ -29,7 +29,21 @@ import {
   checkClassificationEligibility,
   scrubText,
 } from './engine/scrub-engine';
-import { CreateTrainingAssetDto, BuildDatasetDto } from './dto/ai-training.dto';
+import {
+  buildPlan,
+  canTransition,
+  computeResume,
+  validateMetricSeries,
+  compareExperiments,
+  RunState,
+} from './engine/training-run-engine';
+import { recordCost, reproducibilityFingerprint } from './engine/cost-reproducibility-engine';
+import { TrainingRun } from './entities/training-run.entity';
+import {
+  CreateTrainingAssetDto, BuildDatasetDto,
+  CreateTrainingRunDto, TransitionRunDto, RecordRunCheckpointDto,
+  RecordRunCostDto, RecordRunMetricDto, CompareRunsDto,
+} from './dto/ai-training.dto';
 
 @Injectable()
 export class AiTrainingService {
@@ -38,6 +52,8 @@ export class AiTrainingService {
     private readonly assetRepository: Repository<TrainingAsset>,
     @InjectRepository(TrainingDataset)
     private readonly datasetRepository: Repository<TrainingDataset>,
+    @InjectRepository(TrainingRun)
+    private readonly runRepository: Repository<TrainingRun>,
   ) {}
 
   // --- 1. Admit an asset through the gates (AI-002/003/004) ---
@@ -276,5 +292,187 @@ export class AiTrainingService {
     const row = await this.datasetRepository.findOne({ where: { id, userId } });
     if (!row) throw new NotFoundException('Training dataset with id ' + id + ' not found');
     return row;
+  }
+
+  // --- 3. Training runs (AI-013/014/017/018/019/020) ---
+  // A run is created against a frozen dataset snapshot; the plan, budget and
+  // reproducibility pins are engine truths, never service guesses.
+
+  async getRun(userId: string, id: string): Promise<TrainingRun> {
+    const run = await this.runRepository.findOne({ where: { id, userId } });
+    if (!run) throw new NotFoundException('Training run with id ' + id + ' not found');
+    return run;
+  }
+
+  async createRun(userId: string, dto: CreateTrainingRunDto): Promise<TrainingRun> {
+    const dataset = await this.getDataset(userId, dto.datasetId);
+    const plan = buildPlan({
+      datasetFingerprint: dataset.fingerprint,
+      itemCount: dataset.itemCount,
+      epochs: dto.epochs,
+      batchSize: dto.batchSize,
+      budget: dto.budget,
+      costPerStep: dto.costPerStep,
+    });
+    if (!plan.ok) {
+      throw new BadRequestException(
+        'The training run was refused (reason: ' + plan.reason + ').',
+      );
+    }
+    const fp = reproducibilityFingerprint({
+      datasetFingerprint: dataset.fingerprint,
+      codeVersion: dto.codeVersion,
+      seed: dto.seed,
+      environment: dto.environment,
+      hyperparams: dto.hyperparams,
+    });
+    if (!fp.ok) {
+      throw new BadRequestException(
+        'The training run was refused (reason: ' + fp.reason + ').',
+      );
+    }
+    const row = this.runRepository.create({
+      userId,
+      datasetId: dataset.id,
+      datasetVersion: dataset.version,
+      datasetFingerprint: dataset.fingerprint,
+      state: 'planned',
+      plan: {
+        epochs: plan.value.epochs,
+        batchSize: plan.value.batchSize,
+        steps: plan.value.steps,
+        estimatedCost: plan.value.estimatedCost,
+      },
+      budget: dto.budget,
+      spent: 0,
+      costEntries: [],
+      checkpoint: null,
+      metrics: [],
+      runFingerprint: fp.value,
+      codeVersion: dto.codeVersion,
+      seed: dto.seed,
+      environment: dto.environment,
+      hyperparams: dto.hyperparams ?? null,
+    });
+    return this.runRepository.save(row);
+  }
+
+  async listRuns(
+    userId: string,
+    options: { state?: string; datasetId?: string; page?: number; limit?: number } = {},
+  ): Promise<{ data: TrainingRun[]; total: number; page: number; limit: number }> {
+    const page = Math.max(1, Number(options.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(options.limit) || 20));
+    const where: any = { userId };
+    if (options.state) where.state = options.state;
+    if (options.datasetId) where.datasetId = options.datasetId;
+    const [data, total] = await this.runRepository.findAndCount({
+      where,
+      order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return { data, total, page, limit };
+  }
+
+  async transitionRun(userId: string, id: string, dto: TransitionRunDto): Promise<TrainingRun> {
+    const run = await this.getRun(userId, id);
+    const t = canTransition({ from: run.state as RunState, to: dto.to as RunState });
+    if (!t.ok) {
+      throw new BadRequestException(
+        'The run transition was refused (reason: ' + t.reason + ').',
+      );
+    }
+    if (dto.to === 'running' && run.state === 'paused') {
+      const r = computeResume({
+        state: 'paused',
+        checkpoint: run.checkpoint,
+        planSteps: run.plan.steps,
+      });
+      if (!r.ok) {
+        throw new BadRequestException(
+          'The run cannot resume (reason: ' + r.reason + ').',
+        );
+      }
+    }
+    run.state = dto.to;
+    return this.runRepository.save(run);
+  }
+
+  async recordRunCheckpoint(userId: string, id: string, dto: RecordRunCheckpointDto): Promise<TrainingRun> {
+    const run = await this.getRun(userId, id);
+    if (run.state !== 'running') {
+      throw new BadRequestException(
+        'A checkpoint is only recorded while the run is running (reason: run-not-running:' + run.state + ').',
+      );
+    }
+    if (dto.step >= run.plan.steps) {
+      throw new BadRequestException(
+        'The checkpoint is outside the plan (reason: resume-checkpoint-past-plan:' + dto.step + '>=' + run.plan.steps + ').',
+      );
+    }
+    run.checkpoint = {
+      step: dto.step,
+      sequence: (run.checkpoint?.sequence ?? 0) + 1,
+      loss: dto.loss,
+      savedAt: new Date().toISOString(),
+    };
+    return this.runRepository.save(run);
+  }
+
+  async recordRunCost(userId: string, id: string, dto: RecordRunCostDto): Promise<TrainingRun> {
+    const run = await this.getRun(userId, id);
+    const r = recordCost(
+      { budget: Number(run.budget), spent: Number(run.spent), entries: run.costEntries ?? [] },
+      { step: dto.step, units: dto.units, at: new Date().toISOString() },
+    );
+    if (!r.ok) {
+      throw new ConflictException(
+        'The cost event was refused (reason: ' + r.reason + ').',
+      );
+    }
+    run.spent = r.value.spent;
+    run.costEntries = r.value.entries;
+    return this.runRepository.save(run);
+  }
+
+  async recordRunMetric(userId: string, id: string, dto: RecordRunMetricDto): Promise<TrainingRun> {
+    const run = await this.getRun(userId, id);
+    const series = (run.metrics ?? []).concat([
+      dto.evalScore !== undefined
+        ? { step: dto.step, loss: dto.loss, evalScore: dto.evalScore }
+        : { step: dto.step, loss: dto.loss },
+    ]);
+    const v = validateMetricSeries(series);
+    if (!v.ok) {
+      throw new BadRequestException(
+        'The metric point was refused (reason: ' + v.reason + ').',
+      );
+    }
+    run.metrics = v.value;
+    return this.runRepository.save(run);
+  }
+
+  async compareRuns(userId: string, dto: CompareRunsDto) {
+    const a = await this.getRun(userId, dto.runAId);
+    const b = await this.getRun(userId, dto.runBId);
+    const finalLoss = (r: TrainingRun): number =>
+      r.metrics && r.metrics.length > 0 ? r.metrics[r.metrics.length - 1].loss : Number.NaN;
+    const bestEval = (r: TrainingRun): number | undefined => {
+      const es = (r.metrics ?? [])
+        .map((m) => m.evalScore)
+        .filter((x): x is number => typeof x === 'number' && Number.isFinite(x));
+      return es.length > 0 ? Math.max(...es) : undefined;
+    };
+    const cmp = compareExperiments({
+      a: { runId: a.id, finalLoss: finalLoss(a), bestEvalScore: bestEval(a), steps: a.plan.steps },
+      b: { runId: b.id, finalLoss: finalLoss(b), bestEvalScore: bestEval(b), steps: b.plan.steps },
+    });
+    if (!cmp.ok) {
+      throw new BadRequestException(
+        'The comparison was refused (reason: ' + cmp.reason + ').',
+      );
+    }
+    return cmp.value;
   }
 }
