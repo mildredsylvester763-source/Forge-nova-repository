@@ -93,6 +93,9 @@ import { TrainingDataset } from './modules/ai-training/entities/training-dataset
 import { TrainingRun } from './modules/ai-training/entities/training-run.entity';
 import { EvalSuiteVersion } from './modules/ai-training/entities/eval-suite-version.entity';
 import { PanelVoteRecord } from './modules/ai-training/entities/panel-vote.entity';
+import { SafetyProbeBattery } from './modules/ai-training/entities/safety-battery.entity';
+import { SafetyRunGrade } from './modules/ai-training/entities/safety-run-grade.entity';
+import { BlindBallot } from './modules/ai-training/entities/blind-ballot.entity';
 import { LoyaltyAccount } from './modules/loyalty/entities/loyalty-account.entity';
 import { LoyaltyEvent } from './modules/loyalty/entities/loyalty-event.entity';
 import { ReferralCode } from './modules/referrals/entities/referral-code.entity';
@@ -166,6 +169,9 @@ import { ReferralsModule } from './modules/referrals/referrals.module';
             TrainingRun,
             EvalSuiteVersion,
             PanelVoteRecord,
+      SafetyProbeBattery,
+      SafetyRunGrade,
+      BlindBallot,
             LoyaltyAccount,
             LoyaltyEvent,
             ReferralCode,
