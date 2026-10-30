@@ -253,7 +253,7 @@ describe('ai-training eval adversarial scenarios (double-taps, concurrent admins
       expect(r.refusals[0]).toMatch(/eval-suite-(unchanged-content|version-gap)/);
       const rows = await suites.find({ where: { userId: USER, suiteId: 'forge-core' } } as any);
       expect(rows).toHaveLength(2);
-      const v2 = rows.find((x: any) => x.version === 2);
+      const v2 = rows.find((x: any) => x.version === 2) as any;
       expect(v2.cases[0].criteria).toHaveLength(3);
     }
   });
