@@ -104,9 +104,9 @@ describe('defineEvalSuite (AI-021) — named refusals', () => {
   });
   it('admits a creative case with no criteria (criteria are a forge law)', () => {
     const v = valueOf(
-      defineEvalSuite({ id: 'art-1', version: 1, kind: 'creative', cases: [{ id: 'm1', domain: 'manhwa' }] }),
+      defineEvalSuite({ id: 'art-1', version: 1, kind: 'creative', cases: [{ id: 'm1', domain: 'manhwa', criteria: [] }] }),
     );
-    expect(v.cases).toEqual([{ id: 'm1', domain: 'manhwa' }]);
+    expect(v.cases).toEqual([{ id: 'm1', domain: 'manhwa', criteria: [] }]);
   });
   it('returns a deep copy: mutating the input never corrupts the suite', () => {
     const a = defineEvalSuite(SUITE);
@@ -161,7 +161,7 @@ describe('gradeSuite (AI-022) — criteria grading', () => {
       id: 'art-1',
       version: 1,
       kind: 'creative',
-      cases: [{ id: 'm1', domain: 'manhwa' }],
+      cases: [{ id: 'm1', domain: 'manhwa', criteria: [] }],
     });
     expect(reasonOf(gradeSuite(valueOf(creative), {}))).toBe('grade-creative-not-criteria');
   });
