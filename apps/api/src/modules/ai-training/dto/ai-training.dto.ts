@@ -580,3 +580,126 @@ export class MineFailuresDto {
   maxMined: number;
 }
 
+// ============================================================================
+// AI-033..035: model registry, auto-generated cards, staged promotion
+// ============================================================================
+
+export class RegisterModelLineageDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  datasetId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  evalSuiteId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  parentVersionId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  runFingerprint?: string;
+}
+
+export class RegisterModelDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  modelId: string;
+
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(10)
+  @IsString({ each: true })
+  owners: string[];
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(128)
+  weightsFingerprint: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => RegisterModelLineageDto)
+  lineage?: RegisterModelLineageDto;
+
+  /** Omit for the next auto version; an explicit version must be exact-next. */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(100000)
+  version?: number;
+}
+
+export class CardEvalScoreDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  suiteId: string;
+
+  @IsNumber({ maxDecimalPlaces: 6 })
+  @Min(0)
+  @Max(1)
+  score: number;
+}
+
+export class BuildModelCardDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  modelId: string;
+
+  @IsInt()
+  @Min(1)
+  version: number;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(2000)
+  intendedUse: string;
+
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(50)
+  @ValidateNested({ each: true })
+  @Type(() => CardEvalScoreDto)
+  evalScores: CardEvalScoreDto[];
+
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 6 })
+  @Min(0)
+  @Max(1)
+  safetyPassRate?: number;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(50)
+  @IsString({ each: true })
+  limitations?: string[];
+}
+
+export class PromoteModelDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  modelId: string;
+
+  @IsInt()
+  @Min(1)
+  version: number;
+
+  @IsIn(['experimental', 'internal', 'beta', 'stable'])
+  to: 'experimental' | 'internal' | 'beta' | 'stable';
+
+  /** Safety evidence for the stable gate; missing is a named refusal. */
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 6 })
+  @Min(0)
+  @Max(1)
+  safetyPassRate?: number;
+}
