@@ -67,7 +67,7 @@ describe('defineExperiment (AI-029) — the consent and split laws', () => {
 
   it('refuses a non-consented experiment by name — the [C] law is hard', () => {
     expect(reasonOf(defineExperiment({ ...E50, consentGranted: false }))).toBe('experiment-no-consent');
-    expect(reasonOf(defineExperiment({ ...E50, consentGranted: undefined }))).toBe('experiment-no-consent');
+    expect(reasonOf(defineExperiment({ ...E50, consentGranted: undefined as unknown as boolean }))).toBe('experiment-no-consent');
   });
 
   it('refuses structural violations by name', () => {
