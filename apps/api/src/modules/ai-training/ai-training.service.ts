@@ -38,11 +38,22 @@ import {
   RunState,
 } from './engine/training-run-engine';
 import { recordCost, reproducibilityFingerprint } from './engine/cost-reproducibility-engine';
+import {
+  defineEvalSuite,
+  suiteFingerprint,
+  gradeSuite,
+  aggregatePanel,
+  applyRegressionGate,
+  EvalCase,
+} from './engine/eval-gate-engine';
+import { EvalSuiteVersion } from './entities/eval-suite-version.entity';
+import { PanelVoteRecord } from './entities/panel-vote.entity';
 import { TrainingRun } from './entities/training-run.entity';
 import {
   CreateTrainingAssetDto, BuildDatasetDto,
   CreateTrainingRunDto, TransitionRunDto, RecordRunCheckpointDto,
   RecordRunCostDto, RecordRunMetricDto, CompareRunsDto,
+  DefineEvalSuiteDto, GradeEvalSuiteDto, RecordPanelVoteDto, ShipGateDto,
 } from './dto/ai-training.dto';
 
 @Injectable()
@@ -54,6 +65,10 @@ export class AiTrainingService {
     private readonly datasetRepository: Repository<TrainingDataset>,
     @InjectRepository(TrainingRun)
     private readonly runRepository: Repository<TrainingRun>,
+    @InjectRepository(EvalSuiteVersion)
+    private readonly evalSuiteRepository: Repository<EvalSuiteVersion>,
+    @InjectRepository(PanelVoteRecord)
+    private readonly panelVoteRepository: Repository<PanelVoteRecord>,
   ) {}
 
   // --- 1. Admit an asset through the gates (AI-002/003/004) ---
@@ -474,5 +489,127 @@ export class AiTrainingService {
       );
     }
     return cmp.value;
+  }
+
+  // --- 5. Eval harness (AI-021..024) --------------------------------------
+  // Suites are versioned and content-fingerprinted; re-versioning identical
+  // content is refused by name. Panel votes are one-per-panelist-per-case.
+  // Ship gates name every failure — a model cannot ship below thresholds.
+
+  async defineEvalSuite(userId: string, dto: DefineEvalSuiteDto): Promise<EvalSuiteVersion> {
+    const def = defineEvalSuite({
+      id: dto.suiteId,
+      version: dto.version,
+      kind: dto.kind as 'forge' | 'creative',
+      cases: dto.cases as unknown as EvalCase[],
+    });
+    if (!def.ok) {
+      throw new BadRequestException(def.reason);
+    }
+    const fp = suiteFingerprint(def.value);
+    if (!fp.ok) {
+      throw new BadRequestException(fp.reason);
+    }
+    const latest = await this.evalSuiteRepository.findOne({
+      where: { userId, suiteId: dto.suiteId },
+      order: { version: 'DESC' },
+    });
+    if (latest) {
+      if (dto.version !== latest.version + 1) {
+        throw new ConflictException('eval-suite-version-gap:' + dto.version + '!=' + (latest.version + 1));
+      }
+      if (latest.fingerprint === fp.value) {
+        throw new ConflictException('eval-suite-unchanged-content:' + fp.value);
+      }
+    } else if (dto.version !== 1) {
+      throw new ConflictException('eval-suite-version-gap:' + dto.version + '!=1');
+    }
+    const row = this.evalSuiteRepository.create({
+      userId,
+      suiteId: dto.suiteId,
+      version: dto.version,
+      kind: dto.kind,
+      cases: dto.cases,
+      fingerprint: fp.value,
+    });
+    return this.evalSuiteRepository.save(row);
+  }
+
+  async getEvalSuite(userId: string, suiteId: string, version?: number): Promise<EvalSuiteVersion> {
+    const row = await this.evalSuiteRepository.findOne({
+      where: version !== undefined ? { userId, suiteId, version } : { userId, suiteId },
+      order: { version: 'DESC' },
+    });
+    if (!row) {
+      throw new NotFoundException('eval-suite-not-found:' + suiteId);
+    }
+    return row;
+  }
+
+  async gradeEvalSuite(userId: string, suiteId: string, dto: GradeEvalSuiteDto) {
+    const row = await this.getEvalSuite(userId, suiteId, dto.version);
+    const graded = gradeSuite(
+      {
+        id: row.suiteId,
+        version: row.version,
+        kind: row.kind as 'forge' | 'creative',
+        cases: row.cases as unknown as EvalCase[],
+      },
+      dto.results,
+    );
+    if (!graded.ok) {
+      throw new BadRequestException(graded.reason);
+    }
+    return {
+      suiteId: row.suiteId,
+      version: row.version,
+      score: graded.value.score,
+      perCase: graded.value.perCase,
+    };
+  }
+
+  async recordPanelVote(userId: string, dto: RecordPanelVoteDto): Promise<PanelVoteRecord> {
+    const suite = await this.getEvalSuite(userId, dto.suiteId);
+    if (!suite.cases.some((c) => c.id === dto.caseId)) {
+      throw new BadRequestException('panel-case-unknown:' + dto.caseId);
+    }
+    const dup = await this.panelVoteRepository.findOne({
+      where: { userId, suiteId: dto.suiteId, caseId: dto.caseId, panelist: dto.panelist },
+    });
+    if (dup) {
+      throw new ConflictException('panel-duplicate-panelist:' + dto.panelist);
+    }
+    const vote = this.panelVoteRepository.create({
+      userId,
+      suiteId: dto.suiteId,
+      caseId: dto.caseId,
+      panelist: dto.panelist,
+      score: dto.score,
+    });
+    return this.panelVoteRepository.save(vote);
+  }
+
+  async aggregatePanelVotes(userId: string, suiteId: string, caseId: string, quorum = 3) {
+    await this.getEvalSuite(userId, suiteId);
+    const rows = await this.panelVoteRepository.find({
+      where: { userId, suiteId, caseId },
+      order: { createdAt: 'ASC' },
+    });
+    const agg = aggregatePanel(
+      rows.map((r) => ({ panelist: r.panelist, score: Number(r.score) })),
+      quorum,
+    );
+    if (!agg.ok) {
+      throw new BadRequestException(agg.reason);
+    }
+    return { suiteId, caseId, median: agg.value.median, count: agg.value.count, quorum };
+  }
+
+  async applyShipGate(dto: ShipGateDto) {
+    const gate = applyRegressionGate(dto.metrics, dto.thresholds);
+    if (!gate.ok) {
+      throw new BadRequestException(gate.reason);
+    }
+    return { passed: gate.value.passed };
   }
 }
