@@ -13,6 +13,7 @@ import {
   CreateTrainingAssetDto, BuildDatasetDto,
   CreateTrainingRunDto, TransitionRunDto, RecordRunCheckpointDto,
   RecordRunCostDto, RecordRunMetricDto, CompareRunsDto,
+  DefineEvalSuiteDto, GradeEvalSuiteDto, RecordPanelVoteDto, ShipGateDto,
 } from './dto/ai-training.dto';
 
 @Controller('ai-training')
@@ -139,5 +140,57 @@ export class AiTrainingController {
     @Body() dto: RecordRunMetricDto,
   ) {
     return this.aiTrainingService.recordRunMetric(req.user.id, id, dto);
+  }
+
+  // --- Eval harness (AI-021..024) ---
+  // Static segments declared before :param routes.
+
+  @Post('eval/suites')
+  @HttpCode(HttpStatus.CREATED)
+  defineEvalSuite(@Request() req: any, @Body() dto: DefineEvalSuiteDto) {
+    return this.aiTrainingService.defineEvalSuite(req.user.id, dto);
+  }
+
+  @Get('eval/suites/:suiteId')
+  getEvalSuite(
+    @Request() req: any,
+    @Param('suiteId') suiteId: string,
+    @Query('version') version?: string,
+  ) {
+    return this.aiTrainingService.getEvalSuite(
+      req.user.id,
+      suiteId,
+      version === undefined ? undefined : Number(version),
+    );
+  }
+
+  @Post('eval/suites/:suiteId/grade')
+  gradeEvalSuite(
+    @Request() req: any,
+    @Param('suiteId') suiteId: string,
+    @Body() dto: GradeEvalSuiteDto,
+  ) {
+    return this.aiTrainingService.gradeEvalSuite(req.user.id, suiteId, dto);
+  }
+
+  @Post('eval/panels/votes')
+  @HttpCode(HttpStatus.CREATED)
+  recordPanelVote(@Request() req: any, @Body() dto: RecordPanelVoteDto) {
+    return this.aiTrainingService.recordPanelVote(req.user.id, dto);
+  }
+
+  @Get('eval/panels/:suiteId/:caseId')
+  aggregatePanelVotes(
+    @Request() req: any,
+    @Param('suiteId') suiteId: string,
+    @Param('caseId') caseId: string,
+    @Query('quorum') quorum = '3',
+  ) {
+    return this.aiTrainingService.aggregatePanelVotes(req.user.id, suiteId, caseId, Number(quorum));
+  }
+
+  @Post('eval/gate')
+  applyShipGate(@Body() dto: ShipGateDto) {
+    return this.aiTrainingService.applyShipGate(dto);
   }
 }
