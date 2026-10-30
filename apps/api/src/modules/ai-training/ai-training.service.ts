@@ -66,6 +66,12 @@ import {
   buildModelCard,
   promoteModel,
 } from './engine/model-registry-engine';
+import {
+  planServingScale as planServingScaleEngine,
+  buildQuantizationPlan as buildQuantizationPlanEngine,
+  buildOnDeviceBundle as buildOnDeviceBundleEngine,
+  routeModel as routeModelEngine,
+} from './engine/model-serving-engine';
 import { EvalSuiteVersion } from './entities/eval-suite-version.entity';
 import { PanelVoteRecord } from './entities/panel-vote.entity';
 import { SafetyProbeBattery } from './entities/safety-battery.entity';
@@ -79,6 +85,10 @@ import { FailureMiningBatch } from './entities/mining-batch.entity';
 import { ModelVersion } from './entities/model-version.entity';
 import { ModelCard } from './entities/model-card.entity';
 import { ModelPromotionEvent } from './entities/promotion-event.entity';
+import { ServingScalePlan } from './entities/serving-scale-plan.entity';
+import { QuantizationPlanRow } from './entities/quantization-plan.entity';
+import { OnDeviceBundle } from './entities/on-device-bundle.entity';
+import { RoutingDecision } from './entities/routing-decision.entity';
 import { TrainingRun } from './entities/training-run.entity';
 import {
   CreateTrainingAssetDto, BuildDatasetDto,
@@ -91,6 +101,8 @@ import {
   TallyExperimentDto, RecordAgentEventDto, BuildScorecardsDto,
   RecordTrendSampleDto, BuildTrendDto, MineFailuresDto,
   RegisterModelDto, BuildModelCardDto, PromoteModelDto,
+  PlanServingScaleDto, BuildQuantizationDto, BuildBundleDto,
+  RoutePromptDto,
 } from './dto/ai-training.dto';
 
 @Injectable()
@@ -128,6 +140,14 @@ export class AiTrainingService {
     private readonly modelCardRepository: Repository<ModelCard>,
     @InjectRepository(ModelPromotionEvent)
     private readonly promotionEventRepository: Repository<ModelPromotionEvent>,
+    @InjectRepository(ServingScalePlan)
+    private readonly servingScalePlanRepository: Repository<ServingScalePlan>,
+    @InjectRepository(QuantizationPlanRow)
+    private readonly quantizationPlanRepository: Repository<QuantizationPlanRow>,
+    @InjectRepository(OnDeviceBundle)
+    private readonly onDeviceBundleRepository: Repository<OnDeviceBundle>,
+    @InjectRepository(RoutingDecision)
+    private readonly routingDecisionRepository: Repository<RoutingDecision>,
   ) {}
 
   // --- 1. Admit an asset through the gates (AI-002/003/004) ---
@@ -1150,5 +1170,116 @@ export class AiTrainingService {
       to: verdict.value.to,
       promotionFingerprint: verdict.value.promotionFingerprint,
     };
+
+  // --- 9. Serving: scale plans, quantization, bundles, cascade routing (AI-036..039) ---
+  // Scale history is append-only but idempotent: an identical re-plan returns
+  // the existing row (reused), a changed plan appends; a refused plan stores
+  // nothing — caps and pool limits are engine laws. Quantization and bundle
+  // plans are fingerprint-idempotent. Routing decisions are an append-only
+  // log: every route is recorded with its chain, costs and truncation truth.
+  // Zero-trust scoped throughout.
+
+  async planServingScale(userId: string, dto: PlanServingScaleDto) {
+    const verdict = planServingScaleEngine({ ...dto });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason);
+    }
+    const rows = await this.servingScalePlanRepository.find({
+      where: { userId, modelId: dto.modelId },
+      order: { createdAt: 'ASC' },
+    });
+    const identical = rows.find((r) => JSON.stringify(r.plan) === JSON.stringify(verdict.value));
+    if (identical) {
+      return { ...identical, reused: true };
+    }
+    const row = this.servingScalePlanRepository.create({
+      userId,
+      modelId: dto.modelId,
+      plan: verdict.value,
+    });
+    const saved = await this.servingScalePlanRepository.save(row);
+    return { ...saved, reused: false };
+  }
+
+  async getServingScalePlans(userId: string, modelId: string): Promise<ServingScalePlan[]> {
+    const rows = await this.servingScalePlanRepository.find({
+      where: { userId, modelId },
+      order: { createdAt: 'ASC' },
+    });
+    if (rows.length === 0) {
+      throw new NotFoundException('serving-plans-not-found:' + modelId);
+    }
+    return rows;
+  }
+
+  async buildQuantization(userId: string, dto: BuildQuantizationDto) {
+    const verdict = buildQuantizationPlanEngine({ ...dto });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason);
+    }
+    const existing = await this.quantizationPlanRepository.findOne({
+      where: { userId, fingerprint: verdict.value.fingerprint },
+    });
+    if (existing) {
+      return { ...existing, reused: true };
+    }
+    const row = this.quantizationPlanRepository.create({
+      userId,
+      modelId: verdict.value.modelId,
+      method: verdict.value.method,
+      fingerprint: verdict.value.fingerprint,
+      plan: verdict.value,
+    });
+    const saved = await this.quantizationPlanRepository.save(row);
+    return { ...saved, reused: false };
+  }
+
+  async buildBundle(userId: string, dto: BuildBundleDto) {
+    const verdict = buildOnDeviceBundleEngine({ ...dto });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason);
+    }
+    const existing = await this.onDeviceBundleRepository.findOne({
+      where: { userId, fingerprint: verdict.value.fingerprint },
+    });
+    if (existing) {
+      return { ...existing, reused: true };
+    }
+    const row = this.onDeviceBundleRepository.create({
+      userId,
+      modelId: verdict.value.modelId,
+      runtime: verdict.value.runtime,
+      fingerprint: verdict.value.fingerprint,
+      bundle: verdict.value,
+    });
+    const saved = await this.onDeviceBundleRepository.save(row);
+    return { ...saved, reused: false };
+  }
+
+  async routePrompt(userId: string, dto: RoutePromptDto): Promise<RoutingDecision> {
+    const verdict = routeModelEngine({
+      promptTokens: dto.promptTokens,
+      models: dto.models,
+      costCap: dto.costCap,
+      confidenceThreshold: dto.confidenceThreshold,
+    });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason);
+    }
+    const row = this.routingDecisionRepository.create({
+      userId,
+      promptTokens: verdict.value.promptTokens,
+      primary: verdict.value.primary,
+      plan: verdict.value,
+    });
+    return this.routingDecisionRepository.save(row);
+  }
+
+  async listRoutingDecisions(userId: string): Promise<RoutingDecision[]> {
+    return this.routingDecisionRepository.find({
+      where: { userId },
+      order: { createdAt: 'ASC' },
+    });
+  }
   }
 }
