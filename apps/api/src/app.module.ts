@@ -91,6 +91,8 @@ import { EgressOauthSession } from './modules/egress-universal/entities/egress-o
 import { TrainingAsset } from './modules/ai-training/entities/training-asset.entity';
 import { TrainingDataset } from './modules/ai-training/entities/training-dataset.entity';
 import { TrainingRun } from './modules/ai-training/entities/training-run.entity';
+import { EvalSuiteVersion } from './modules/ai-training/entities/eval-suite-version.entity';
+import { PanelVoteRecord } from './modules/ai-training/entities/panel-vote.entity';
 import { LoyaltyAccount } from './modules/loyalty/entities/loyalty-account.entity';
 import { LoyaltyEvent } from './modules/loyalty/entities/loyalty-event.entity';
 import { ReferralCode } from './modules/referrals/entities/referral-code.entity';
@@ -162,6 +164,8 @@ import { ReferralsModule } from './modules/referrals/referrals.module';
             TrainingAsset,
             TrainingDataset,
             TrainingRun,
+            EvalSuiteVersion,
+            PanelVoteRecord,
             LoyaltyAccount,
             LoyaltyEvent,
             ReferralCode,
