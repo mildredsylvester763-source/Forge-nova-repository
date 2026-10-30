@@ -101,6 +101,9 @@ import { ProductExperimentSubject } from './modules/ai-training/entities/experim
 import { ProductAgentEvent } from './modules/ai-training/entities/agent-event.entity';
 import { EvalTrendSample } from './modules/ai-training/entities/eval-trend.entity';
 import { FailureMiningBatch } from './modules/ai-training/entities/mining-batch.entity';
+import { ModelVersion } from './modules/ai-training/entities/model-version.entity';
+import { ModelCard } from './modules/ai-training/entities/model-card.entity';
+import { ModelPromotionEvent } from './modules/ai-training/entities/promotion-event.entity';
 import { LoyaltyAccount } from './modules/loyalty/entities/loyalty-account.entity';
 import { LoyaltyEvent } from './modules/loyalty/entities/loyalty-event.entity';
 import { ReferralCode } from './modules/referrals/entities/referral-code.entity';
@@ -174,14 +177,17 @@ import { ReferralsModule } from './modules/referrals/referrals.module';
             TrainingRun,
             EvalSuiteVersion,
             PanelVoteRecord,
-      SafetyProbeBattery,
-      SafetyRunGrade,
-      BlindBallot,
+            SafetyProbeBattery,
+            SafetyRunGrade,
+            BlindBallot,
             ProductExperiment,
             ProductExperimentSubject,
             ProductAgentEvent,
             EvalTrendSample,
             FailureMiningBatch,
+            ModelVersion,
+            ModelCard,
+            ModelPromotionEvent,
             LoyaltyAccount,
             LoyaltyEvent,
             ReferralCode,
