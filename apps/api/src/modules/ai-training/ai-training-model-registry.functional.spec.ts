@@ -51,12 +51,13 @@ class RepoDouble<T> {
 }
 
 const makeService = () => {
-  const repos = Array.from({ length: 16 }, () => new RepoDouble<any>());
+  const repos = Array.from({ length: 20 }, () => new RepoDouble<any>());
   const svc = new AiTrainingService(
     repos[0] as any, repos[1] as any, repos[2] as any, repos[3] as any,
     repos[4] as any, repos[5] as any, repos[6] as any, repos[7] as any,
     repos[8] as any, repos[9] as any, repos[10] as any, repos[11] as any,
     repos[12] as any, repos[13] as any, repos[14] as any, repos[15] as any,
+    repos[16] as any, repos[17] as any, repos[18] as any, repos[19] as any,
   );
   return {
     svc,
