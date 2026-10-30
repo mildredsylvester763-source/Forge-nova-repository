@@ -81,6 +81,9 @@ function makeService() {
     assets as any, datasets as any, runs as any, suites as any, votes as any,
     batteries as any, grades as any, ballots as any,
     experiments as any, subjects as any, events as any, trends as any, batches as any,
+  new RepoDouble<any>() as any,
+    new RepoDouble<any>() as any,
+    new RepoDouble<any>() as any,
   );
   return { svc, experiments, subjects, events, trends, batches };
 }
