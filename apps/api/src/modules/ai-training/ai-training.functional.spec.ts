@@ -80,7 +80,10 @@ function makeService() {
   const runs = new RepoDouble<TrainingRun>();
   const suites = new RepoDouble<EvalSuiteVersion>();
   const votes = new RepoDouble<PanelVoteRecord>();
-  const svc = new AiTrainingService(assets as any, datasets as any, runs as any, suites as any, votes as any);
+  const batteries = new RepoDouble<any>();
+  const grades = new RepoDouble<any>();
+  const ballots = new RepoDouble<any>();
+  const svc = new AiTrainingService(assets as any, datasets as any, runs as any, suites as any, votes as any, batteries as any, grades as any, ballots as any);
   return { svc, assets, datasets, runs, suites, votes };
 }
 
