@@ -116,15 +116,18 @@ function sortedCanon(v: unknown): string {
 }
 
 /**
- * Content fingerprint of a suite (djb2 over the canonical form). Property key
- * order never matters; case order does (case order is content). Refusals named:
+ * Content fingerprint of a suite (djb2 over the canonical form). Version is
+ * metadata, NOT content: identical content at a higher version fingerprints
+ * identically — that is how the service refuses unchanged-content re-versions.
+ * Property key order never matters; case order does (case order is content).
+ * Refusals named:
  *  - suite-no-cases (not a suite)
  */
 export function suiteFingerprint(suite: EvalSuite): Verdict<string> {
   if (!suite || !Array.isArray(suite.cases)) {
     return { ok: false, reason: 'suite-no-cases' };
   }
-  const canon = sortedCanon({ id: suite.id, version: suite.version, kind: suite.kind, cases: suite.cases });
+  const canon = sortedCanon({ id: suite.id, kind: suite.kind, cases: suite.cases });
   let h = 5381;
   for (let i = 0; i < canon.length; i++) {
     h = ((h << 5) + h + canon.charCodeAt(i)) >>> 0;
