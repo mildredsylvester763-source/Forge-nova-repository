@@ -5,9 +5,19 @@ import { AiTrainingController } from './ai-training.controller';
 import { TrainingAsset } from './entities/training-asset.entity';
 import { TrainingDataset } from './entities/training-dataset.entity';
 import { TrainingRun } from './entities/training-run.entity';
+import { EvalSuiteVersion } from './entities/eval-suite-version.entity';
+import { PanelVoteRecord } from './entities/panel-vote.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([TrainingAsset, TrainingDataset, TrainingRun])],
+  imports: [
+    TypeOrmModule.forFeature([
+      TrainingAsset,
+      TrainingDataset,
+      TrainingRun,
+      EvalSuiteVersion,
+      PanelVoteRecord,
+    ]),
+  ],
   controllers: [AiTrainingController],
   providers: [AiTrainingService],
   exports: [AiTrainingService],
