@@ -221,14 +221,19 @@ export function compareExperiments(input: CompareExperimentsInput): Verdict<Expe
     const a = input.a.bestEvalScore as number;
     const b = input.b.bestEvalScore as number;
     const winner = a >= b ? input.a.runId : input.b.runId;
-    return { ok: true, value: { winner, margin: Math.abs(a - b), basis: 'eval-score' } };
+    // Margins are rounded to 1e-6: IEEE-754 subtraction (0.8 - 0.7) must
+    // never surface as 0.10000000000000009 in a comparison a human reads.
+    return {
+      ok: true,
+      value: { winner, margin: Math.round(Math.abs(a - b) * 1e6) / 1e6, basis: 'eval-score' },
+    };
   }
   const winner = input.a.finalLoss <= input.b.finalLoss ? input.a.runId : input.b.runId;
   return {
     ok: true,
     value: {
       winner,
-      margin: Math.abs(input.a.finalLoss - input.b.finalLoss),
+      margin: Math.round(Math.abs(input.a.finalLoss - input.b.finalLoss) * 1e6) / 1e6,
       basis: 'final-loss',
     },
   };
