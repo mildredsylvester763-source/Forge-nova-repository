@@ -18,6 +18,10 @@ import { FailureMiningBatch } from './entities/mining-batch.entity';
 import { ModelVersion } from './entities/model-version.entity';
 import { ModelCard } from './entities/model-card.entity';
 import { ModelPromotionEvent } from './entities/promotion-event.entity';
+import { ServingScalePlan } from './entities/serving-scale-plan.entity';
+import { QuantizationPlanRow } from './entities/quantization-plan.entity';
+import { OnDeviceBundle } from './entities/on-device-bundle.entity';
+import { RoutingDecision } from './entities/routing-decision.entity';
 
 @Module({
   imports: [
@@ -38,6 +42,10 @@ import { ModelPromotionEvent } from './entities/promotion-event.entity';
       ModelVersion,
       ModelCard,
       ModelPromotionEvent,
+    ServingScalePlan,
+    QuantizationPlanRow,
+    OnDeviceBundle,
+    RoutingDecision,
     ]),
   ],
   controllers: [AiTrainingController],
