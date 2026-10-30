@@ -528,15 +528,21 @@ export class AiTrainingService {
     if (!fp.ok) {
       throw new BadRequestException(fp.reason);
     }
-    const latest = await this.evalSuiteRepository.findOne({
+    const existing = await this.evalSuiteRepository.find({
       where: { userId, suiteId: dto.suiteId },
       order: { version: 'DESC' },
     });
-    if (latest) {
+    if (existing.length > 0) {
+      const latest = existing[0];
       if (dto.version !== latest.version + 1) {
         throw new ConflictException('eval-suite-version-gap:' + dto.version + '!=' + (latest.version + 1));
       }
-      if (latest.fingerprint === fp.value) {
+      // Content-immutability law: a new version may never repeat content
+      // already recorded under ANY prior version. The fingerprint is
+      // version-insensitive by law, so the whole history is checked —
+      // re-offering v1 content as v3 is refused, not silently admitted.
+      const duplicate = existing.find((row) => row.fingerprint === fp.value);
+      if (duplicate) {
         throw new ConflictException('eval-suite-unchanged-content:' + fp.value);
       }
     } else if (dto.version !== 1) {
