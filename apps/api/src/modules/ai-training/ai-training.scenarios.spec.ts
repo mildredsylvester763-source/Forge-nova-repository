@@ -145,7 +145,7 @@ describe('ai-training adversarial scenarios (double-tap, concurrent admins, stal
   });
 
   // --- S2: one admin pauses, another marks success, same instant ---
-  it('S2 pause-vs-succeed race: first writer wins, second refused by name, final state is the winner's', async () => {
+  it('S2 pause-vs-succeed race: first writer wins, second refused by name, final state belongs to the winner', async () => {
     const outcomes = ['paused', 'succeeded'] as const;
     for (const winnerIdx of [0, 1]) {
       const { svc } = makeService();
