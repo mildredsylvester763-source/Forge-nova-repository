@@ -12,12 +12,22 @@ import {
   GateThreshold,
   PanelVote,
   RegressionGate,
+  Verdict,
   aggregatePanel,
   applyRegressionGate,
   defineEvalSuite,
   gradeSuite,
   suiteFingerprint,
 } from './eval-gate-engine';
+
+function reasonOf<T>(v: Verdict<T>): string {
+  return v.ok ? '' : v.reason;
+}
+
+function valueOf<T>(v: Verdict<T>): T {
+  if (!v.ok) throw new Error('unreachable');
+  return v.value;
+}
 
 function mulberry32(a: number): () => number {
   return function () {
@@ -46,37 +56,38 @@ const SUITE: EvalSuite = { id: 'forge-core', version: 1, kind: 'forge', cases: [
 
 describe('AI-021 versioned benchmark suites', () => {
   it('refuses malformed suites by name (pinned boundary vectors)', () => {
-    expect(defineEvalSuite(null as unknown as EvalSuite).reason).toBe('suite-no-id');
-    expect(defineEvalSuite({ ...SUITE, version: 0, cases: [FIX1] }).reason).toBe('suite-invalid-version');
-    expect(defineEvalSuite({ ...SUITE, kind: 'weird' as EvalSuite['kind'] }).reason).toBe('suite-no-kind');
-    expect(defineEvalSuite({ ...SUITE, cases: [] }).reason).toBe('suite-no-cases');
-    expect(defineEvalSuite({ ...SUITE, cases: [FIX1, { ...FIX1 }] }).reason).toBe('suite-duplicate-case:fix1');
-    expect(defineEvalSuite({ ...SUITE, cases: [{ id: 'c1', criteria: [] }] }).reason).toBe('suite-case-no-criteria:c1');
-    expect(defineEvalSuite({ ...SUITE, cases: [{ ...FIX1, weight: 0 }] }).reason).toBe('suite-case-invalid-weight:fix1');
-    expect(defineEvalSuite({ ...SUITE, cases: [{ ...FIX1, domain: 'manhwa' }] }).reason).toBe('suite-case-invalid-domain:fix1:manhwa');
+    expect(reasonOf(defineEvalSuite(null as unknown as EvalSuite))).toBe('suite-no-id');
+    expect(reasonOf(defineEvalSuite({ ...SUITE, version: 0, cases: [FIX1] }))).toBe('suite-invalid-version');
+    expect(reasonOf(defineEvalSuite({ ...SUITE, kind: 'weird' as EvalSuite['kind'] }))).toBe('suite-no-kind');
+    expect(reasonOf(defineEvalSuite({ ...SUITE, cases: [] }))).toBe('suite-no-cases');
+    expect(reasonOf(defineEvalSuite({ ...SUITE, cases: [FIX1, { ...FIX1 }] }))).toBe('suite-duplicate-case:fix1');
+    expect(reasonOf(defineEvalSuite({ ...SUITE, cases: [{ id: 'c1', criteria: [] }] }))).toBe('suite-case-no-criteria:c1');
+    expect(reasonOf(defineEvalSuite({ ...SUITE, cases: [{ ...FIX1, weight: 0 }] }))).toBe('suite-case-invalid-weight:fix1');
+    expect(reasonOf(defineEvalSuite({ ...SUITE, cases: [{ ...FIX1, domain: 'manhwa' }] }))).toBe('suite-case-invalid-domain:fix1:manhwa');
     expect(defineEvalSuite({ id: 'art', version: 1, kind: 'creative', cases: [{ id: 'm1', domain: 'manhwa', criteria: [] }] }).ok).toBe(true);
-    expect(defineEvalSuite({ id: 'art', version: 1, kind: 'creative', cases: [{ id: 'm1', domain: 'code-fix', criteria: [] }] }).reason).toBe('suite-case-invalid-domain:m1:code-fix');
+    expect(reasonOf(defineEvalSuite({ id: 'art', version: 1, kind: 'creative', cases: [{ id: 'm1', domain: 'code-fix', criteria: [] }] }))).toBe('suite-case-invalid-domain:m1:code-fix');
   });
 
   it('fingerprints content: key-order independent, version and case-order sensitive', () => {
     const a = defineEvalSuite(SUITE);
     expect(a.ok).toBe(true);
-    if (!a.ok) return;
-    const fp1 = suiteFingerprint(a.value);
-    expect(fp1.ok).toBe(true);
-    if (!fp1.ok) return;
-    const fp2 = suiteFingerprint({ kind: 'forge', cases: [{ weight: 2, criteria: ['compiles', 'tests-pass'], id: 'fix1' }, { criteria: ['severity', 'tone'], id: 'rev1' }], version: 1, id: 'forge-core' });
-    expect(fp2.ok).toBe(true);
-    if (!fp2.ok) return;
-    expect(fp2.value).toBe(fp1.value);
-    const fp3 = suiteFingerprint({ ...a.value, version: 2 });
-    expect(fp3.ok).toBe(true);
-    if (!fp3.ok) return;
-    expect(fp3.value).not.toBe(fp1.value);
-    const fp4 = suiteFingerprint({ ...a.value, cases: [REV1, FIX1] });
-    expect(fp4.ok).toBe(true);
-    if (!fp4.ok) return;
-    expect(fp4.value).not.toBe(fp1.value);
+    const fp1 = valueOf(suiteFingerprint(valueOf(a)));
+    const fp2 = valueOf(
+      suiteFingerprint({
+        kind: 'forge',
+        cases: [
+          { weight: 2, criteria: ['compiles', 'tests-pass'], id: 'fix1' },
+          { criteria: ['severity', 'tone'], id: 'rev1' },
+        ],
+        version: 1,
+        id: 'forge-core',
+      }),
+    );
+    expect(fp2).toBe(fp1);
+    const fp3 = valueOf(suiteFingerprint({ ...valueOf(a), version: 2 }));
+    expect(fp3).not.toBe(fp1);
+    const fp4 = valueOf(suiteFingerprint({ ...valueOf(a), cases: [REV1, FIX1] }));
+    expect(fp4).not.toBe(fp1);
   });
 });
 
@@ -84,22 +95,21 @@ describe('AI-022 FORGE benchmark grading', () => {
   it('grades weighted criteria and refuses bad result maps by name (pinned vectors)', () => {
     const s = defineEvalSuite(SUITE);
     expect(s.ok).toBe(true);
-    if (!s.ok) return;
-    expect(gradeSuite(s.value, { nope: [] } as Record<string, string[]>).reason).toBe('grade-case-unknown:nope');
-    expect(gradeSuite(s.value, { fix1: ['compiles'] } as Record<string, string[]>).reason).toBe('grade-case-missing:rev1');
-    expect(gradeSuite(s.value, { fix1: ['compiles', 'nope'], rev1: [] }).reason).toBe('grade-criterion-unknown:fix1/nope');
-    expect(gradeSuite(s.value, { fix1: ['compiles', 'compiles'], rev1: [] }).reason).toBe('grade-criterion-duplicate:fix1/compiles');
-    expect(gradeSuite(s.value, { fix1: ['compiles', 'tests-pass'], rev1: ['severity', 'tone'] }).value?.score).toBe(1);
-    expect(gradeSuite(s.value, { fix1: [], rev1: [] }).value?.score).toBe(0);
+    const suite = valueOf(s);
+    expect(reasonOf(gradeSuite(suite, { nope: [] } as Record<string, string[]>))).toBe('grade-case-unknown:nope');
+    expect(reasonOf(gradeSuite(suite, { fix1: ['compiles'] } as Record<string, string[]>))).toBe('grade-case-missing:rev1');
+    expect(reasonOf(gradeSuite(suite, { fix1: ['compiles', 'nope'], rev1: [] }))).toBe('grade-criterion-unknown:fix1/nope');
+    expect(reasonOf(gradeSuite(suite, { fix1: ['compiles', 'compiles'], rev1: [] }))).toBe('grade-criterion-duplicate:fix1/compiles');
+    expect(valueOf(gradeSuite(suite, { fix1: ['compiles', 'tests-pass'], rev1: ['severity', 'tone'] })).score).toBe(1);
+    expect(valueOf(gradeSuite(suite, { fix1: [], rev1: [] })).score).toBe(0);
     // fix1 weight 2: (2*0.5 + 1*0) / 3 = 0.333333
-    expect(gradeSuite(s.value, { fix1: ['compiles'], rev1: [] }).value?.score).toBe(0.333333);
+    expect(valueOf(gradeSuite(suite, { fix1: ['compiles'], rev1: [] })).score).toBe(0.333333);
   });
 
   it('refuses creative suites at the criteria gate by name', () => {
     const s = defineEvalSuite({ id: 'art', version: 1, kind: 'creative', cases: [{ id: 'm1', domain: 'voice', criteria: [] }] });
     expect(s.ok).toBe(true);
-    if (!s.ok) return;
-    expect(gradeSuite(s.value, { m1: [] }).reason).toBe('grade-creative-not-criteria');
+    expect(reasonOf(gradeSuite(valueOf(s), { m1: [] }))).toBe('grade-creative-not-criteria');
   });
 });
 
@@ -111,12 +121,12 @@ describe('AI-023 human panels', () => {
   ];
 
   it('refuses malformed panels by name and gates the quorum as a hard boundary (pinned vectors)', () => {
-    expect(aggregatePanel(null as unknown as PanelVote[], 1).reason).toBe('panel-no-votes');
-    expect(aggregatePanel(votes, 0).reason).toBe('panel-invalid-quorum');
-    expect(aggregatePanel([{ panelist: 'a', score: 50 }], 2).reason).toBe('panel-quorum-unmet:1<2');
-    expect(aggregatePanel([{ panelist: 'a', score: 101 }], 1).reason).toBe('panel-invalid-score:a');
-    expect(aggregatePanel([{ panelist: 'a', score: 50 }, { panelist: 'a', score: 60 }], 1).reason).toBe('panel-duplicate-panelist:a');
-    expect(aggregatePanel(votes, 3).value?.median).toBe(50);
+    expect(reasonOf(aggregatePanel(null as unknown as PanelVote[], 1))).toBe('panel-no-votes');
+    expect(reasonOf(aggregatePanel(votes, 0))).toBe('panel-invalid-quorum');
+    expect(reasonOf(aggregatePanel([{ panelist: 'a', score: 50 }], 2))).toBe('panel-quorum-unmet:1<2');
+    expect(reasonOf(aggregatePanel([{ panelist: 'a', score: 101 }], 1))).toBe('panel-invalid-score:a');
+    expect(reasonOf(aggregatePanel([{ panelist: 'a', score: 50 }, { panelist: 'a', score: 60 }], 1))).toBe('panel-duplicate-panelist:a');
+    expect(valueOf(aggregatePanel(votes, 3)).median).toBe(50);
     const even = aggregatePanel(
       [
         { panelist: 'a', score: 10 },
@@ -126,10 +136,10 @@ describe('AI-023 human panels', () => {
       ],
       4,
     );
-    expect(even.value?.median).toBe(55);
+    expect(valueOf(even).median).toBe(55);
     // quorum boundary: exactly quorum passes, one fewer is refused by name
     expect(aggregatePanel(votes, 3).ok).toBe(true);
-    expect(aggregatePanel(votes.slice(0, 2), 3).reason).toBe('panel-quorum-unmet:2<3');
+    expect(reasonOf(aggregatePanel(votes.slice(0, 2), 3))).toBe('panel-quorum-unmet:2<3');
   });
 
   it('SCENARIO panel votes arriving in ANY order give the identical median (all permutations)', () => {
@@ -139,14 +149,11 @@ describe('AI-023 human panels', () => {
       { panelist: 'c', score: 60 },
       { panelist: 'd', score: 100 },
     ];
-    const base = aggregatePanel(four, 4);
-    expect(base.ok).toBe(true);
-    if (!base.ok) return;
+    const base = valueOf(aggregatePanel(four, 4));
     for (const order of orderings(four)) {
-      const r = aggregatePanel(order, 4);
-      expect(r.ok).toBe(true);
-      expect(r.value?.median).toBe(base.value.median);
-      expect(r.value?.count).toBe(4);
+      const r = valueOf(aggregatePanel(order, 4));
+      expect(r.median).toBe(base.median);
+      expect(r.count).toBe(4);
     }
   });
 
@@ -156,22 +163,22 @@ describe('AI-023 human panels', () => {
       { panelist: 'a', score: 70 },
     ];
     for (const order of orderings(pair)) {
-      expect(aggregatePanel(order, 1).reason).toBe('panel-duplicate-panelist:a');
+      expect(reasonOf(aggregatePanel(order, 1))).toBe('panel-duplicate-panelist:a');
     }
   });
 });
 
 describe('AI-024 regression gates', () => {
   it('refuses malformed gates by name and pins boundary behavior (pinned vectors)', () => {
-    expect(applyRegressionGate(null as unknown as Record<string, number>, { thresholds: {} }).reason).toBe('gate-no-metrics');
-    expect(applyRegressionGate({ accuracy: 0.9 }, null as unknown as RegressionGate).reason).toBe('gate-no-thresholds');
-    expect(applyRegressionGate({ accuracy: 0.9 }, { thresholds: {} }).reason).toBe('gate-missing-threshold:accuracy');
-    expect(applyRegressionGate({ accuracy: 0.9 }, { thresholds: { accuracy: { min: 0.9 }, tone: { min: 0.8 } } }).reason).toBe('gate-unmeasured-metric:tone');
-    expect(applyRegressionGate({ accuracy: 0.9 }, { thresholds: { accuracy: { min: 0.9, baseline: 1.0 } } }).reason).toBe('gate-incomplete-regression:accuracy');
-    expect(applyRegressionGate({ accuracy: 0.9 }, { thresholds: { accuracy: { baseline: 1.0, maxDrop: -1 } } }).reason).toBe('gate-invalid-max-drop:accuracy');
-    expect(applyRegressionGate({ accuracy: 0.89 }, { thresholds: { accuracy: { min: 0.9 } } }).reason).toBe('gate-below-minimum:accuracy:0.89<0.9');
+    expect(reasonOf(applyRegressionGate(null as unknown as Record<string, number>, { thresholds: {} }))).toBe('gate-no-metrics');
+    expect(reasonOf(applyRegressionGate({ accuracy: 0.9 }, null as unknown as RegressionGate))).toBe('gate-no-thresholds');
+    expect(reasonOf(applyRegressionGate({ accuracy: 0.9 }, { thresholds: {} }))).toBe('gate-missing-threshold:accuracy');
+    expect(reasonOf(applyRegressionGate({ accuracy: 0.9 }, { thresholds: { accuracy: { min: 0.9 }, tone: { min: 0.8 } } }))).toBe('gate-unmeasured-metric:tone');
+    expect(reasonOf(applyRegressionGate({ accuracy: 0.9 }, { thresholds: { accuracy: { min: 0.9, baseline: 1.0 } } }))).toBe('gate-incomplete-regression:accuracy');
+    expect(reasonOf(applyRegressionGate({ accuracy: 0.9 }, { thresholds: { accuracy: { baseline: 1.0, maxDrop: -1 } } }))).toBe('gate-invalid-max-drop:accuracy');
+    expect(reasonOf(applyRegressionGate({ accuracy: 0.89 }, { thresholds: { accuracy: { min: 0.9 } } }))).toBe('gate-below-minimum:accuracy:0.89<0.9');
     expect(applyRegressionGate({ accuracy: 0.9 }, { thresholds: { accuracy: { min: 0.9 } } }).ok).toBe(true);
-    expect(applyRegressionGate({ accuracy: 0.9 }, { thresholds: { accuracy: { baseline: 1.0, maxDrop: 0.05 } } }).reason).toBe('gate-regression:accuracy:-0.1000>0.05');
+    expect(reasonOf(applyRegressionGate({ accuracy: 0.9 }, { thresholds: { accuracy: { baseline: 1.0, maxDrop: 0.05 } } }))).toBe('gate-regression:accuracy:-0.1000>0.05');
     expect(applyRegressionGate({ accuracy: 0.95 }, { thresholds: { accuracy: { baseline: 1.0, maxDrop: 0.05 } } }).ok).toBe(true);
   });
 
@@ -181,10 +188,9 @@ describe('AI-024 regression gates', () => {
       { thresholds: { accuracy: { min: 0.9 }, tone: { min: 0.8 }, latency: { min: 0.9 } } },
     );
     expect(r.ok).toBe(false);
-    if (r.ok) return;
-    expect(r.reason).toContain('gate-below-minimum:accuracy:0.5<0.9');
-    expect(r.reason).toContain('gate-below-minimum:tone:0.4<0.8');
-    expect(r.reason).not.toContain('latency');
+    expect(reasonOf(r)).toContain('gate-below-minimum:accuracy:0.5<0.9');
+    expect(reasonOf(r)).toContain('gate-below-minimum:tone:0.4<0.8');
+    expect(reasonOf(r)).not.toContain('latency');
   });
 
   it('SCENARIO gate verdict is identical under every serialization order of the metrics payload', () => {
@@ -197,9 +203,9 @@ describe('AI-024 regression gates', () => {
       for (const k of order) payload[k] = values[k];
       const r = applyRegressionGate(payload, gate);
       expect(r.ok).toBe(false);
-      if (r.ok) return;
-      if (first === null) first = r.reason;
-      expect(r.reason).toBe(first);
+      const reason = reasonOf(r);
+      if (first === null) first = reason;
+      expect(reason).toBe(first);
     }
   });
 });
@@ -208,9 +214,9 @@ describe('purity and sweeps', () => {
   it('SCENARIO double-apply is a no-op: every law is pure (same input, same verdict)', () => {
     const s = defineEvalSuite(SUITE);
     expect(s.ok).toBe(true);
-    if (!s.ok) return;
-    const g1 = gradeSuite(s.value, { fix1: ['compiles'], rev1: ['severity'] });
-    const g2 = gradeSuite(s.value, { fix1: ['compiles'], rev1: ['severity'] });
+    const suite = valueOf(s);
+    const g1 = gradeSuite(suite, { fix1: ['compiles'], rev1: ['severity'] });
+    const g2 = gradeSuite(suite, { fix1: ['compiles'], rev1: ['severity'] });
     expect(JSON.stringify(g1)).toBe(JSON.stringify(g2));
     const v: PanelVote[] = [{ panelist: 'a', score: 10 }, { panelist: 'b', score: 50 }];
     expect(JSON.stringify(aggregatePanel(v, 2))).toBe(JSON.stringify(aggregatePanel(v, 2)));
@@ -227,43 +233,45 @@ describe('purity and sweeps', () => {
         const critCount = 1 + Math.floor(rnd() * 3);
         cases.push({ id: 'c' + i, criteria: Array.from({ length: critCount }, (_, j) => 'k' + j) });
       }
-      const suite = defineEvalSuite({ id: 'sw', version: 1, kind: 'forge', cases });
-      expect(suite.ok).toBe(true);
-      if (!suite.ok) continue;
+      const sv = defineEvalSuite({ id: 'sw', version: 1, kind: 'forge', cases });
+      expect(sv.ok).toBe(true);
+      if (!sv.ok) continue;
+      const suite = valueOf(sv);
       const results: Record<string, string[]> = {};
-      for (const c of suite.value.cases) {
+      for (const c of suite.cases) {
         results[c.id] = Array.from(new Set(c.criteria.filter(() => rnd() < 0.5)));
       }
-      const g = gradeSuite(suite.value, results);
+      const g = gradeSuite(suite, results);
       expect(g.ok).toBe(true);
       if (!g.ok) continue;
-      expect(g.value.score).toBeGreaterThanOrEqual(0);
-      expect(g.value.score).toBeLessThanOrEqual(1);
+      const graded = valueOf(g);
+      expect(graded.score).toBeGreaterThanOrEqual(0);
+      expect(graded.score).toBeLessThanOrEqual(1);
       // monotonicity: passing one more criterion never lowers the score
-      const firstCase = suite.value.cases[0];
+      const firstCase = suite.cases[0];
       const results2 = JSON.parse(JSON.stringify(results)) as Record<string, string[]>;
       if (!results2[firstCase.id].includes(firstCase.criteria[0])) {
         results2[firstCase.id].push(firstCase.criteria[0]);
       }
-      const g2 = gradeSuite(suite.value, results2);
+      const g2 = gradeSuite(suite, results2);
       expect(g2.ok).toBe(true);
       if (g2.ok) {
-        expect(g2.value.score).toBeGreaterThanOrEqual(g.value.score - 1e-9);
+        expect(valueOf(g2).score).toBeGreaterThanOrEqual(graded.score - 1e-9);
       }
       // gate consistency: a pass implies every metric met its threshold
       const gate: RegressionGate = { thresholds: {} };
-      for (const c of suite.value.cases) {
+      for (const c of suite.cases) {
         const th: GateThreshold = { min: rnd() };
         gate.thresholds[c.id] = th;
       }
-      const gv = applyRegressionGate(g.value.perCase, gate);
+      const gv = applyRegressionGate(graded.perCase, gate);
       if (!gv.ok) {
-        expect(gv.reason.startsWith('gate-')).toBe(true);
-        expect(gv.reason).toContain('gate-below-minimum');
+        expect(reasonOf(gv).startsWith('gate-')).toBe(true);
+        expect(reasonOf(gv)).toContain('gate-below-minimum');
       } else {
-        for (const c of suite.value.cases) {
+        for (const c of suite.cases) {
           const min = gate.thresholds[c.id].min as number;
-          expect(g.value.perCase[c.id]).toBeGreaterThanOrEqual(min);
+          expect(graded.perCase[c.id]).toBeGreaterThanOrEqual(min);
         }
       }
     }
