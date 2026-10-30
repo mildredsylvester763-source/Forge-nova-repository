@@ -104,6 +104,10 @@ import { FailureMiningBatch } from './modules/ai-training/entities/mining-batch.
 import { ModelVersion } from './modules/ai-training/entities/model-version.entity';
 import { ModelCard } from './modules/ai-training/entities/model-card.entity';
 import { ModelPromotionEvent } from './modules/ai-training/entities/promotion-event.entity';
+import { ServingScalePlan } from './modules/ai-training/entities/serving-scale-plan.entity';
+import { QuantizationPlanRow } from './modules/ai-training/entities/quantization-plan.entity';
+import { OnDeviceBundle } from './modules/ai-training/entities/on-device-bundle.entity';
+import { RoutingDecision } from './modules/ai-training/entities/routing-decision.entity';
 import { LoyaltyAccount } from './modules/loyalty/entities/loyalty-account.entity';
 import { LoyaltyEvent } from './modules/loyalty/entities/loyalty-event.entity';
 import { ReferralCode } from './modules/referrals/entities/referral-code.entity';
@@ -188,6 +192,10 @@ import { ReferralsModule } from './modules/referrals/referrals.module';
             ModelVersion,
             ModelCard,
             ModelPromotionEvent,
+    ServingScalePlan,
+    QuantizationPlanRow,
+    OnDeviceBundle,
+    RoutingDecision,
             LoyaltyAccount,
             LoyaltyEvent,
             ReferralCode,
