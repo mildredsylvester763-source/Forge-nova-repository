@@ -20,6 +20,8 @@ import {
   TallyExperimentDto, RecordAgentEventDto, BuildScorecardsDto,
   RecordTrendSampleDto, BuildTrendDto, MineFailuresDto,
   RegisterModelDto, BuildModelCardDto, PromoteModelDto,
+  PlanServingScaleDto, BuildQuantizationDto, BuildBundleDto,
+  RoutePromptDto,
 } from './dto/ai-training.dto';
 
 @Controller('ai-training')
@@ -324,5 +326,39 @@ export class AiTrainingController {
   @Get('models/:modelId')
   getModelVersions(@Request() req: any, @Param('modelId') modelId: string) {
     return this.aiTrainingService.getModelVersions(req.user.id, modelId);
+  }
+
+  // --- Model serving: scale, quantization, on-device bundles, routing (AI-036..039) ---
+  // Static segments declared before :param routes.
+
+  @Post('serving/scale')
+  planServingScale(@Request() req: any, @Body() dto: PlanServingScaleDto) {
+    return this.aiTrainingService.planServingScale(req.user.id, dto);
+  }
+
+  @Get('serving/scale/:modelId')
+  getServingScalePlans(@Request() req: any, @Param('modelId') modelId: string) {
+    return this.aiTrainingService.getServingScalePlans(req.user.id, modelId);
+  }
+
+  @Post('serving/quantize')
+  buildQuantization(@Request() req: any, @Body() dto: BuildQuantizationDto) {
+    return this.aiTrainingService.buildQuantization(req.user.id, dto);
+  }
+
+  @Post('serving/bundles')
+  @HttpCode(HttpStatus.CREATED)
+  buildBundle(@Request() req: any, @Body() dto: BuildBundleDto) {
+    return this.aiTrainingService.buildBundle(req.user.id, dto);
+  }
+
+  @Post('serving/route')
+  routePrompt(@Request() req: any, @Body() dto: RoutePromptDto) {
+    return this.aiTrainingService.routePrompt(req.user.id, dto);
+  }
+
+  @Get('serving/routing-decisions')
+  listRoutingDecisions(@Request() req: any) {
+    return this.aiTrainingService.listRoutingDecisions(req.user.id);
   }
 }
