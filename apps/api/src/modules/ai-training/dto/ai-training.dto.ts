@@ -404,3 +404,179 @@ export class TallyBlindVotesDto {
   @Max(1000)
   votesRequired: number;
 }
+
+// ============================================================================
+// AI-029..032: in-product A/B experiments, agent scorecards, eval trends,
+// failure mining
+// ============================================================================
+
+export class ExperimentVariantDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  id: string;
+
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  splitPercent: number;
+}
+
+export class DefineExperimentDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  experimentId: string;
+
+  /** The [C] consent law: no consent, no experiment — the engine refuses by name. */
+  @IsBoolean()
+  consentGranted: boolean;
+
+  @IsArray()
+  @ArrayMinSize(2)
+  @ArrayMaxSize(4)
+  @ValidateNested({ each: true })
+  @Type(() => ExperimentVariantDto)
+  variants: ExperimentVariantDto[];
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(10000)
+  minSamplesPerVariant?: number;
+}
+
+export class AssignVariantDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  experimentId: string;
+
+  @IsUUID()
+  subjectUserId: string;
+
+  /** Per-subject consent — declined consent refuses assignment by name. */
+  @IsBoolean()
+  consentGranted: boolean;
+}
+
+export class RecordExperimentOutcomeDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  experimentId: string;
+
+  @IsUUID()
+  subjectUserId: string;
+
+  @IsBoolean()
+  success: boolean;
+}
+
+export class TallyExperimentDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  experimentId: string;
+}
+
+export class RecordAgentEventDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  agentId: string;
+
+  @IsIn(['success', 'failure'])
+  outcome: 'success' | 'failure';
+
+  @IsOptional()
+  @IsBoolean()
+  reverted?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  approved?: boolean;
+}
+
+export class BuildScorecardsDto {
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(1000)
+  minEventsPerAgent?: number;
+
+  /** Filter to a single agent; omit for the full roster. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  agentId?: string;
+}
+
+export class RecordTrendSampleDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  metricId: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  bucket: string;
+
+  @IsNumber({ maxDecimalPlaces: 6 })
+  @Min(0)
+  @Max(1)
+  score: number;
+}
+
+export class BuildTrendDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  metricId: string;
+
+  @IsNumber({ maxDecimalPlaces: 6 })
+  @Min(0)
+  @Max(1)
+  degradeThreshold: number;
+}
+
+export class MinedCaseDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  id: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100_000)
+  content: string;
+
+  @IsBoolean()
+  passed: boolean;
+
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 6 })
+  @Min(0.000001)
+  weight?: number;
+}
+
+export class MineFailuresDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  batchId: string;
+
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(500)
+  @ValidateNested({ each: true })
+  @Type(() => MinedCaseDto)
+  cases: MinedCaseDto[];
+
+  @IsInt()
+  @Min(1)
+  @Max(500)
+  maxMined: number;
+}
+
