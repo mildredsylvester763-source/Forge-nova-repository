@@ -6,7 +6,6 @@
 // generation, binding races, self-referral attempts, reward double-claim
 // attempts, and points landing in the referrer is wallet.
 
-import { ObjectLiteral, Repository } from 'typeorm';
 import { ReferralsService } from './referrals.service';
 import { LoyaltyService } from '../loyalty/loyalty.service';
 import { LoyaltyAccount } from '../loyalty/entities/loyalty-account.entity';
