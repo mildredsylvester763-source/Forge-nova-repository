@@ -10,6 +10,8 @@
 import { TrainingAsset, TrainingAssetKind, TrainingClassification } from './entities/training-asset.entity';
 import { TrainingDataset } from './entities/training-dataset.entity';
 import { TrainingRun } from './entities/training-run.entity';
+import { EvalSuiteVersion } from './entities/eval-suite-version.entity';
+import { PanelVoteRecord } from './entities/panel-vote.entity';
 import { AiTrainingService } from './ai-training.service';
 
 // ---- minimal TypeORM repository double (behavior-true, no DB needed) ----
@@ -76,8 +78,10 @@ function makeService() {
   const assets = new RepoDouble<TrainingAsset>();
   const datasets = new RepoDouble<TrainingDataset>();
   const runs = new RepoDouble<TrainingRun>();
-  const svc = new AiTrainingService(assets as any, datasets as any, runs as any);
-  return { svc, assets, datasets, runs };
+  const suites = new RepoDouble<EvalSuiteVersion>();
+  const votes = new RepoDouble<PanelVoteRecord>();
+  const svc = new AiTrainingService(assets as any, datasets as any, runs as any, suites as any, votes as any);
+  return { svc, assets, datasets, runs, suites, votes };
 }
 
 const USER = '11111111-1111-4111-8111-111111111111';
