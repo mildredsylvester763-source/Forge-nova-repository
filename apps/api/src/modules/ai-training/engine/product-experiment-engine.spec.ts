@@ -162,12 +162,12 @@ describe('tallyExperiment (AI-029) — honest verdicts and the samples floor', (
 
 describe('buildScorecards (AI-030) — success, revert, approval rates', () => {
   const EV = [
-    { agentId: 'coder', outcome: 'success' },
-    { agentId: 'coder', outcome: 'success' },
-    { agentId: 'coder', outcome: 'failure', reverted: true },
-    { agentId: 'coder', outcome: 'failure', approved: false },
-    { agentId: 'coder', outcome: 'success', approved: true },
-    { agentId: 'rookie', outcome: 'success' },
+    { agentId: 'coder', outcome: 'success' as const },
+    { agentId: 'coder', outcome: 'success' as const },
+    { agentId: 'coder', outcome: 'failure' as const, reverted: true },
+    { agentId: 'coder', outcome: 'failure' as const, approved: false },
+    { agentId: 'coder', outcome: 'success' as const, approved: true },
+    { agentId: 'rookie', outcome: 'success' as const },
   ];
 
   it('computes rounded rates: 0.6 success, 0.2 revert, 0.5 approval', () => {
