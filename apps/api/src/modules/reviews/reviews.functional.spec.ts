@@ -6,7 +6,6 @@
 // Multi-user reality: two owners racing the same customer, cooldowns,
 // yearly caps, ownership isolation, and honest recording (no fake sends).
 
-import { Repository } from 'typeorm';
 import { ReviewRequestService, ReviewResponseService } from './reviews.service';
 import { ReviewRequest } from './entities/review-request.entity';
 import { ReviewResponse } from './entities/review-response.entity';
