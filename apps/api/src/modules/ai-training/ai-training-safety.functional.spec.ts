@@ -68,6 +68,7 @@ function makeService() {
   const svc = new AiTrainingService(
     assets as any, datasets as any, runs as any, suites as any, votes as any,
     batteries as any, grades as any, ballots as any,
+    new RepoDouble<any>(), new RepoDouble<any>(), new RepoDouble<any>(), new RepoDouble<any>(), new RepoDouble<any>(),
   );
   return { svc, batteries, grades, ballots };
 }
