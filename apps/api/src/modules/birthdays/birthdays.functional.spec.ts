@@ -111,23 +111,25 @@ describe('birthday functional flows', () => {
     expect(bobList.length).toBe(0);
   });
 
-  it('the same customer gets the same message text every check within a year', async () => {
-    const { service } = buildService();
-    const row = await service.upsertBirthday('user-alice', 'Carol', '03-14');
-    const first = await service.checkAndSend('user-alice', row.id, {
+  it('two owners sending to the same-named customer get the identical message', async () => {
+    const { service, outbox } = buildService();
+    const a = await service.upsertBirthday('user-alice', 'Carol', '03-14');
+    const b = await service.upsertBirthday('user-bob', 'Carol', '03-14');
+    const ra = await service.checkAndSend('user-alice', a.id, {
       year: 2026,
       monthDay: '03-14',
     });
-    const nextYear = await service.checkAndSend('user-alice', row.id, {
-      year: 2027,
+    const rb = await service.checkAndSend('user-bob', b.id, {
+      year: 2026,
       monthDay: '03-14',
     });
-    if (first.message && nextYear.message) {
-      // Same name, same variant index basis -> same template.
-      expect(first.message).toBe(nextYear.message);
+    if (ra.message && rb.message) {
+      // Same name, same year -> same deterministic variant -> same words.
+      expect(ra.message).toBe(rb.message);
     } else {
       throw new Error('messages were not produced');
     }
+    expect(outbox.length).toBe(2);
   });
 
   it('bad dates and names are refused through the service with named errors', async () => {
