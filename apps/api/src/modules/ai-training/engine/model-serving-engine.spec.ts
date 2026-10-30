@@ -60,7 +60,7 @@ describe('model-serving engine pinned vectors (AI-036 scaling + GPU pool)', () =
     expect(v.replicas).toBe(1);
     expect(v.neededRaw).toBe(1);
     expect(v.scaledDownCautiously).toBe(false);
-    expect(v.assigned).toEqual([{ gpuId: 'gpu-0', replicas: 1 }]);
+    expect(v.assigned).toEqual([{ gpuId: 'gpu-0', replicas: 1 }, { gpuId: 'gpu-1', replicas: 0 }]);
     expect(v.projectedUtilization).toBe(0.5);
   });
 
