@@ -100,6 +100,9 @@ import { EgressUniversalModule } from './modules/egress-universal/egress-univers
 import { SystemModule } from './modules/system/system.module';
 import { LoyaltyModule } from './modules/loyalty/loyalty.module';
 import { ReferralsModule } from './modules/referrals/referrals.module';
+import { BirthdaysModule } from './modules/birthdays/birthdays.module';
+import { Birthday } from './modules/birthdays/entities/birthday.entity';
+import { BirthdayOutbox } from './modules/birthdays/entities/birthday-outbox.entity';
 
 @Module({
   imports: [
@@ -165,6 +168,8 @@ import { ReferralsModule } from './modules/referrals/referrals.module';
             ReferralCode,
             ReferralBinding,
             ReferralReward,
+            Birthday,
+            BirthdayOutbox,
           ],
           synchronize: isDevelopment,
           logging: isDevelopment,
@@ -216,6 +221,7 @@ import { ReferralsModule } from './modules/referrals/referrals.module';
     SystemModule,
     LoyaltyModule,
     ReferralsModule,
+    BirthdaysModule,
   ],
   providers: [
     {
