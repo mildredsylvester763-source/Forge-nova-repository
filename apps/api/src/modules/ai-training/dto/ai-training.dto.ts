@@ -155,3 +155,87 @@ export class CompareRunsDto {
   @IsUUID()
   runBId: string;
 }
+
+// --- Eval harness (AI-021..024) ---
+
+export class EvalCaseDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  id: string;
+
+  @IsOptional()
+  @IsIn(['code-fix', 'code-review', 'incident-diagnosis', 'deploy-decision', 'manhwa', 'music', 'voice'])
+  domain?: string;
+
+  /** Forge cases must list criteria (engine refuses empty by name); creative cases may be empty. */
+  @IsArray()
+  @IsString({ each: true })
+  @ArrayMaxSize(50)
+  criteria: string[];
+
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 6 })
+  @Min(0.000001)
+  weight?: number;
+}
+
+export class DefineEvalSuiteDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  suiteId: string;
+
+  @IsInt()
+  @Min(1)
+  version: number;
+
+  @IsIn(['forge', 'creative'])
+  kind: string;
+
+  @IsArray()
+  @ArrayMaxSize(200)
+  cases: EvalCaseDto[];
+}
+
+export class GradeEvalSuiteDto {
+  /** Omit to grade the latest version. */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  version?: number;
+
+  /** caseId -> PASSED criteria ids; validated by the engine law. */
+  @IsObject()
+  results: Record<string, string[]>;
+}
+
+export class RecordPanelVoteDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  suiteId: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  caseId: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(128)
+  panelist: string;
+
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(100)
+  score: number;
+}
+
+export class ShipGateDto {
+  @IsObject()
+  metrics: Record<string, number>;
+
+  @IsObject()
+  thresholds: Record<string, { min?: number; baseline?: number; maxDrop?: number }>;
+}
