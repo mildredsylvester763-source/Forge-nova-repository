@@ -9,7 +9,7 @@
 
 import { ObjectLiteral, Repository } from 'typeorm';
 
-export interface FakeRepo<T> {
+export interface FakeRepo<T extends ObjectLiteral> {
   repo: Repository<T>;
   rows: T[];
 }
