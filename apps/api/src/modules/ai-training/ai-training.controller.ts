@@ -16,6 +16,9 @@ import {
   DefineEvalSuiteDto, GradeEvalSuiteDto, RecordPanelVoteDto, ShipGateDto,
   DefineSafetyBatteryDto, GradeSafetyRunDto, GroundClaimsDto,
   CheckContaminationDto, CastBlindVoteDto, TallyBlindVotesDto,
+  DefineExperimentDto, AssignVariantDto, RecordExperimentOutcomeDto,
+  TallyExperimentDto, RecordAgentEventDto, BuildScorecardsDto,
+  RecordTrendSampleDto, BuildTrendDto, MineFailuresDto,
 } from './dto/ai-training.dto';
 
 @Controller('ai-training')
@@ -238,5 +241,62 @@ export class AiTrainingController {
   @Post('blind/tally')
   tallyBlindVotes(@Request() req: any, @Body() dto: TallyBlindVotesDto) {
     return this.aiTrainingService.tallyBlindVotes(req.user.id, dto);
+  }
+
+  // --- In-product A/B experiments, scorecards, trends, mining (AI-029..032) ---
+  // Static segments declared before :param routes.
+
+  @Post('experiments')
+  @HttpCode(HttpStatus.CREATED)
+  defineExperiment(@Request() req: any, @Body() dto: DefineExperimentDto) {
+    return this.aiTrainingService.defineExperiment(req.user.id, dto);
+  }
+
+  @Get('experiments/:experimentId')
+  getExperiment(@Request() req: any, @Param('experimentId') experimentId: string) {
+    return this.aiTrainingService.getExperiment(req.user.id, experimentId);
+  }
+
+  @Post('experiments/:experimentId/assign')
+  assignExperimentVariant(@Request() req: any, @Body() dto: AssignVariantDto) {
+    return this.aiTrainingService.assignExperimentVariant(req.user.id, dto);
+  }
+
+  @Post('experiments/:experimentId/outcomes')
+  recordExperimentOutcome(@Request() req: any, @Body() dto: RecordExperimentOutcomeDto) {
+    return this.aiTrainingService.recordExperimentOutcome(req.user.id, dto);
+  }
+
+  @Post('experiments/:experimentId/tally')
+  tallyExperiment(@Request() req: any, @Body() dto: TallyExperimentDto) {
+    return this.aiTrainingService.tallyExperiment(req.user.id, dto);
+  }
+
+  @Post('agents/events')
+  @HttpCode(HttpStatus.CREATED)
+  recordAgentEvent(@Request() req: any, @Body() dto: RecordAgentEventDto) {
+    return this.aiTrainingService.recordAgentEvent(req.user.id, dto);
+  }
+
+  @Post('agents/scorecards')
+  buildAgentScorecards(@Request() req: any, @Body() dto: BuildScorecardsDto) {
+    return this.aiTrainingService.buildAgentScorecards(req.user.id, dto);
+  }
+
+  @Post('eval-trend/samples')
+  @HttpCode(HttpStatus.CREATED)
+  recordTrendSample(@Request() req: any, @Body() dto: RecordTrendSampleDto) {
+    return this.aiTrainingService.recordTrendSample(req.user.id, dto);
+  }
+
+  @Post('eval-trend')
+  buildEvalTrend(@Request() req: any, @Body() dto: BuildTrendDto) {
+    return this.aiTrainingService.buildEvalTrend(req.user.id, dto);
+  }
+
+  @Post('mining/failures')
+  @HttpCode(HttpStatus.CREATED)
+  mineFailureCases(@Request() req: any, @Body() dto: MineFailuresDto) {
+    return this.aiTrainingService.mineFailureCases(req.user.id, dto);
   }
 }
