@@ -100,9 +100,12 @@ import { EgressUniversalModule } from './modules/egress-universal/egress-univers
 import { SystemModule } from './modules/system/system.module';
 import { LoyaltyModule } from './modules/loyalty/loyalty.module';
 import { ReferralsModule } from './modules/referrals/referrals.module';
-import { BirthdaysModule } from './modules/birthdays/birthdays.module';\nimport { ReviewsModule } from './modules/reviews/reviews.module';
+import { BirthdaysModule } from './modules/birthdays/birthdays.module';
+import { ReviewsModule } from './modules/reviews/reviews.module';
 import { Birthday } from './modules/birthdays/entities/birthday.entity';
-import { BirthdayOutbox } from './modules/birthdays/entities/birthday-outbox.entity';\nimport { ReviewRequest } from './modules/reviews/entities/review-request.entity';\nimport { ReviewResponse } from './modules/reviews/entities/review-response.entity';
+import { BirthdayOutbox } from './modules/birthdays/entities/birthday-outbox.entity';
+import { ReviewRequest } from './modules/reviews/entities/review-request.entity';
+import { ReviewResponse } from './modules/reviews/entities/review-response.entity';
 
 @Module({
   imports: [
@@ -169,7 +172,9 @@ import { BirthdayOutbox } from './modules/birthdays/entities/birthday-outbox.ent
             ReferralBinding,
             ReferralReward,
             Birthday,
-            BirthdayOutbox,\n            ReviewRequest,\n            ReviewResponse,
+            BirthdayOutbox,
+            ReviewRequest,
+            ReviewResponse,
           ],
           synchronize: isDevelopment,
           logging: isDevelopment,
@@ -221,7 +226,8 @@ import { BirthdayOutbox } from './modules/birthdays/entities/birthday-outbox.ent
     SystemModule,
     LoyaltyModule,
     ReferralsModule,
-    BirthdaysModule,\n    ReviewsModule,
+    BirthdaysModule,
+    ReviewsModule,
   ],
   providers: [
     {
