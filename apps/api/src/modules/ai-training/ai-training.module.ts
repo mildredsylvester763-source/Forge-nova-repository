@@ -7,6 +7,9 @@ import { TrainingDataset } from './entities/training-dataset.entity';
 import { TrainingRun } from './entities/training-run.entity';
 import { EvalSuiteVersion } from './entities/eval-suite-version.entity';
 import { PanelVoteRecord } from './entities/panel-vote.entity';
+import { SafetyProbeBattery } from './entities/safety-battery.entity';
+import { SafetyRunGrade } from './entities/safety-run-grade.entity';
+import { BlindBallot } from './entities/blind-ballot.entity';
 
 @Module({
   imports: [
@@ -16,6 +19,9 @@ import { PanelVoteRecord } from './entities/panel-vote.entity';
       TrainingRun,
       EvalSuiteVersion,
       PanelVoteRecord,
+      SafetyProbeBattery,
+      SafetyRunGrade,
+      BlindBallot,
     ]),
   ],
   controllers: [AiTrainingController],
