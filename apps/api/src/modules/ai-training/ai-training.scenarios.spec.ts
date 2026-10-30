@@ -132,7 +132,8 @@ describe('ai-training adversarial scenarios (double-tap, concurrent admins, stal
         () => svc.transitionRun(USER, run.id, { to: 'canceled' } as any),
         () => svc.transitionRun(USER, run.id, { to: 'canceled' } as any),
       ];
-      const r = await race(ops.slice(order[0], order[0]).concat(ops.slice(0, order[0])).length ? ops : ops);
+      expect(order).toHaveLength(2);
+      const r = await race(ops);
       // exactly one cancel applied
       expect(r.ok).toBe(1);
       expect(r.refusals).toHaveLength(1);
@@ -184,7 +185,8 @@ describe('ai-training adversarial scenarios (double-tap, concurrent admins, stal
 
   // --- S4: two cost events race at the budget cap ---
   it('S4 double-tap cost at the cap: one event wins, the cap is never crossed, the loser is named', async () => {
-    for (const _order of orderings([0, 1])) {
+    for (const order of orderings([0, 1])) {
+      expect(order).toHaveLength(2);
       const { svc } = makeService();
       const run = await seedRun(svc, { budget: 5 });
       await svc.recordRunCost(USER, run.id, { step: 0, units: 3 } as any);
@@ -204,7 +206,8 @@ describe('ai-training adversarial scenarios (double-tap, concurrent admins, stal
 
   // --- S5: double-tap snapshot build (retry storm) ---
   it('S5 double-tap buildDataset: exactly one version is created, the duplicate is refused by name', async () => {
-    for (const _order of orderings([0, 1])) {
+    for (const order of orderings([0, 1])) {
+      expect(order).toHaveLength(2);
       const { svc, datasets } = makeService();
       await svc.createAsset(USER, {
         title: 'A1', kind: TrainingAssetKind.IMAGE,
@@ -328,7 +331,8 @@ describe('ai-training adversarial scenarios (double-tap, concurrent admins, stal
 
   // --- S11: budget race — three spenders, cap 5, spent 3: one 2-unit event fits ---
   it('S11 triple-tap cost at the cap: exactly one of three racing events lands, cap never crossed', async () => {
-    for (const _order of orderings([0, 1, 2])) {
+    for (const order of orderings([0, 1, 2])) {
+      expect(order).toHaveLength(3);
       const { svc } = makeService();
       const run = await seedRun(svc, { budget: 5 });
       await svc.recordRunCost(USER, run.id, { step: 0, units: 3 } as any);
