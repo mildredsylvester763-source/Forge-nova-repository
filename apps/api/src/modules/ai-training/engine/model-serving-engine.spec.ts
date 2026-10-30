@@ -331,7 +331,7 @@ describe('model-serving engine 500-case mulberry32(42) sweep', () => {
       expect(JSON.stringify(again)).toBe(JSON.stringify(p));
       expect(p.worstCaseCost).toBeLessThanOrEqual(cap);
       expect(p.chain[0]).toBe(p.primary);
-      const primary = models.find((m) => m.id === p.primary) as { costPer1kTokens: number; maxTokens: number };
+      const primary = models.find((m) => m.id === p.primary) as { id: string; costPer1kTokens: number; maxTokens: number };
       const cheaper = models.filter((m) => m.costPer1kTokens < primary.costPer1kTokens || (m.costPer1kTokens === primary.costPer1kTokens && m.id < primary.id));
       for (const m of cheaper) {
         if (tokens <= m.maxTokens) throw new Error('sweep: a cheaper capable model was skipped: ' + m.id);
