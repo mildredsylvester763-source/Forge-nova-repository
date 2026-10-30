@@ -3,6 +3,7 @@
 // ============================================================================
 
 import { IsString, IsEnum, IsBoolean, IsInt, IsOptional, IsArray, MaxLength, MinLength, Min, Max, ArrayMaxSize, IsUUID, IsNumber, IsIn, IsObject, ValidateNested, ArrayMinSize } from 'class-validator';
+import { Type } from 'class-transformer';
 import { TrainingAssetKind, TrainingClassification } from '../entities/training-asset.entity';
 
 export class CreateTrainingAssetDto {
