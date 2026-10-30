@@ -83,7 +83,10 @@ function makeService() {
   const batteries = new RepoDouble<any>();
   const grades = new RepoDouble<any>();
   const ballots = new RepoDouble<any>();
-  const svc = new AiTrainingService(assets as any, datasets as any, runs as any, suites as any, votes as any, batteries as any, grades as any, ballots as any, new RepoDouble<any>() as any, new RepoDouble<any>() as any, new RepoDouble<any>() as any, new RepoDouble<any>() as any, new RepoDouble<any>() as any);
+  const svc = new AiTrainingService(assets as any, datasets as any, runs as any, suites as any, votes as any, batteries as any, grades as any, ballots as any, new RepoDouble<any>() as any, new RepoDouble<any>() as any, new RepoDouble<any>() as any, new RepoDouble<any>() as any, new RepoDouble<any>() as anynew RepoDouble<any>() as any,
+    new RepoDouble<any>() as any,
+    new RepoDouble<any>() as any,
+  );
   return { svc, assets, datasets, runs, suites, votes };
 }
 
