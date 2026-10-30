@@ -15,6 +15,9 @@ import { ProductExperimentSubject } from './entities/experiment-subject.entity';
 import { ProductAgentEvent } from './entities/agent-event.entity';
 import { EvalTrendSample } from './entities/eval-trend.entity';
 import { FailureMiningBatch } from './entities/mining-batch.entity';
+import { ModelVersion } from './entities/model-version.entity';
+import { ModelCard } from './entities/model-card.entity';
+import { ModelPromotionEvent } from './entities/promotion-event.entity';
 
 @Module({
   imports: [
@@ -32,6 +35,9 @@ import { FailureMiningBatch } from './entities/mining-batch.entity';
       ProductAgentEvent,
       EvalTrendSample,
       FailureMiningBatch,
+      ModelVersion,
+      ModelCard,
+      ModelPromotionEvent,
     ]),
   ],
   controllers: [AiTrainingController],
