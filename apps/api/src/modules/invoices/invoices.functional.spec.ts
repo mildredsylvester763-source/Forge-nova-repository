@@ -6,7 +6,7 @@
 // cross-user wall (user B cannot read or touch user A is invoices), the
 // draft-sent-paid state machine, overdue projection, and soft delete.
 
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 import { InvoicesService } from './invoices.service';
 import { Invoice } from './entities/invoice.entity';
 import { InvoiceStatus } from './enums';
