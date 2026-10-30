@@ -703,3 +703,154 @@ export class PromoteModelDto {
   @Max(1)
   safetyPassRate?: number;
 }
+
+// ============================================================================
+// AI-036..039: serving scale, quantization, on-device bundles, cascade routing
+// ============================================================================
+
+export class ScaleGpuDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  id: string;
+
+  @IsInt()
+  @Min(0)
+  @Max(64)
+  replicaSlots: number;
+}
+
+export class PlanServingScaleDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  modelId: string;
+
+  @IsNumber({ maxDecimalPlaces: 6 })
+  @Min(0)
+  requestsPerSecond: number;
+
+  @IsNumber({ maxDecimalPlaces: 6 })
+  @Min(0.000001)
+  avgLatencyMs: number;
+
+  @IsNumber({ maxDecimalPlaces: 6 })
+  @Min(0.000001)
+  replicaConcurrency: number;
+
+  /** Utilization headroom target; the engine defaults to 0.7 (named). */
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 6 })
+  @Min(0.000001)
+  @Max(1)
+  targetUtilization?: number;
+
+  /** Current pool size — enables the cautious one-step scale-down law. */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  currentReplicas?: number;
+
+  /** Hard replica cap; a plan above it is refused by name, never trimmed. */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  maxReplicas?: number;
+
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(32)
+  @ValidateNested({ each: true })
+  @Type(() => ScaleGpuDto)
+  gpus: ScaleGpuDto[];
+}
+
+export class BuildQuantizationDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  modelId: string;
+
+  @IsNumber({ maxDecimalPlaces: 6 })
+  @Min(1)
+  weightsBytes: number;
+
+  @IsIn(['fp16', 'int8', 'int4'])
+  method: 'fp16' | 'int8' | 'int4';
+
+  /** Post-training quantization needs calibration data; the engine floors it. */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  calibrationSamples?: number;
+
+  /** Max acceptable quality loss; a plan beyond it is refused by name. */
+  @IsNumber({ maxDecimalPlaces: 6 })
+  @Min(0)
+  @Max(1)
+  qualityBudget: number;
+}
+
+export class BuildBundleDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  modelId: string;
+
+  @IsNumber({ maxDecimalPlaces: 6 })
+  @Min(1)
+  quantizedBytes: number;
+
+  @IsNumber({ maxDecimalPlaces: 6 })
+  @Min(1)
+  deviceMemoryBytes: number;
+
+  /** Must be a real offline runtime — no silent server round-trips. */
+  @IsIn(['llama.cpp', 'coreml', 'onnxruntime', 'tflite', 'webgpu'])
+  runtime: string;
+}
+
+export class RouteModelEntryDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  id: string;
+
+  @IsNumber({ maxDecimalPlaces: 6 })
+  @Min(0)
+  costPer1kTokens: number;
+
+  @IsInt()
+  @Min(1)
+  maxTokens: number;
+
+  /** Omit for active; false is refused by name at the engine. */
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
+}
+
+export class RoutePromptDto {
+  @IsInt()
+  @Min(0)
+  promptTokens: number;
+
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(16)
+  @ValidateNested({ each: true })
+  @Type(() => RouteModelEntryDto)
+  models: RouteModelEntryDto[];
+
+  /** Hard worst-case cost cap; the chain truncates at it, never crosses it. */
+  @IsNumber({ maxDecimalPlaces: 6 })
+  @Min(0)
+  costCap: number;
+
+  /** Confidence below which the answer escalates up the chain. */
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 6 })
+  @Min(0)
+  @Max(1)
+  confidenceThreshold?: number;
+}
