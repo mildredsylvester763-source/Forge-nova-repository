@@ -39,6 +39,13 @@ import {
 } from './engine/training-run-engine';
 import { recordCost, reproducibilityFingerprint } from './engine/cost-reproducibility-engine';
 import {
+  defineProbeBattery,
+  gradeSafetyRun as gradeSafetyRunEngine,
+  groundClaims,
+  detectContamination,
+  tallyBlindComparison,
+} from './engine/safety-eval-engine';
+import {
   defineEvalSuite,
   suiteFingerprint,
   gradeSuite,
@@ -48,12 +55,17 @@ import {
 } from './engine/eval-gate-engine';
 import { EvalSuiteVersion } from './entities/eval-suite-version.entity';
 import { PanelVoteRecord } from './entities/panel-vote.entity';
+import { SafetyProbeBattery } from './entities/safety-battery.entity';
+import { SafetyRunGrade } from './entities/safety-run-grade.entity';
+import { BlindBallot } from './entities/blind-ballot.entity';
 import { TrainingRun } from './entities/training-run.entity';
 import {
   CreateTrainingAssetDto, BuildDatasetDto,
   CreateTrainingRunDto, TransitionRunDto, RecordRunCheckpointDto,
   RecordRunCostDto, RecordRunMetricDto, CompareRunsDto,
   DefineEvalSuiteDto, GradeEvalSuiteDto, RecordPanelVoteDto, ShipGateDto,
+  DefineSafetyBatteryDto, GradeSafetyRunDto, GroundClaimsDto,
+  CheckContaminationDto, CastBlindVoteDto, TallyBlindVotesDto,
 } from './dto/ai-training.dto';
 
 @Injectable()
@@ -69,6 +81,12 @@ export class AiTrainingService {
     private readonly evalSuiteRepository: Repository<EvalSuiteVersion>,
     @InjectRepository(PanelVoteRecord)
     private readonly panelVoteRepository: Repository<PanelVoteRecord>,
+    @InjectRepository(SafetyProbeBattery)
+    private readonly safetyBatteryRepository: Repository<SafetyProbeBattery>,
+    @InjectRepository(SafetyRunGrade)
+    private readonly safetyGradeRepository: Repository<SafetyRunGrade>,
+    @InjectRepository(BlindBallot)
+    private readonly blindBallotRepository: Repository<BlindBallot>,
   ) {}
 
   // --- 1. Admit an asset through the gates (AI-002/003/004) ---
@@ -611,5 +629,119 @@ export class AiTrainingService {
       throw new BadRequestException(gate.reason);
     }
     return { passed: gate.value.passed };
+  }
+
+  // --- 6. Safety evals, grounding, contamination, blind comparison (AI-025..028) ---
+  // Batteries are immutable once defined; safety grades are appendable audit
+  // evidence; a voter votes once per contest; grounding and contamination are
+  // pure engine laws — the service never guesses what the engine refused.
+
+  async defineSafetyBattery(userId: string, dto: DefineSafetyBatteryDto): Promise<SafetyProbeBattery> {
+    const def = defineProbeBattery({ id: dto.batteryId, probes: dto.probes });
+    if (!def.ok) {
+      throw new BadRequestException(def.reason);
+    }
+    const dup = await this.safetyBatteryRepository.findOne({
+      where: { userId, batteryId: dto.batteryId },
+    });
+    if (dup) {
+      throw new ConflictException('safety-battery-duplicate:' + dto.batteryId);
+    }
+    const row = this.safetyBatteryRepository.create({
+      userId,
+      batteryId: dto.batteryId,
+      probes: dto.probes,
+    });
+    return this.safetyBatteryRepository.save(row);
+  }
+
+  async getSafetyBattery(userId: string, batteryId: string): Promise<SafetyProbeBattery> {
+    const row = await this.safetyBatteryRepository.findOne({
+      where: { userId, batteryId },
+    });
+    if (!row) {
+      throw new NotFoundException('safety-battery-not-found:' + batteryId);
+    }
+    return row;
+  }
+
+  async gradeSafetyRun(userId: string, batteryId: string, dto: GradeSafetyRunDto) {
+    const battery = await this.getSafetyBattery(userId, batteryId);
+    const graded = gradeSafetyRunEngine(
+      { id: battery.batteryId, probes: battery.probes },
+      dto.responses,
+    );
+    if (!graded.ok) {
+      throw new BadRequestException(graded.reason);
+    }
+    const row = this.safetyGradeRepository.create({
+      userId,
+      batteryId,
+      grade: {
+        batteryId: graded.value.batteryId,
+        total: graded.value.total,
+        passed: graded.value.passed,
+        violations: graded.value.violations,
+        passRate: graded.value.passRate,
+      },
+    });
+    const saved = await this.safetyGradeRepository.save(row);
+    return { gradeId: saved.id, ...graded.value };
+  }
+
+  async groundModelClaims(userId: string, dto: GroundClaimsDto) {
+    const report = groundClaims({
+      claims: dto.claims,
+      facts: dto.facts ?? [],
+      maxUngrounded: dto.maxUngrounded,
+    });
+    if (!report.ok) {
+      throw new BadRequestException(report.reason);
+    }
+    return report.value;
+  }
+
+  async checkContamination(userId: string, dto: CheckContaminationDto) {
+    const report = detectContamination({
+      text: dto.text,
+      corpus: dto.corpus,
+      n: dto.n,
+      threshold: dto.threshold,
+    });
+    if (!report.ok) {
+      throw new BadRequestException(report.reason);
+    }
+    return report.value;
+  }
+
+  async castBlindVote(userId: string, dto: CastBlindVoteDto): Promise<BlindBallot> {
+    const dup = await this.blindBallotRepository.findOne({
+      where: { userId, contestId: dto.contestId, voterId: dto.voterId },
+    });
+    if (dup) {
+      throw new ConflictException('blind-duplicate-voter:' + dto.voterId);
+    }
+    const row = this.blindBallotRepository.create({
+      userId,
+      contestId: dto.contestId,
+      voterId: dto.voterId,
+      preference: dto.preference,
+    });
+    return this.blindBallotRepository.save(row);
+  }
+
+  async tallyBlindVotes(userId: string, dto: TallyBlindVotesDto) {
+    const rows = await this.blindBallotRepository.find({
+      where: { userId, contestId: dto.contestId },
+      order: { createdAt: 'ASC' },
+    });
+    const tally = tallyBlindComparison({
+      votes: rows.map((r) => ({ voterId: r.voterId, preference: r.preference })),
+      votesRequired: dto.votesRequired,
+    });
+    if (!tally.ok) {
+      throw new BadRequestException(tally.reason);
+    }
+    return { contestId: dto.contestId, ...tally.value };
   }
 }
