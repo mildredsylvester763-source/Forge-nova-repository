@@ -106,6 +106,9 @@ import { Birthday } from './modules/birthdays/entities/birthday.entity';
 import { BirthdayOutbox } from './modules/birthdays/entities/birthday-outbox.entity';
 import { ReviewRequest } from './modules/reviews/entities/review-request.entity';
 import { ReviewResponse } from './modules/reviews/entities/review-response.entity';
+import { CustomerCredit } from './modules/credit-limits/entities/customer-credit.entity';
+import { CreditEvent } from './modules/credit-limits/entities/credit-event.entity';
+import { CreditLimitsModule } from './modules/credit-limits/credit-limits.module';
 
 @Module({
   imports: [
@@ -175,6 +178,8 @@ import { ReviewResponse } from './modules/reviews/entities/review-response.entit
             BirthdayOutbox,
             ReviewRequest,
             ReviewResponse,
+            CustomerCredit,
+            CreditEvent,
           ],
           synchronize: isDevelopment,
           logging: isDevelopment,
@@ -228,6 +233,7 @@ import { ReviewResponse } from './modules/reviews/entities/review-response.entit
     ReferralsModule,
     BirthdaysModule,
     ReviewsModule,
+    CreditLimitsModule,
   ],
   providers: [
     {
