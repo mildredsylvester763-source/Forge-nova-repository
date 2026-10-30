@@ -125,6 +125,7 @@ describe('credit-limits-engine (500-case sweep, seed 42)', () => {
       } else if (release > used) {
         expect(verdict).toEqual({ ok: false, reason: 'credit-release-exceeds-used' });
       } else {
+        if (!verdict.ok) throw new Error('expected release to succeed');
         expect(verdict.value.usedAfterCents).toBe(used - release);
       }
     }
