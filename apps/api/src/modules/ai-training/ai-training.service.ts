@@ -1170,6 +1170,7 @@ export class AiTrainingService {
       to: verdict.value.to,
       promotionFingerprint: verdict.value.promotionFingerprint,
     };
+  }
 
   // --- 9. Serving: scale plans, quantization, bundles, cascade routing (AI-036..039) ---
   // Scale history is append-only but idempotent: an identical re-plan returns
@@ -1280,6 +1281,5 @@ export class AiTrainingService {
       where: { userId },
       order: { createdAt: 'ASC' },
     });
-  }
   }
 }
