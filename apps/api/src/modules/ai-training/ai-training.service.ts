@@ -53,11 +53,24 @@ import {
   applyRegressionGate,
   EvalCase,
 } from './engine/eval-gate-engine';
+import {
+  defineExperiment as defineExperimentEngine,
+  assignVariant,
+  tallyExperiment as tallyExperimentEngine,
+  buildScorecards,
+  buildTrend,
+  mineFailures,
+} from './engine/product-experiment-engine';
 import { EvalSuiteVersion } from './entities/eval-suite-version.entity';
 import { PanelVoteRecord } from './entities/panel-vote.entity';
 import { SafetyProbeBattery } from './entities/safety-battery.entity';
 import { SafetyRunGrade } from './entities/safety-run-grade.entity';
 import { BlindBallot } from './entities/blind-ballot.entity';
+import { ProductExperiment } from './entities/experiment.entity';
+import { ProductExperimentSubject } from './entities/experiment-subject.entity';
+import { ProductAgentEvent } from './entities/agent-event.entity';
+import { EvalTrendSample } from './entities/eval-trend.entity';
+import { FailureMiningBatch } from './entities/mining-batch.entity';
 import { TrainingRun } from './entities/training-run.entity';
 import {
   CreateTrainingAssetDto, BuildDatasetDto,
@@ -66,6 +79,9 @@ import {
   DefineEvalSuiteDto, GradeEvalSuiteDto, RecordPanelVoteDto, ShipGateDto,
   DefineSafetyBatteryDto, GradeSafetyRunDto, GroundClaimsDto,
   CheckContaminationDto, CastBlindVoteDto, TallyBlindVotesDto,
+  DefineExperimentDto, AssignVariantDto, RecordExperimentOutcomeDto,
+  TallyExperimentDto, RecordAgentEventDto, BuildScorecardsDto,
+  RecordTrendSampleDto, BuildTrendDto, MineFailuresDto,
 } from './dto/ai-training.dto';
 
 @Injectable()
@@ -87,6 +103,16 @@ export class AiTrainingService {
     private readonly safetyGradeRepository: Repository<SafetyRunGrade>,
     @InjectRepository(BlindBallot)
     private readonly blindBallotRepository: Repository<BlindBallot>,
+    @InjectRepository(ProductExperiment)
+    private readonly experimentRepository: Repository<ProductExperiment>,
+    @InjectRepository(ProductExperimentSubject)
+    private readonly experimentSubjectRepository: Repository<ProductExperimentSubject>,
+    @InjectRepository(ProductAgentEvent)
+    private readonly agentEventRepository: Repository<ProductAgentEvent>,
+    @InjectRepository(EvalTrendSample)
+    private readonly evalTrendRepository: Repository<EvalTrendSample>,
+    @InjectRepository(FailureMiningBatch)
+    private readonly miningBatchRepository: Repository<FailureMiningBatch>,
   ) {}
 
   // --- 1. Admit an asset through the gates (AI-002/003/004) ---
@@ -749,5 +775,216 @@ export class AiTrainingService {
       throw new BadRequestException(tally.reason);
     }
     return { contestId: dto.contestId, ...tally.value };
+  }
+
+  // --- 7. In-product A/B experiments, scorecards, trends, mining (AI-029..032) ---
+  // Experiments are consent-gated ([C]) and deterministic: the same subject
+  // lands in the same arm forever. Outcomes are exactly-one-per-subject
+  // (double-taps refused by name). Scorecards are computed from the raw
+  // event log, never stored mutable. Trend history is append-only. Mining
+  // refuses over-cap batches loudly. Zero-trust scoped throughout.
+
+  async defineExperiment(userId: string, dto: DefineExperimentDto): Promise<ProductExperiment> {
+    const def = defineExperimentEngine({
+      id: dto.experimentId,
+      consentGranted: dto.consentGranted,
+      variants: dto.variants,
+      minSamplesPerVariant: dto.minSamplesPerVariant,
+    });
+    if (!def.ok) {
+      throw new BadRequestException(def.reason);
+    }
+    const dup = await this.experimentRepository.findOne({
+      where: { userId, experimentId: dto.experimentId },
+    });
+    if (dup) {
+      throw new ConflictException('experiment-duplicate:' + dto.experimentId);
+    }
+    const row = this.experimentRepository.create({
+      userId,
+      experimentId: dto.experimentId,
+      variants: def.value.variants,
+      minSamplesPerVariant: def.value.minSamplesPerVariant,
+      active: true,
+    });
+    return this.experimentRepository.save(row);
+  }
+
+  async getExperiment(userId: string, experimentId: string): Promise<ProductExperiment> {
+    const row = await this.experimentRepository.findOne({
+      where: { userId, experimentId },
+    });
+    if (!row) {
+      throw new NotFoundException('experiment-not-found:' + experimentId);
+    }
+    return row;
+  }
+
+  async assignExperimentVariant(userId: string, dto: AssignVariantDto) {
+    const exp = await this.getExperiment(userId, dto.experimentId);
+    const assignment = assignVariant({
+      experimentId: dto.experimentId,
+      userId: dto.subjectUserId,
+      variants: exp.variants,
+      active: exp.active,
+      consentGranted: dto.consentGranted,
+    });
+    if (!assignment.ok) {
+      throw new BadRequestException(assignment.reason);
+    }
+    // The assignment law is deterministic, so a double-tap returns the
+    // existing row as-is — never a second row, never a different arm.
+    const existing = await this.experimentSubjectRepository.findOne({
+      where: { userId, experimentId: dto.experimentId, subjectUserId: dto.subjectUserId },
+    });
+    if (existing) {
+      if (existing.variantId !== assignment.value.variantId) {
+        throw new ConflictException('assignment-mismatch:' + existing.variantId + '!=' + assignment.value.variantId);
+      }
+      return {
+        experimentId: dto.experimentId,
+        subjectUserId: dto.subjectUserId,
+        variantId: existing.variantId,
+        bucket: assignment.value.bucket,
+      };
+    }
+    const row = this.experimentSubjectRepository.create({
+      userId,
+      experimentId: dto.experimentId,
+      subjectUserId: dto.subjectUserId,
+      variantId: assignment.value.variantId,
+      success: null,
+    });
+    await this.experimentSubjectRepository.save(row);
+    return {
+      experimentId: dto.experimentId,
+      subjectUserId: dto.subjectUserId,
+      variantId: assignment.value.variantId,
+      bucket: assignment.value.bucket,
+    };
+  }
+
+  async recordExperimentOutcome(userId: string, dto: RecordExperimentOutcomeDto) {
+    await this.getExperiment(userId, dto.experimentId);
+    const subject = await this.experimentSubjectRepository.findOne({
+      where: { userId, experimentId: dto.experimentId, subjectUserId: dto.subjectUserId },
+    });
+    if (!subject) {
+      throw new BadRequestException('outcome-not-assigned:' + dto.subjectUserId);
+    }
+    if (subject.success !== null && subject.success !== undefined) {
+      throw new ConflictException('outcome-duplicate:' + dto.subjectUserId);
+    }
+    subject.success = dto.success;
+    await this.experimentSubjectRepository.save(subject);
+    return {
+      experimentId: dto.experimentId,
+      subjectUserId: dto.subjectUserId,
+      variantId: subject.variantId,
+      success: dto.success,
+    };
+  }
+
+  async tallyExperiment(userId: string, dto: TallyExperimentDto) {
+    const exp = await this.getExperiment(userId, dto.experimentId);
+    const rows = await this.experimentSubjectRepository.find({
+      where: { userId, experimentId: dto.experimentId },
+      order: { createdAt: 'ASC' },
+    });
+    const outcomes = rows
+      .filter((r) => r.success === true || r.success === false)
+      .map((r) => ({ variantId: r.variantId, userId: r.subjectUserId, success: r.success as boolean }));
+    const tally = tallyExperimentEngine({
+      variants: exp.variants,
+      minSamplesPerVariant: exp.minSamplesPerVariant,
+      outcomes,
+    });
+    if (!tally.ok) {
+      throw new BadRequestException(tally.reason);
+    }
+    return { experimentId: dto.experimentId, ...tally.value };
+  }
+
+  async recordAgentEvent(userId: string, dto: RecordAgentEventDto): Promise<ProductAgentEvent> {
+    const row = this.agentEventRepository.create({
+      userId,
+      agentId: dto.agentId,
+      outcome: dto.outcome,
+      reverted: dto.reverted ?? null,
+      approved: dto.approved ?? null,
+    });
+    return this.agentEventRepository.save(row);
+  }
+
+  async buildAgentScorecards(userId: string, dto: BuildScorecardsDto) {
+    const where: any = { userId };
+    if (dto.agentId) where.agentId = dto.agentId;
+    const rows = await this.agentEventRepository.find({ where, order: { createdAt: 'ASC' } });
+    const events = rows.map((r) => ({
+      agentId: r.agentId,
+      outcome: r.outcome,
+      ...(r.reverted === null || r.reverted === undefined ? {} : { reverted: r.reverted }),
+      ...(r.approved === null || r.approved === undefined ? {} : { approved: r.approved }),
+    }));
+    const report = buildScorecards({ events, minEventsPerAgent: dto.minEventsPerAgent });
+    if (!report.ok) {
+      throw new BadRequestException(report.reason);
+    }
+    return report.value;
+  }
+
+  async recordTrendSample(userId: string, dto: RecordTrendSampleDto): Promise<EvalTrendSample> {
+    const existing = await this.evalTrendRepository.findOne({
+      where: { userId, metricId: dto.metricId, bucket: dto.bucket },
+    });
+    if (existing) {
+      if (existing.score !== dto.score) {
+        throw new ConflictException('trend-conflicting-score:' + dto.bucket);
+      }
+      return existing;
+    }
+    const row = this.evalTrendRepository.create({
+      userId,
+      metricId: dto.metricId,
+      bucket: dto.bucket,
+      score: dto.score,
+    });
+    return this.evalTrendRepository.save(row);
+  }
+
+  async buildEvalTrend(userId: string, dto: BuildTrendDto) {
+    const rows = await this.evalTrendRepository.find({
+      where: { userId, metricId: dto.metricId },
+      order: { bucket: 'ASC' },
+    });
+    const report = buildTrend({
+      samples: rows.map((r) => ({ bucket: r.bucket, score: Number(r.score) })),
+      degradeThreshold: dto.degradeThreshold,
+    });
+    if (!report.ok) {
+      throw new BadRequestException(report.reason);
+    }
+    return { metricId: dto.metricId, ...report.value };
+  }
+
+  async mineFailureCases(userId: string, dto: MineFailuresDto): Promise<FailureMiningBatch> {
+    const dup = await this.miningBatchRepository.findOne({
+      where: { userId, batchId: dto.batchId },
+    });
+    if (dup) {
+      throw new ConflictException('mining-batch-duplicate:' + dto.batchId);
+    }
+    const batch = mineFailures({ cases: dto.cases, maxMined: dto.maxMined });
+    if (!batch.ok) {
+      throw new BadRequestException(batch.reason);
+    }
+    const row = this.miningBatchRepository.create({
+      userId,
+      batchId: dto.batchId,
+      cases: batch.value.cases,
+      count: batch.value.count,
+      duplicatesDropped: batch.value.duplicatesDropped,
+    });
+    return this.miningBatchRepository.save(row);
   }
 }
