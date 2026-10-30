@@ -15,38 +15,8 @@ import { ReferralCode } from './entities/referral-code.entity';
 import { ReferralBinding } from './entities/referral-binding.entity';
 import { ReferralReward } from './entities/referral-reward.entity';
 import { CODE_ALPHABET } from './engine/referral-engine';
+import { fakeRepo } from '../../common/testing/fake-repository';
 
-// An in-memory stand-in for a TypeORM repository. Same methods the
-// service actually calls: create, save, findOne, find.
-function fakeRepo<T extends ObjectLiteral>(): { repo: Repository<T>; rows: T[] } {
-  const rows: T[] = [];
-  let counter = 0;
-  const repo = {
-    create: (partial: Partial<T>): T => ({ ...partial }) as T,
-    save: async (entity: T): Promise<T> => {
-      const record = entity as Record<string, unknown>;
-      if (!record['id']) {
-        counter += 1;
-        record['id'] = 'row-' + counter;
-        rows.push(entity);
-      }
-      return entity;
-    },
-    findOne: async (opts: { where: Record<string, unknown> }): Promise<T | null> =>
-      rows.find((r) =>
-        Object.keys(opts.where).every(
-          (k) => (r as Record<string, unknown>)[k] === opts.where[k],
-        ),
-      ) ?? null,
-    find: async (opts: { where: Record<string, unknown> }): Promise<T[]> =>
-      rows.filter((r) =>
-        Object.keys(opts.where ?? {}).every(
-          (k) => (r as Record<string, unknown>)[k] === opts.where[k],
-        ),
-      ),
-  } as unknown as Repository<T>;
-  return { repo, rows };
-}
 
 interface Harness {
   referrals: ReferralsService;
@@ -119,7 +89,7 @@ describe('referral functional flows', () => {
 
   it('applying an unknown or malformed code is refused by name', async () => {
     const { referrals } = buildHarness();
-    await expect(referrals.apply('NOPECODE', 'user-x')).rejects.toThrow(
+    await expect(referrals.apply('ABCDEFGH', 'user-x')).rejects.toThrow(
       'referral-code-not-found',
     );
     await expect(referrals.apply('ab', 'user-x')).rejects.toThrow(
