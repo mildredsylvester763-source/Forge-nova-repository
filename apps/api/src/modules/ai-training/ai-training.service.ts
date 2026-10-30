@@ -61,6 +61,11 @@ import {
   buildTrend,
   mineFailures,
 } from './engine/product-experiment-engine';
+import {
+  registerModelVersion,
+  buildModelCard,
+  promoteModel,
+} from './engine/model-registry-engine';
 import { EvalSuiteVersion } from './entities/eval-suite-version.entity';
 import { PanelVoteRecord } from './entities/panel-vote.entity';
 import { SafetyProbeBattery } from './entities/safety-battery.entity';
@@ -71,6 +76,9 @@ import { ProductExperimentSubject } from './entities/experiment-subject.entity';
 import { ProductAgentEvent } from './entities/agent-event.entity';
 import { EvalTrendSample } from './entities/eval-trend.entity';
 import { FailureMiningBatch } from './entities/mining-batch.entity';
+import { ModelVersion } from './entities/model-version.entity';
+import { ModelCard } from './entities/model-card.entity';
+import { ModelPromotionEvent } from './entities/promotion-event.entity';
 import { TrainingRun } from './entities/training-run.entity';
 import {
   CreateTrainingAssetDto, BuildDatasetDto,
@@ -82,6 +90,7 @@ import {
   DefineExperimentDto, AssignVariantDto, RecordExperimentOutcomeDto,
   TallyExperimentDto, RecordAgentEventDto, BuildScorecardsDto,
   RecordTrendSampleDto, BuildTrendDto, MineFailuresDto,
+  RegisterModelDto, BuildModelCardDto, PromoteModelDto,
 } from './dto/ai-training.dto';
 
 @Injectable()
@@ -113,6 +122,12 @@ export class AiTrainingService {
     private readonly evalTrendRepository: Repository<EvalTrendSample>,
     @InjectRepository(FailureMiningBatch)
     private readonly miningBatchRepository: Repository<FailureMiningBatch>,
+    @InjectRepository(ModelVersion)
+    private readonly modelVersionRepository: Repository<ModelVersion>,
+    @InjectRepository(ModelCard)
+    private readonly modelCardRepository: Repository<ModelCard>,
+    @InjectRepository(ModelPromotionEvent)
+    private readonly promotionEventRepository: Repository<ModelPromotionEvent>,
   ) {}
 
   // --- 1. Admit an asset through the gates (AI-002/003/004) ---
@@ -986,5 +1001,154 @@ export class AiTrainingService {
       duplicatesDropped: batch.value.duplicatesDropped,
     });
     return this.miningBatchRepository.save(row);
+  }
+
+  // --- 8. Model registry, cards, staged promotion (AI-033..035) ---------
+  // Registry versions are gap-free and per-model sequential; re-registering
+  // the same weights returns the existing row (idempotent), never a silent
+  // second version. Cards are honest: missing safety evidence is a caveat,
+  // never hidden, and a conflicting card for the same version is refused by
+  // name. Promotion is one stage at a time with hard gates; the promotion
+  // event is append-only audit. Zero-trust scoped throughout.
+
+  async registerModel(userId: string, dto: RegisterModelDto) {
+    const existingRows = await this.modelVersionRepository.find({
+      where: { userId, modelId: dto.modelId },
+      order: { version: 'ASC' },
+    });
+    const sameWeights = existingRows.find((r) => r.weightsFingerprint === dto.weightsFingerprint);
+    if (sameWeights) {
+      return { ...sameWeights, reused: true };
+    }
+    const verdict = registerModelVersion({
+      modelId: dto.modelId,
+      owners: dto.owners,
+      weightsFingerprint: dto.weightsFingerprint,
+      lineage: dto.lineage,
+      version: dto.version,
+      existingVersions: existingRows.map((r) => r.version),
+    });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason);
+    }
+    const row = this.modelVersionRepository.create({
+      userId,
+      modelId: verdict.value.modelId,
+      version: verdict.value.version,
+      stage: verdict.value.stage,
+      owners: verdict.value.owners,
+      lineage: verdict.value.lineage,
+      weightsFingerprint: verdict.value.weightsFingerprint,
+      fingerprint: verdict.value.fingerprint,
+    });
+    const saved = await this.modelVersionRepository.save(row);
+    return { ...saved, reused: false };
+  }
+
+  async getModelVersions(userId: string, modelId: string): Promise<ModelVersion[]> {
+    const rows = await this.modelVersionRepository.find({
+      where: { userId, modelId },
+      order: { version: 'ASC' },
+    });
+    if (rows.length === 0) {
+      throw new NotFoundException('registry-model-not-found:' + modelId);
+    }
+    return rows;
+  }
+
+  async getModelVersion(userId: string, modelId: string, version: number): Promise<ModelVersion> {
+    const row = await this.modelVersionRepository.findOne({
+      where: { userId, modelId, version },
+    });
+    if (!row) {
+      throw new NotFoundException('registry-model-version-not-found:' + modelId + ':' + version);
+    }
+    return row;
+  }
+
+  async buildCardForModel(userId: string, dto: BuildModelCardDto): Promise<ModelCard> {
+    const entry = await this.getModelVersion(userId, dto.modelId, dto.version);
+    const verdict = buildModelCard({
+      entry: {
+        modelId: entry.modelId,
+        version: entry.version,
+        stage: entry.stage,
+        owners: entry.owners,
+        weightsFingerprint: entry.weightsFingerprint,
+        lineage: entry.lineage,
+      },
+      intendedUse: dto.intendedUse,
+      evalScores: dto.evalScores,
+      safetyPassRate: dto.safetyPassRate,
+      limitations: dto.limitations,
+    });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason);
+    }
+    const existing = await this.modelCardRepository.findOne({
+      where: { userId, modelId: dto.modelId, version: dto.version },
+    });
+    if (existing) {
+      if (existing.card.cardFingerprint === verdict.value.cardFingerprint) {
+        return existing;
+      }
+      throw new ConflictException(
+        'card-conflicting-fingerprint:' + existing.card.cardFingerprint + '!=' + verdict.value.cardFingerprint,
+      );
+    }
+    const row = this.modelCardRepository.create({
+      userId,
+      modelId: dto.modelId,
+      version: dto.version,
+      card: verdict.value,
+    });
+    return this.modelCardRepository.save(row);
+  }
+
+  async promoteModelVersion(userId: string, dto: PromoteModelDto) {
+    const entry = await this.getModelVersion(userId, dto.modelId, dto.version);
+    const card = await this.modelCardRepository.findOne({
+      where: { userId, modelId: dto.modelId, version: dto.version },
+    });
+    // Evidence is assembled from durable artifacts, never caller guesses:
+    // eval evidence is the best score recorded on the card; safety evidence
+    // must be supplied explicitly (a missing number is a named refusal, and
+    // a card without safety evidence carries the caveat by law).
+    let evalScore: number | undefined;
+    if (card && card.card.evaluation.length > 0) {
+      evalScore = card.card.evaluation.reduce((m, e) => (e.score > m ? e.score : m), 0);
+    }
+    const verdict = promoteModel({
+      modelId: dto.modelId,
+      version: dto.version,
+      from: entry.stage,
+      to: dto.to,
+      evidence: {
+        hasCard: Boolean(card),
+        evalScore,
+        safetyPassRate: dto.safetyPassRate,
+      },
+    });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason);
+    }
+    entry.stage = dto.to;
+    await this.modelVersionRepository.save(entry);
+    const event = this.promotionEventRepository.create({
+      userId,
+      modelId: dto.modelId,
+      version: dto.version,
+      fromStage: verdict.value.from,
+      toStage: verdict.value.to,
+      promotionFingerprint: verdict.value.promotionFingerprint,
+    });
+    await this.promotionEventRepository.save(event);
+    return {
+      modelId: dto.modelId,
+      version: dto.version,
+      from: verdict.value.from,
+      to: verdict.value.to,
+      promotionFingerprint: verdict.value.promotionFingerprint,
+    };
   }
 }
