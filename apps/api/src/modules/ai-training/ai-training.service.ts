@@ -606,7 +606,7 @@ export class AiTrainingService {
   }
 
   async applyShipGate(dto: ShipGateDto) {
-    const gate = applyRegressionGate(dto.metrics, dto.thresholds);
+    const gate = applyRegressionGate(dto.metrics, { thresholds: dto.thresholds });
     if (!gate.ok) {
       throw new BadRequestException(gate.reason);
     }
