@@ -7,7 +7,6 @@
 // of ledgers between users, grant flow, and history.
 
 import { BadRequestException } from '@nestjs/common';
-import { ObjectLiteral, Repository } from 'typeorm';
 import { LoyaltyService } from './loyalty.service';
 import { LoyaltyAccount } from './entities/loyalty-account.entity';
 import { LoyaltyEvent } from './entities/loyalty-event.entity';
