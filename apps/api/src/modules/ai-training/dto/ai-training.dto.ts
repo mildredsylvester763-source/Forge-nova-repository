@@ -2,10 +2,7 @@
 // FILE: /apps/api/src/modules/ai-training/dto/ai-training.dto.ts
 // ============================================================================
 
-import {
-  IsString, IsEnum, IsBoolean, IsInt, IsOptional, IsArray,
-  MaxLength, MinLength, Min, Max, ArrayMaxSize, IsUUID, IsNumber, IsIn, IsObject,
-} from 'class-validator';
+import { IsString, IsEnum, IsBoolean, IsInt, IsOptional, IsArray, MaxLength, MinLength, Min, Max, ArrayMaxSize, IsUUID, IsNumber, IsIn, IsObject, ValidateNested, ArrayMinSize } from 'class-validator';
 import { TrainingAssetKind, TrainingClassification } from '../entities/training-asset.entity';
 
 export class CreateTrainingAssetDto {
@@ -238,4 +235,171 @@ export class ShipGateDto {
 
   @IsObject()
   thresholds: Record<string, { min?: number; baseline?: number; maxDrop?: number }>;
+}
+
+// ============================================================================
+// AI-025..028: safety evals, grounding, contamination, blind comparison
+// ============================================================================
+
+export class SafetyProbeDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  id: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(512)
+  prompt: string;
+
+  @IsBoolean()
+  mustRefuse: boolean;
+}
+
+export class DefineSafetyBatteryDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  batteryId: string;
+
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(200)
+  @ValidateNested({ each: true })
+  @Type(() => SafetyProbeDto)
+  probes: SafetyProbeDto[];
+}
+
+export class SafetyResponseDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  probeId: string;
+
+  @IsBoolean()
+  refused: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(4000)
+  response?: string;
+}
+
+export class GradeSafetyRunDto {
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(200)
+  @ValidateNested({ each: true })
+  @Type(() => SafetyResponseDto)
+  responses: SafetyResponseDto[];
+}
+
+export class GroundClaimDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  id: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(2000)
+  text: string;
+}
+
+export class GroundFactDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  id: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(2000)
+  text: string;
+}
+
+export class GroundClaimsDto {
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(500)
+  @ValidateNested({ each: true })
+  @Type(() => GroundClaimDto)
+  claims: GroundClaimDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(500)
+  @ValidateNested({ each: true })
+  @Type(() => GroundFactDto)
+  facts?: GroundFactDto[];
+
+  @IsNumber()
+  @Min(0)
+  @Max(500)
+  maxUngrounded: number;
+}
+
+export class CorpusDocDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  id: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(8000)
+  text: string;
+}
+
+export class CheckContaminationDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(8000)
+  text: string;
+
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(200)
+  @ValidateNested({ each: true })
+  @Type(() => CorpusDocDto)
+  corpus: CorpusDocDto[];
+
+  @IsOptional()
+  @IsInt()
+  @Min(3)
+  @Max(12)
+  n?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0.000001)
+  @Max(1)
+  threshold?: number;
+}
+
+export class CastBlindVoteDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  contestId: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(128)
+  voterId: string;
+
+  @IsIn(['a', 'b', 'tie'])
+  preference: 'a' | 'b' | 'tie';
+}
+
+export class TallyBlindVotesDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  contestId: string;
+
+  @IsInt()
+  @Min(1)
+  @Max(1000)
+  votesRequired: number;
 }
