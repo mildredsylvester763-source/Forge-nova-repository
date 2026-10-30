@@ -14,6 +14,8 @@ import {
   CreateTrainingRunDto, TransitionRunDto, RecordRunCheckpointDto,
   RecordRunCostDto, RecordRunMetricDto, CompareRunsDto,
   DefineEvalSuiteDto, GradeEvalSuiteDto, RecordPanelVoteDto, ShipGateDto,
+  DefineSafetyBatteryDto, GradeSafetyRunDto, GroundClaimsDto,
+  CheckContaminationDto, CastBlindVoteDto, TallyBlindVotesDto,
 } from './dto/ai-training.dto';
 
 @Controller('ai-training')
@@ -192,5 +194,49 @@ export class AiTrainingController {
   @Post('eval/gate')
   applyShipGate(@Body() dto: ShipGateDto) {
     return this.aiTrainingService.applyShipGate(dto);
+  }
+
+  // --- Safety evals, grounding, contamination, blind comparison (AI-025..028) ---
+  // Static segments declared before :param routes.
+
+  @Post('safety/batteries')
+  @HttpCode(HttpStatus.CREATED)
+  defineSafetyBattery(@Request() req: any, @Body() dto: DefineSafetyBatteryDto) {
+    return this.aiTrainingService.defineSafetyBattery(req.user.id, dto);
+  }
+
+  @Get('safety/batteries/:batteryId')
+  getSafetyBattery(@Request() req: any, @Param('batteryId') batteryId: string) {
+    return this.aiTrainingService.getSafetyBattery(req.user.id, batteryId);
+  }
+
+  @Post('safety/batteries/:batteryId/grade')
+  gradeSafetyRun(
+    @Request() req: any,
+    @Param('batteryId') batteryId: string,
+    @Body() dto: GradeSafetyRunDto,
+  ) {
+    return this.aiTrainingService.gradeSafetyRun(req.user.id, batteryId, dto);
+  }
+
+  @Post('safety/grounding')
+  groundModelClaims(@Request() req: any, @Body() dto: GroundClaimsDto) {
+    return this.aiTrainingService.groundModelClaims(req.user.id, dto);
+  }
+
+  @Post('safety/contamination')
+  checkContamination(@Request() req: any, @Body() dto: CheckContaminationDto) {
+    return this.aiTrainingService.checkContamination(req.user.id, dto);
+  }
+
+  @Post('blind/votes')
+  @HttpCode(HttpStatus.CREATED)
+  castBlindVote(@Request() req: any, @Body() dto: CastBlindVoteDto) {
+    return this.aiTrainingService.castBlindVote(req.user.id, dto);
+  }
+
+  @Post('blind/tally')
+  tallyBlindVotes(@Request() req: any, @Body() dto: TallyBlindVotesDto) {
+    return this.aiTrainingService.tallyBlindVotes(req.user.id, dto);
   }
 }
