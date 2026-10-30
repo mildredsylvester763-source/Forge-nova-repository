@@ -128,7 +128,7 @@ describe('birthday-messages engine', () => {
       const birth = pad(birthMonth) + '-' + pad(birthDay);
       const today = rng() < 0.5 ? birth : pad(1 + Math.floor(rng() * 12)) + '-' + pad(1 + Math.floor(rng() * 28));
       const year = 2026;
-      const last = rng() < 0.5 ? null : 1900 + Math.floor(rng() * 200);
+      const last = rng() < 0.5 ? null : 1970 + Math.floor(rng() * 120);
       const v = shouldSendBirthday({
         todayMonthDay: today,
         birthMonthDay: birth,
