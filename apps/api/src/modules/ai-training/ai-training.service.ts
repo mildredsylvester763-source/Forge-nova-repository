@@ -689,7 +689,7 @@ export class AiTrainingService {
     return { gradeId: saved.id, ...graded.value };
   }
 
-  async groundModelClaims(userId: string, dto: GroundClaimsDto) {
+  async groundModelClaims(_userId: string, dto: GroundClaimsDto) {
     const report = groundClaims({
       claims: dto.claims,
       facts: dto.facts ?? [],
@@ -701,7 +701,7 @@ export class AiTrainingService {
     return report.value;
   }
 
-  async checkContamination(userId: string, dto: CheckContaminationDto) {
+  async checkContamination(_userId: string, dto: CheckContaminationDto) {
     const report = detectContamination({
       text: dto.text,
       corpus: dto.corpus,
