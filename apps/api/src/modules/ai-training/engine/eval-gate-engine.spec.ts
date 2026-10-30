@@ -127,8 +127,8 @@ describe('suiteFingerprint (AI-021) — the fingerprint law', () => {
       suiteFingerprint({
         kind: 'forge',
         cases: [
-          { weight: 2, criteria: ['compiles', 'tests-pass'], id: 'fix1' },
-          { criteria: ['severity', 'tone'], id: 'rev1' },
+          { weight: 2, criteria: ['compiles', 'tests-pass'], id: 'fix1', domain: 'code-fix' },
+          { criteria: ['severity', 'tone'], id: 'rev1', domain: 'code-review' },
         ],
         version: 1,
         id: 'forge-core',
