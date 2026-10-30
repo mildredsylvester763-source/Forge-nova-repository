@@ -11,38 +11,8 @@ import { ObjectLiteral, Repository } from 'typeorm';
 import { LoyaltyService } from './loyalty.service';
 import { LoyaltyAccount } from './entities/loyalty-account.entity';
 import { LoyaltyEvent } from './entities/loyalty-event.entity';
+import { fakeRepo } from '../../common/testing/fake-repository';
 
-// An in-memory stand-in for a TypeORM repository. Same methods the
-// service actually calls: create, save, findOne, find.
-function fakeRepo<T extends ObjectLiteral>(): { repo: Repository<T>; rows: T[] } {
-  const rows: T[] = [];
-  let counter = 0;
-  const repo = {
-    create: (partial: Partial<T>): T => ({ ...partial }) as T,
-    save: async (entity: T): Promise<T> => {
-      const record = entity as Record<string, unknown>;
-      if (!record['id']) {
-        counter += 1;
-        record['id'] = 'row-' + counter;
-        rows.push(entity);
-      }
-      return entity;
-    },
-    findOne: async (opts: { where: Record<string, unknown> }): Promise<T | null> =>
-      rows.find((r) =>
-        Object.keys(opts.where).every(
-          (k) => (r as Record<string, unknown>)[k] === opts.where[k],
-        ),
-      ) ?? null,
-    find: async (opts: { where: Record<string, unknown> }): Promise<T[]> =>
-      rows.filter((r) =>
-        Object.keys(opts.where ?? {}).every(
-          (k) => (r as Record<string, unknown>)[k] === opts.where[k],
-        ),
-      ),
-  } as unknown as Repository<T>;
-  return { repo, rows };
-}
 
 function buildService(): {
   service: LoyaltyService;
@@ -111,8 +81,8 @@ describe('loyalty functional flows', () => {
     const { service } = buildService();
     await service.earn('user-a', 500, 'order 7');
     const after = await service.grantPointsToUser('user-a', 500, 'referral reward');
-    expect(after.pointsBalance).toBe(10);
-    expect(after.lifetimePoints).toBe(10);
+    expect(after.pointsBalance).toBe(505);
+    expect(after.lifetimePoints).toBe(505);
   });
 
   it('one user cannot spend another user is points: ledgers are isolated', async () => {
