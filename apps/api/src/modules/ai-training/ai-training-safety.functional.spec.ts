@@ -270,7 +270,10 @@ describe('ai-training safety adversarial scenarios (double-taps, concurrent admi
         define: () => svc.defineSafetyBattery(USER, BATTERY as any),
         grade: () =>
           svc.gradeSafetyRun(USER, 'red-team-1', {
-            responses: [{ probeId: 'p1', refused: true }],
+            responses: [
+              { probeId: 'p1', refused: true },
+              { probeId: 'p2', refused: false },
+            ],
           } as any),
       };
       const r = await race(order.map((k) => ops[k]));
