@@ -19,6 +19,7 @@ import {
   DefineExperimentDto, AssignVariantDto, RecordExperimentOutcomeDto,
   TallyExperimentDto, RecordAgentEventDto, BuildScorecardsDto,
   RecordTrendSampleDto, BuildTrendDto, MineFailuresDto,
+  RegisterModelDto, BuildModelCardDto, PromoteModelDto,
 } from './dto/ai-training.dto';
 
 @Controller('ai-training')
@@ -298,5 +299,30 @@ export class AiTrainingController {
   @HttpCode(HttpStatus.CREATED)
   mineFailureCases(@Request() req: any, @Body() dto: MineFailuresDto) {
     return this.aiTrainingService.mineFailureCases(req.user.id, dto);
+  }
+
+  // --- Model registry, cards, staged promotion (AI-033..035) ---
+  // Static segments declared before :param routes.
+
+  @Post('models/register')
+  @HttpCode(HttpStatus.CREATED)
+  registerModel(@Request() req: any, @Body() dto: RegisterModelDto) {
+    return this.aiTrainingService.registerModel(req.user.id, dto);
+  }
+
+  @Post('models/cards')
+  @HttpCode(HttpStatus.CREATED)
+  buildCardForModel(@Request() req: any, @Body() dto: BuildModelCardDto) {
+    return this.aiTrainingService.buildCardForModel(req.user.id, dto);
+  }
+
+  @Post('models/promote')
+  promoteModelVersion(@Request() req: any, @Body() dto: PromoteModelDto) {
+    return this.aiTrainingService.promoteModelVersion(req.user.id, dto);
+  }
+
+  @Get('models/:modelId')
+  getModelVersions(@Request() req: any, @Param('modelId') modelId: string) {
+    return this.aiTrainingService.getModelVersions(req.user.id, modelId);
   }
 }
