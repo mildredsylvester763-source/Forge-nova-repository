@@ -96,6 +96,11 @@ import { PanelVoteRecord } from './modules/ai-training/entities/panel-vote.entit
 import { SafetyProbeBattery } from './modules/ai-training/entities/safety-battery.entity';
 import { SafetyRunGrade } from './modules/ai-training/entities/safety-run-grade.entity';
 import { BlindBallot } from './modules/ai-training/entities/blind-ballot.entity';
+import { ProductExperiment } from './modules/ai-training/entities/experiment.entity';
+import { ProductExperimentSubject } from './modules/ai-training/entities/experiment-subject.entity';
+import { ProductAgentEvent } from './modules/ai-training/entities/agent-event.entity';
+import { EvalTrendSample } from './modules/ai-training/entities/eval-trend.entity';
+import { FailureMiningBatch } from './modules/ai-training/entities/mining-batch.entity';
 import { LoyaltyAccount } from './modules/loyalty/entities/loyalty-account.entity';
 import { LoyaltyEvent } from './modules/loyalty/entities/loyalty-event.entity';
 import { ReferralCode } from './modules/referrals/entities/referral-code.entity';
@@ -172,6 +177,11 @@ import { ReferralsModule } from './modules/referrals/referrals.module';
       SafetyProbeBattery,
       SafetyRunGrade,
       BlindBallot,
+            ProductExperiment,
+            ProductExperimentSubject,
+            ProductAgentEvent,
+            EvalTrendSample,
+            FailureMiningBatch,
             LoyaltyAccount,
             LoyaltyEvent,
             ReferralCode,
