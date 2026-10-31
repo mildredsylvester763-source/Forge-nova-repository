@@ -157,7 +157,7 @@ import {
   ReserveInstancesDto, ReleaseInstancesDto,
   PackageBuildDto, ReimportVerifyDto,
   RegisterProviderDto, GatewayRouteDto, RecordOutcomeDto, FailoverPlanDto,
-  ByokRegisterDto, ByokListDto, PolicyCheckDto, UsageRecordDto, AccountingDto,
+  ByokRegisterDto, PolicyCheckDto, UsageRecordDto, AccountingDto,
 } from './dto/ai-training.dto';
 
 @Injectable()
@@ -2024,7 +2024,7 @@ export class AiTrainingService {
     return rows.map((r) => ({ workspaceId: r.workspaceId, providerId: r.providerId, key: r.key }));
   }
 
-  async checkDataPolicy(userId: string, dto: PolicyCheckDto) {
+  async checkDataPolicy(_userId: string, dto: PolicyCheckDto) {
     const verdict = enforceDataPolicyEngine({
       dataTags: dto.dataTags,
       providerClearance: dto.providerClearance,
