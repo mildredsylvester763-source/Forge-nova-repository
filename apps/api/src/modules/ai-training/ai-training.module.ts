@@ -27,6 +27,9 @@ import { StreamSession } from './entities/stream-session.entity';
 import { ServingMetricSample } from './entities/serving-metric-sample.entity';
 import { ShadowDeployment } from './entities/shadow-deployment.entity';
 import { RollbackEvent } from './entities/rollback-event.entity';
+import { ModelPin } from './entities/model-pin.entity';
+import { InstanceReservation } from './entities/instance-reservation.entity';
+import { OnPremPackage } from './entities/on-prem-package.entity';
 
 @Module({
   imports: [
@@ -56,6 +59,9 @@ import { RollbackEvent } from './entities/rollback-event.entity';
     ServingMetricSample,
     ShadowDeployment,
     RollbackEvent,
+    ModelPin,
+    InstanceReservation,
+    OnPremPackage,
     ]),
   ],
   controllers: [AiTrainingController],
