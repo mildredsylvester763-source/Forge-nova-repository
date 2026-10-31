@@ -91,6 +91,19 @@ import {
   buildOnPremPackage as buildOnPremPackageEngine,
   verifyReimport as verifyReimportEngine,
 } from './engine/model-access-engine';
+import {
+  planGatewayRoute as planGatewayRouteEngine,
+  recordProviderHealth as recordProviderHealthEngine,
+  planFailoverChain as planFailoverChainEngine,
+  byokFingerprint,
+  validateByokKey as validateByokKeyEngine,
+  enforceDataPolicy as enforceDataPolicyEngine,
+  aggregateProviderUsage as aggregateProviderUsageEngine,
+  ProviderDescriptor,
+  ProviderHealthState,
+  ByokKeyMeta,
+  UsageSample,
+} from './engine/model-gateway-engine';
 import { EvalSuiteVersion } from './entities/eval-suite-version.entity';
 import { PanelVoteRecord } from './entities/panel-vote.entity';
 import { SafetyProbeBattery } from './entities/safety-battery.entity';
@@ -116,6 +129,11 @@ import { RollbackEvent } from './entities/rollback-event.entity';
 import { ModelPin } from './entities/model-pin.entity';
 import { InstanceReservation } from './entities/instance-reservation.entity';
 import { OnPremPackage } from './entities/on-prem-package.entity';
+import { GatewayProvider } from './entities/gateway-provider.entity';
+import { GatewayRouteEvent } from './entities/gateway-route-event.entity';
+import { ProviderHealth } from './entities/provider-health.entity';
+import { ByokKey } from './entities/byok-key.entity';
+import { ProviderUsageSample } from './entities/provider-usage-sample.entity';
 import { TrainingRun } from './entities/training-run.entity';
 import {
   CreateTrainingAssetDto, BuildDatasetDto,
@@ -138,6 +156,8 @@ import {
   PinModelDto, UnpinModelDto, ResolveModelDto,
   ReserveInstancesDto, ReleaseInstancesDto,
   PackageBuildDto, ReimportVerifyDto,
+  RegisterProviderDto, GatewayRouteDto, RecordOutcomeDto, FailoverPlanDto,
+  ByokRegisterDto, ByokListDto, PolicyCheckDto, UsageRecordDto, AccountingDto,
 } from './dto/ai-training.dto';
 
 @Injectable()
@@ -199,6 +219,16 @@ export class AiTrainingService {
     private readonly instanceReservationRepository: Repository<InstanceReservation>,
     @InjectRepository(OnPremPackage)
     private readonly onPremPackageRepository: Repository<OnPremPackage>,
+    @InjectRepository(GatewayProvider)
+    private readonly gatewayProviderRepository: Repository<GatewayProvider>,
+    @InjectRepository(GatewayRouteEvent)
+    private readonly gatewayRouteEventRepository: Repository<GatewayRouteEvent>,
+    @InjectRepository(ProviderHealth)
+    private readonly providerHealthRepository: Repository<ProviderHealth>,
+    @InjectRepository(ByokKey)
+    private readonly byokKeyRepository: Repository<ByokKey>,
+    @InjectRepository(ProviderUsageSample)
+    private readonly providerUsageSampleRepository: Repository<ProviderUsageSample>,
   ) {}
 
   // --- 1. Admit an asset through the gates (AI-002/003/004) ---
@@ -1835,5 +1865,221 @@ export class AiTrainingService {
     const where: any = { userId };
     if (modelId) where.modelId = modelId;
     return this.onPremPackageRepository.find({ where, order: { createdAt: 'ASC' } });
+  }
+  // --- AI-048..052: provider-neutral model gateway, circuit health, BYOK,
+  // data policy, honest accounting ---
+
+  async registerGatewayProvider(userId: string, dto: RegisterProviderDto) {
+    const descriptor: ProviderDescriptor = {
+      id: dto.providerId,
+      costPer1kIn: dto.costPer1kIn,
+      costPer1kOut: dto.costPer1kOut,
+      maxTokens: dto.maxTokens,
+      active: dto.active ?? true,
+    };
+    const fingerprint = byokFingerprint(
+      dto.providerId,
+      [descriptor.costPer1kIn, descriptor.costPer1kOut, descriptor.maxTokens, descriptor.active].join(':'),
+    );
+    const existing = await this.gatewayProviderRepository.findOne({
+      where: { userId, providerId: dto.providerId },
+    });
+    if (existing) {
+      existing.provider = descriptor;
+      existing.fingerprint = fingerprint;
+      const saved = await this.gatewayProviderRepository.save(existing);
+      return { ...saved, duplicate: false };
+    }
+    const row = this.gatewayProviderRepository.create({
+      userId,
+      providerId: dto.providerId,
+      provider: descriptor,
+      fingerprint,
+    });
+    const saved = await this.gatewayProviderRepository.save(row);
+    return { ...saved, duplicate: false };
+  }
+
+  async listGatewayProviders(userId: string): Promise<GatewayProvider[]> {
+    return this.gatewayProviderRepository.find({ where: { userId }, order: { createdAt: 'ASC' } });
+  }
+
+  async routeGatewayRequest(userId: string, dto: GatewayRouteDto) {
+    const rows = await this.gatewayProviderRepository.find({
+      where: { userId },
+      order: { createdAt: 'ASC' },
+    });
+    const verdict = planGatewayRouteEngine({
+      providers: rows.map((r) => r.provider),
+      promptTokens: dto.promptTokens,
+      outputTokens: dto.outputTokens,
+    });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason);
+    }
+    const fingerprint = byokFingerprint(
+      verdict.value.primaryId,
+      verdict.value.chain.join('|') + '|' + verdict.value.estimatedCostUsd,
+    );
+    const row = this.gatewayRouteEventRepository.create({
+      userId,
+      route: verdict.value,
+      fingerprint,
+    });
+    await this.gatewayRouteEventRepository.save(row);
+    return { ...verdict.value, fingerprint };
+  }
+
+  async recordProviderOutcome(userId: string, dto: RecordOutcomeDto) {
+    const existing = await this.providerHealthRepository.findOne({
+      where: { userId, providerId: dto.providerId },
+    });
+    const verdict = recordProviderHealthEngine({
+      providerId: dto.providerId,
+      consecutiveFailures: existing ? existing.health.consecutiveFailures : 0,
+      ok: dto.ok,
+    });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason);
+    }
+    if (existing) {
+      existing.health = verdict.value;
+      const saved = await this.providerHealthRepository.save(existing);
+      return saved.health;
+    }
+    const row = this.providerHealthRepository.create({
+      userId,
+      providerId: dto.providerId,
+      health: verdict.value,
+    });
+    const saved = await this.providerHealthRepository.save(row);
+    return saved.health;
+  }
+
+  async listProviderHealth(userId: string): Promise<ProviderHealthState[]> {
+    const rows = await this.providerHealthRepository.find({ where: { userId }, order: { createdAt: 'ASC' } });
+    return rows.map((r) => r.health);
+  }
+
+  async planGatewayFailover(userId: string, dto: FailoverPlanDto) {
+    const providerRows = await this.gatewayProviderRepository.find({
+      where: { userId },
+      order: { createdAt: 'ASC' },
+    });
+    const healthRows = await this.providerHealthRepository.find({ where: { userId } });
+    const health: Record<string, number> = {};
+    for (const row of healthRows) {
+      health[row.providerId] = row.health.consecutiveFailures;
+    }
+    const verdict = planFailoverChainEngine({
+      providers: providerRows.map((r) => r.provider),
+      health,
+      maxRetriesPerProvider: dto.maxRetriesPerProvider,
+      promptTokens: dto.promptTokens,
+      outputTokens: dto.outputTokens,
+    });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason);
+    }
+    return verdict.value;
+  }
+
+  async registerWorkspaceKey(userId: string, dto: ByokRegisterDto) {
+    const keyVerdict = validateByokKeyEngine(dto.apiKey);
+    if (!keyVerdict.ok) {
+      throw new BadRequestException(keyVerdict.reason);
+    }
+    const fingerprint = byokFingerprint(dto.providerId, dto.apiKey.trim());
+    const meta: ByokKeyMeta = {
+      providerId: dto.providerId,
+      keyLength: keyVerdict.value.keyLength,
+      fingerprint,
+    };
+    const existing = await this.byokKeyRepository.findOne({
+      where: { userId, workspaceId: dto.workspaceId, providerId: dto.providerId },
+    });
+    if (existing) {
+      existing.key = meta;
+      existing.fingerprint = fingerprint;
+      const saved = await this.byokKeyRepository.save(existing);
+      return { workspaceId: saved.workspaceId, providerId: saved.providerId, key: saved.key };
+    }
+    const row = this.byokKeyRepository.create({
+      userId,
+      workspaceId: dto.workspaceId,
+      providerId: dto.providerId,
+      key: meta,
+      fingerprint,
+    });
+    const saved = await this.byokKeyRepository.save(row);
+    // The raw key NEVER survives this method — only its fingerprint does (AI-050).
+    return { workspaceId: saved.workspaceId, providerId: saved.providerId, key: saved.key };
+  }
+
+  async listWorkspaceKeys(userId: string, workspaceId: string) {
+    const rows = await this.byokKeyRepository.find({
+      where: { userId, workspaceId },
+      order: { createdAt: 'ASC' },
+    });
+    return rows.map((r) => ({ workspaceId: r.workspaceId, providerId: r.providerId, key: r.key }));
+  }
+
+  async checkDataPolicy(userId: string, dto: PolicyCheckDto) {
+    const verdict = enforceDataPolicyEngine({
+      dataTags: dto.dataTags,
+      providerClearance: dto.providerClearance,
+    });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason);
+    }
+    // Policy checks are stateless: a decision, not a row.
+    return verdict.value;
+  }
+
+  async recordProviderUsage(userId: string, dto: UsageRecordDto) {
+    const provider = await this.gatewayProviderRepository.findOne({
+      where: { userId, providerId: dto.providerId },
+    });
+    if (!provider) {
+      throw new NotFoundException('gateway-provider-not-found:' + dto.providerId);
+    }
+    const sample: UsageSample = {
+      tokensIn: dto.tokensIn,
+      tokensOut: dto.tokensOut,
+      latencyMs: dto.latencyMs,
+      ok: dto.ok ?? true,
+    };
+    const row = this.providerUsageSampleRepository.create({
+      userId,
+      providerId: dto.providerId,
+      sample,
+    });
+    await this.providerUsageSampleRepository.save(row);
+    return { recorded: true, sample };
+  }
+
+  async buildProviderAccounting(userId: string, dto: AccountingDto) {
+    const provider = await this.gatewayProviderRepository.findOne({
+      where: { userId, providerId: dto.providerId },
+    });
+    if (!provider) {
+      throw new NotFoundException('gateway-provider-not-found:' + dto.providerId);
+    }
+    const rows = await this.providerUsageSampleRepository.find({
+      where: { userId, providerId: dto.providerId },
+      order: { createdAt: 'ASC' },
+    });
+    const verdict = aggregateProviderUsageEngine({
+      providerId: dto.providerId,
+      descriptor: {
+        costPer1kIn: provider.provider.costPer1kIn,
+        costPer1kOut: provider.provider.costPer1kOut,
+      },
+      samples: rows.map((r) => r.sample),
+    });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason);
+    }
+    return verdict.value;
   }
 }
