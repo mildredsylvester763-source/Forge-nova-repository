@@ -130,6 +130,11 @@ import { ItemCost } from './modules/stock-insights/entities/item-cost.entity';
 import { CostReceipt } from './modules/stock-insights/entities/cost-receipt.entity';
 import { LowStockAlert } from './modules/stock-insights/entities/low-stock-alert.entity';
 import { StockInsightsModule } from './modules/stock-insights/stock-insights.module';
+import { DamagedGoodsLog } from './modules/goods-tracking/entities/damaged-goods-log.entity';
+import { Consignor } from './modules/goods-tracking/entities/consignor.entity';
+import { ConsignmentLot } from './modules/goods-tracking/entities/consignment-lot.entity';
+import { ConsignmentEvent } from './modules/goods-tracking/entities/consignment-event.entity';
+import { GoodsTrackingModule } from './modules/goods-tracking/goods-tracking.module';
 
 @Module({
   imports: [
@@ -216,6 +221,10 @@ import { StockInsightsModule } from './modules/stock-insights/stock-insights.mod
             ItemCost,
             CostReceipt,
             LowStockAlert,
+            DamagedGoodsLog,
+            Consignor,
+            ConsignmentLot,
+            ConsignmentEvent,
           ],
           synchronize: isDevelopment,
           logging: isDevelopment,
@@ -276,6 +285,7 @@ import { StockInsightsModule } from './modules/stock-insights/stock-insights.mod
     CatalogModule,
     WarehousingModule,
     StockInsightsModule,
+    GoodsTrackingModule,
   ],
   providers: [
     {
