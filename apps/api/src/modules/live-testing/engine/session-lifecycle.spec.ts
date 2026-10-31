@@ -97,7 +97,7 @@ describe('session lifecycle engine (FORGE TQ-001/009/010)', () => {
 
   it('500-case sweep: verdicts recompute exactly from the table', () => {
     const rand = mulberry32(42);
-    const pool = SESSION_STATUSES.concat(['nonsense', '', 'RUNNING', 'paused ']);
+    const pool: string[] = [...SESSION_STATUSES, 'nonsense', '', 'RUNNING', 'paused '];
     for (let i = 0; i < 500; i++) {
       const from = pool[Math.floor(rand() * pool.length)];
       const to = pool[Math.floor(rand() * pool.length)];
