@@ -30,6 +30,8 @@ export interface ProviderDescriptor {
   costPer1kOut: number;
   maxTokens: number;
   active: boolean;
+  /** Days the provider retains prompts/responses at source; 0 = retains nothing (AI-054). */
+  retentionDays?: number;
 }
 
 export interface RouteDecision {
