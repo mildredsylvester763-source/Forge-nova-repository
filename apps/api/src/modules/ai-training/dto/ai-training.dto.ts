@@ -1253,6 +1253,13 @@ export class RegisterProviderDto {
   @IsOptional()
   @IsBoolean()
   active?: boolean;
+
+  /** Days the provider retains prompts at source; 0 = retains nothing (AI-054). */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(36500)
+  retentionDays?: number;
 }
 
 export class GatewayRouteDto {
@@ -1358,4 +1365,179 @@ export class AccountingDto {
   @MinLength(1)
   @MaxLength(64)
   providerId: string;
+}
+
+// ============================================================================
+// AI-053..056: prompt/response logging with redaction, zero-retention
+// routing, capability registry, unified tool-calling + structured output
+// ============================================================================
+
+export class LogRecordDto {
+  /** Workspace whose retention law governs this log; omit for standard. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  workspaceId?: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  providerId: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  modelId: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100_000)
+  prompt: string;
+
+  /** May be empty; secrets on either side are redacted before storage. */
+  @IsString()
+  @MaxLength(100_000)
+  response: string;
+}
+
+export class RetentionSetDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  workspaceId: string;
+
+  /** standard keeps content; zero never stores prompt/response content. */
+  @IsIn(['standard', 'zero'])
+  mode: 'standard' | 'zero';
+}
+
+export class WorkspaceRouteDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  workspaceId: string;
+
+  @IsInt()
+  @Min(0)
+  promptTokens: number;
+
+  @IsInt()
+  @Min(0)
+  outputTokens: number;
+}
+
+export class CapabilityRegisterDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  modelId: string;
+
+  /** code | vision | audio | tools — unknown is refused by name. */
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(8)
+  @IsString({ each: true })
+  capabilities: string[];
+
+  @IsInt()
+  @Min(1)
+  @Max(10000000)
+  maxContextTokens: number;
+
+  @IsNumber({ maxDecimalPlaces: 6 })
+  @Min(0)
+  costPer1kIn: number;
+
+  @IsNumber({ maxDecimalPlaces: 6 })
+  @Min(0)
+  costPer1kOut: number;
+
+  /** Omit for active; inactive models are never routed to. */
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
+}
+
+export class CapabilityMatchDto {
+  @IsArray()
+  @ArrayMaxSize(8)
+  @IsString({ each: true })
+  required: string[];
+
+  @IsInt()
+  @Min(0)
+  promptTokens: number;
+
+  @IsInt()
+  @Min(0)
+  outputTokens: number;
+}
+
+export class ToolCallRecordDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  providerId: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(128)
+  name: string;
+
+  /** openai-style: raw JSON string of the arguments. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(100_000)
+  argumentsJson?: string;
+
+  /** anthropic/generic-style: the arguments as an object. */
+  @IsOptional()
+  @IsObject()
+  args?: Record<string, unknown>;
+}
+
+export class OutputSchemaFieldDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  name: string;
+
+  @IsIn(['string', 'number', 'boolean', 'array', 'object'])
+  type: 'string' | 'number' | 'boolean' | 'array' | 'object';
+
+  /** Omit for required. */
+  @IsOptional()
+  @IsBoolean()
+  required?: boolean;
+
+  /** Closed enum: values outside it are refused by name. */
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(64)
+  @IsString({ each: true })
+  enumValues?: string[];
+}
+
+export class OutputSchemaRegisterDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  schemaId: string;
+
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(64)
+  @ValidateNested({ each: true })
+  @Type(() => OutputSchemaFieldDto)
+  fields: OutputSchemaFieldDto[];
+}
+
+export class OutputValidateDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  schemaId: string;
+
+  @IsObject()
+  output: Record<string, unknown>;
 }
