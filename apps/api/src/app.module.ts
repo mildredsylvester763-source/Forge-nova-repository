@@ -135,6 +135,10 @@ import { Consignor } from './modules/goods-tracking/entities/consignor.entity';
 import { ConsignmentLot } from './modules/goods-tracking/entities/consignment-lot.entity';
 import { ConsignmentEvent } from './modules/goods-tracking/entities/consignment-event.entity';
 import { GoodsTrackingModule } from './modules/goods-tracking/goods-tracking.module';
+import { Site } from './modules/websites/entities/site.entity';
+import { SitePage } from './modules/websites/entities/site-page.entity';
+import { SiteDomain } from './modules/websites/entities/site-domain.entity';
+import { WebsitesModule } from './modules/websites/websites.module';
 
 @Module({
   imports: [
@@ -225,6 +229,9 @@ import { GoodsTrackingModule } from './modules/goods-tracking/goods-tracking.mod
             Consignor,
             ConsignmentLot,
             ConsignmentEvent,
+            Site,
+            SitePage,
+            SiteDomain,
           ],
           synchronize: isDevelopment,
           logging: isDevelopment,
@@ -286,6 +293,7 @@ import { GoodsTrackingModule } from './modules/goods-tracking/goods-tracking.mod
     WarehousingModule,
     StockInsightsModule,
     GoodsTrackingModule,
+    WebsitesModule,
   ],
   providers: [
     {
