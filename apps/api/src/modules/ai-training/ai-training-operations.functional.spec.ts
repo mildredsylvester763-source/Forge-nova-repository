@@ -60,7 +60,7 @@ class RepoDouble<T> {
 }
 
 const makeService = () => {
-  const repos = Array.from({ length: 28 }, () => new RepoDouble<any>());
+  const repos = Array.from({ length: 33 }, () => new RepoDouble<any>());
   const svc = new AiTrainingService(
     repos[0] as any, repos[1] as any, repos[2] as any, repos[3] as any,
     repos[4] as any, repos[5] as any, repos[6] as any, repos[7] as any,
@@ -69,7 +69,7 @@ const makeService = () => {
     repos[16] as any, repos[17] as any, repos[18] as any, repos[19] as any,
     repos[20] as any, repos[21] as any, repos[22] as any, repos[23] as any,
     repos[24] as any,
-   repos[25] as any, repos[26] as any, repos[27] as any,);
+   repos[25] as any, repos[26] as any, repos[27] as any, repos[28] as any, repos[29] as any, repos[30] as any, repos[31] as any, repos[32] as any,);
   return {
     svc,
     cache: repos[20] as RepoDouble<any>,
