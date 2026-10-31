@@ -144,6 +144,8 @@ import { SessionParticipant } from './modules/live-testing/entities/session-part
 import { TestAccount } from './modules/live-testing/entities/test-account.entity';
 import { WorkspaceContentItem } from './modules/workspace-retrieval/entities/workspace-content-item.entity';
 import { ResearchReport } from './modules/workspace-retrieval/entities/research-report.entity';
+import { SearchCacheEntry } from './modules/search-integrity/entities/search-cache-entry.entity';
+import { KnowledgePack } from './modules/search-integrity/entities/knowledge-pack.entity';
 import { AiTrainingModule } from './modules/ai-training/ai-training.module';
 import { EgressUniversalModule } from './modules/egress-universal/egress-universal.module';
 import { SystemModule } from './modules/system/system.module';
@@ -152,6 +154,7 @@ import { ReferralsModule } from './modules/referrals/referrals.module';
 import { WebSearchModule } from './modules/web-search/web-search.module';
 import { LiveTestingModule } from './modules/live-testing/live-testing.module';
 import { WorkspaceRetrievalModule } from './modules/workspace-retrieval/workspace-retrieval.module';
+import { SearchIntegrityModule } from './modules/search-integrity/search-integrity.module';
 
 @Module({
   imports: [
@@ -266,6 +269,8 @@ import { WorkspaceRetrievalModule } from './modules/workspace-retrieval/workspac
             TestAccount,
             WorkspaceContentItem,
             ResearchReport,
+            SearchCacheEntry,
+            KnowledgePack,
           ],
           synchronize: isDevelopment,
           logging: isDevelopment,
@@ -320,6 +325,7 @@ import { WorkspaceRetrievalModule } from './modules/workspace-retrieval/workspac
     WebSearchModule,
     LiveTestingModule,
     WorkspaceRetrievalModule,
+    SearchIntegrityModule,
   ],
   providers: [
     {
