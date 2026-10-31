@@ -5,20 +5,27 @@ import { TestSession } from './entities/test-session.entity';
 import { SessionStep } from './entities/session-step.entity';
 import { SessionMessage } from './entities/session-message.entity';
 import { SessionFinding } from './entities/session-finding.entity';
+import { TestPersona } from './entities/test-persona.entity';
 import { canHandBack, canTakeControl, isActing, transition } from './engine/session-lifecycle';
 import { checkAction, isPlatform } from './engine/platform-capability';
 import { evaluateStep, isEnvironment, resolveSafeMode } from './engine/safe-mode';
 import { getPersona, listPersonas } from './engine/persona-profile';
 import { narrate, parseGoal } from './engine/step-narration';
+import { buildTimeline } from './engine/session-recording';
+import { assembleBugReport } from './engine/bug-report';
+import { convertSession } from './engine/test-conversion';
+import { deviceCatalog, networkCatalog } from './engine/device-profile';
 import {
+  CreatePersonaDto,
   CreateSessionDto,
+  PersonaIdDto,
   PostMessageDto,
   RecordStepDto,
   ReportFindingDto,
   SessionRefDto,
 } from './dto/live-testing.dto';
 
-// Live agent testing service (FORGE TQ-001..014, TQ-030). Sessions run
+// Live agent testing service (FORGE TQ-001..021, TQ-030). Sessions run
 // against the real app under engine law: every state change is a legal
 // lifecycle transition, every step is evaluated by safe mode FIRST and the
 // platform vocabulary second (security before mechanics), and every
@@ -35,6 +42,8 @@ export class LiveTestingService {
     private readonly messages: Repository<SessionMessage>,
     @InjectRepository(SessionFinding)
     private readonly findings: Repository<SessionFinding>,
+    @InjectRepository(TestPersona)
+    private readonly personas: Repository<TestPersona>,
   ) {}
 
   private workspaceOf(dto: { workspace?: string }): string {
@@ -95,10 +104,18 @@ export class LiveTestingService {
     let persona: string | null = null;
     if (dto?.persona) {
       const verdict = getPersona(dto.persona);
-      if (!verdict.ok) {
-        throw new BadRequestException(verdict.reason ?? 'persona-invalid');
+      if (verdict.ok) {
+        persona = verdict.profile?.name ?? null;
+      } else {
+        const personaName = dto.persona.trim().toLowerCase();
+        const custom = await this.personas.findOne({
+          where: { userId, workspace, name: personaName },
+        });
+        if (!custom) {
+          throw new BadRequestException(verdict.reason ?? 'persona-invalid');
+        }
+        persona = custom.name;
       }
-      persona = verdict.profile?.name ?? null;
     }
     const title =
       typeof dto?.title === 'string' && dto.title.trim().length > 0
@@ -214,6 +231,7 @@ export class LiveTestingService {
         target: dto?.target ?? null,
         narration: narration.text ?? '',
         payload: intent.payload,
+        occurredAt: new Date(),
       }),
     );
   }
@@ -282,6 +300,153 @@ export class LiveTestingService {
       order: { createdAt: 'DESC' },
       take: n,
     });
+  }
+
+  async buildRecording(userId: string, sessionId: string) {
+    const row = await this.requireSession(userId, sessionId);
+    if (!row.startedAt) {
+      throw new BadRequestException('recording-not-started');
+    }
+    const steps = await this.steps.find({
+      where: { sessionId },
+      order: { seq: 'ASC' },
+    });
+    const verdict = buildTimeline(
+      row.startedAt,
+      steps.map((s) => ({
+        seq: s.seq,
+        narration: s.narration,
+        status: s.status,
+        occurredAt: s.occurredAt ?? s.createdAt,
+      })),
+      [],
+    );
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason ?? 'recording-refused');
+    }
+    return { sessionId, events: verdict.events, durationMs: verdict.durationMs };
+  }
+
+  async assembleBugReportForSession(userId: string, sessionId: string) {
+    const row = await this.requireSession(userId, sessionId);
+    const findings = await this.findings.find({ where: { sessionId } });
+    const latest = findings.length === 0 ? null : findings[findings.length - 1];
+    if (!latest) {
+      throw new BadRequestException('bugreport-none');
+    }
+    const steps = await this.steps.find({
+      where: { sessionId },
+      order: { seq: 'ASC' },
+    });
+    const reproRaw: unknown = latest.reproSteps;
+    const reproJoined = Array.isArray(reproRaw)
+      ? reproRaw.filter((p): p is string => typeof p === 'string').join(' ')
+      : '';
+    const evidenceRaw: unknown = latest.evidence;
+    const evidenceText =
+      evidenceRaw !== null &&
+      typeof evidenceRaw === 'object' &&
+      Object.keys(evidenceRaw).length > 0
+        ? JSON.stringify(evidenceRaw)
+        : null;
+    const verdict = assembleBugReport(
+      sessionId,
+      {
+        platform: row.platform,
+        environment: row.environment,
+        safeMode: row.safeMode,
+      },
+      {
+        severity: Number(latest.severity),
+        title: String(latest.title),
+        reproSteps: reproJoined,
+        evidence: evidenceText,
+        suspectedCommit:
+          typeof latest.suspectedCommit === 'string' ? latest.suspectedCommit : null,
+      },
+      steps.map((s) => ({ narration: s.narration, status: s.status })),
+    );
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason ?? 'bugreport-refused');
+    }
+    return { sessionId, report: verdict.report };
+  }
+
+  async convertSessionForUser(userId: string, sessionId: string) {
+    const row = await this.requireSession(userId, sessionId);
+    const steps = await this.steps.find({
+      where: { sessionId },
+      order: { seq: 'ASC' },
+    });
+    const tasksRaw: unknown = row.goalTasks;
+    const tasks = Array.isArray(tasksRaw) ? (tasksRaw as { id: string; text: string }[]) : [];
+    const verdict = convertSession(
+      { title: row.title, tasks },
+      steps.map((s) => ({ seq: s.seq, action: s.action, target: s.target })),
+    );
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason ?? 'conversion-refused');
+    }
+    return { sessionId, testCase: verdict.testCase };
+  }
+
+  async listDeviceCatalog() {
+    return { devices: deviceCatalog(), networks: networkCatalog() };
+  }
+
+  async createPersona(userId: string, dto: CreatePersonaDto) {
+    const workspace = this.workspaceOf(dto);
+    const name = typeof dto?.name === 'string' ? dto.name.trim().toLowerCase() : '';
+    if (name.length === 0) {
+      throw new BadRequestException('persona-name-missing');
+    }
+    const builtin = getPersona(name);
+    if (builtin.ok) {
+      throw new BadRequestException('persona-duplicate:' + name);
+    }
+    const existing = await this.personas.findOne({ where: { userId, workspace, name } });
+    if (existing) {
+      throw new BadRequestException('persona-duplicate:' + name);
+    }
+    const pace = dto?.paceMultiplier === undefined ? 1 : Number(dto.paceMultiplier);
+    if (!Number.isFinite(pace) || pace < 0.25 || pace > 4) {
+      throw new BadRequestException('persona-pace-invalid');
+    }
+    const traits = Array.isArray(dto?.traits)
+      ? dto.traits.filter((t) => typeof t === 'string')
+      : [];
+    const checklist = Array.isArray(dto?.checklist)
+      ? dto.checklist.filter((c) => typeof c === 'string')
+      : [];
+    return this.personas.save(
+      this.personas.create({
+        userId,
+        workspace,
+        name,
+        traits,
+        checklist,
+        paceMultiplier: pace,
+      }),
+    );
+  }
+
+  async listCustomPersonas(userId: string, workspace?: string) {
+    const w =
+      typeof workspace === 'string' && workspace.trim().length > 0
+        ? workspace.trim().slice(0, 64)
+        : '';
+    return w.length > 0
+      ? this.personas.find({ where: { userId, workspace: w } })
+      : this.personas.find({ where: { userId } });
+  }
+
+  async deletePersona(userId: string, dto: PersonaIdDto) {
+    const row = await this.personas.findOne({ where: { id: dto?.personaId ?? '' } });
+    if (!row || row.userId !== userId) {
+      throw new BadRequestException('persona-not-found:' + String(dto?.personaId));
+    }
+    await this.personas.remove(row);
+    return { deleted: true, id: row.id };
   }
 
   async listPersonaCatalog() {
