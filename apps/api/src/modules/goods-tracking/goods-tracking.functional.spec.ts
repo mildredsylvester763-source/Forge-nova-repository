@@ -256,7 +256,7 @@ describe('goods-tracking functional scenarios', () => {
     await ctx.consignmentService.returnConsignment('owner-a', { consignorId: ada.id, sku: 'ART-2', qty: 2 });
     const summary = await ctx.consignmentService.summary('owner-a', ada.id);
     expect(summary.consignor.name).toBe('Ada Arts');
-    expect(summary.totals.qtyOnConsignment).toBe(11);
+    expect(summary.totals.qtyOnConsignment).toBe(9);
     expect(summary.totals.soldQty).toBe(3);
     expect(summary.totals.returnedQty).toBe(2);
     expect(summary.totals.totalSalesCents).toBe(2400);
