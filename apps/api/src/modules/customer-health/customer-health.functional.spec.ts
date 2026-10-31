@@ -139,6 +139,15 @@ describe('customer health functional scenarios', () => {
 
   it('flags high churn risk with every named factor recorded', async () => {
     const ctx = build();
+    ctx.responseRows.push({
+      ownerUserId: 'owner-a',
+      customerRef: 'cust-1',
+      score: 2,
+      segment: 'detractor',
+      comment: 'never again',
+      channel: 'email',
+      createdAt: new Date(Date.now() - 91 * DAY_MS),
+    } as NpsResponse);
     const result = await ctx.churn.assess('owner-a', 'cust-1', {
       daysSinceLastInteraction: 200,
       overdueInvoiceCount: 2,
