@@ -15,25 +15,25 @@ describe('device catalog and network profile engine', () => {
   it('pins the low-end tier: throttling, platform and slow network numbers', () => {
     const v = normalizeDeviceProfile({ device: 'low-end-android', network: 'slow-3g' });
     expect(v.ok).toBe(true);
-    expect(v.profile.lowEnd).toBe(true);
-    expect(v.profile.cpuThrottle).toBe(4);
-    expect(v.profile.platform).toBe('android');
-    expect(v.profile.downlinkKbps).toBe(400);
-    expect(v.profile.latencyMs).toBe(2000);
+    expect(v.profile?.lowEnd).toBe(true);
+    expect(v.profile?.cpuThrottle).toBe(4);
+    expect(v.profile?.platform).toBe('android');
+    expect(v.profile?.downlinkKbps).toBe(400);
+    expect(v.profile?.latencyMs).toBe(2000);
   });
 
   it('pins the offline network profile', () => {
     const v = normalizeDeviceProfile({ device: 'iphone-13', network: 'offline' });
     expect(v.ok).toBe(true);
-    expect(v.profile.offline).toBe(true);
-    expect(v.profile.downlinkKbps).toBe(0);
+    expect(v.profile?.offline).toBe(true);
+    expect(v.profile?.downlinkKbps).toBe(0);
   });
 
   it('normalizes case and padding in device and network names', () => {
     const v = normalizeDeviceProfile({ device: ' Pixel-5 ', network: 'WiFi' });
     expect(v.ok).toBe(true);
-    expect(v.profile.device).toBe('pixel-5');
-    expect(v.profile.network).toBe('wifi');
+    expect(v.profile?.device).toBe('pixel-5');
+    expect(v.profile?.network).toBe('wifi');
   });
 
   it('refuses unknown devices and networks, non-objects and missing fields', () => {
@@ -79,14 +79,14 @@ describe('device catalog and network profile engine', () => {
         const spec = DEVICES.find((x) => x.device === devName) as any;
         const nspec = NETWORKS.find((x) => x.network === netName) as any;
         expect(v.ok).toBe(true);
-        expect(v.profile.device).toBe(spec.device);
-        expect(v.profile.network).toBe(nspec.network);
-        expect(v.profile.platform).toBe(spec.platform);
-        expect(v.profile.lowEnd).toBe(spec.lowEnd);
-        expect(v.profile.cpuThrottle).toBe(spec.cpuThrottle);
-        expect(v.profile.offline).toBe(nspec.offline);
-        expect(v.profile.downlinkKbps).toBe(nspec.downlinkKbps);
-        expect(v.profile.latencyMs).toBe(nspec.latencyMs);
+        expect(v.profile?.device).toBe(spec.device);
+        expect(v.profile?.network).toBe(nspec.network);
+        expect(v.profile?.platform).toBe(spec.platform);
+        expect(v.profile?.lowEnd).toBe(spec.lowEnd);
+        expect(v.profile?.cpuThrottle).toBe(spec.cpuThrottle);
+        expect(v.profile?.offline).toBe(nspec.offline);
+        expect(v.profile?.downlinkKbps).toBe(nspec.downlinkKbps);
+        expect(v.profile?.latencyMs).toBe(nspec.latencyMs);
       }
     }
   });
