@@ -227,7 +227,9 @@ describe('purchasing functional scenarios', () => {
     expect(result.newOnHand).toBe(13);
     expect(ctx.movementRows).toHaveLength(1);
     expect(ctx.movementRows[0].note).toBe('purchase-order:' + po.id);
-    expect(ctx.itemRows.find((r) => r.sku === 'SKU-1').onHand).toBe(13);
+    const sku1Row = ctx.itemRows.find((r) => r.sku === 'SKU-1');
+    if (!sku1Row) throw new Error('expected SKU-1 stock row');
+    expect(sku1Row.onHand).toBe(13);
   });
 
   it('refuses an over-receipt and leaves stock untouched', async () => {
