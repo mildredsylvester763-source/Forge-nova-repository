@@ -20,9 +20,9 @@ describe('session recording timeline engine', () => {
       { seq: 2, narration: 'Typing 14 characters into search box', status: 'done', occurredAt: new Date(T0 + 2500) },
     ], [{ label: 'paused', occurredAt: new Date(T0 + 2000) }]);
     expect(v.ok).toBe(true);
-    expect(v.events.map((e) => e.kind).join(',')).toBe('step,marker,step');
-    expect(v.events.map((e) => e.offsetMs).join(',')).toBe('1000,2000,2500');
-    expect(v.events.map((e) => e.id).join(',')).toBe('event-1,event-2,event-3');
+    expect(v.events?.map((e) => e.kind).join(',')).toBe('step,marker,step');
+    expect(v.events?.map((e) => e.offsetMs).join(',')).toBe('1000,2000,2500');
+    expect(v.events?.map((e) => e.id).join(',')).toBe('event-1,event-2,event-3');
     expect(v.durationMs).toBe(2500);
   });
 
@@ -55,8 +55,8 @@ describe('session recording timeline engine', () => {
       [{ label: 'paused', occurredAt: new Date(T0 + 500) }],
     );
     expect(v.ok).toBe(true);
-    expect(v.events[0].kind).toBe('step');
-    expect(v.events[1].kind).toBe('marker');
+    expect(v.events?.[0].kind).toBe('step');
+    expect(v.events?.[1].kind).toBe('marker');
   });
 
   it('survives a 500-case sweep of mixed steps and markers', () => {
@@ -90,11 +90,12 @@ describe('session recording timeline engine', () => {
       }
       const v = buildTimeline(new Date(T0), steps, markers);
       if (v.ok) {
-        for (let e = 1; e < v.events.length; e++) {
-          expect(v.events[e - 1].offsetMs).toBeLessThanOrEqual(v.events[e].offsetMs);
+        const evs = v.events ?? [];
+        for (let e = 1; e < evs.length; e++) {
+          expect(evs[e - 1].offsetMs).toBeLessThanOrEqual(evs[e].offsetMs);
         }
-        v.events.forEach((e, idx) => expect(e.id).toBe('event-' + (idx + 1)));
-        const last = v.events.length === 0 ? 0 : v.events[v.events.length - 1].offsetMs;
+        evs.forEach((e, idx) => expect(e.id).toBe('event-' + (idx + 1)));
+        const last = evs.length === 0 ? 0 : evs[evs.length - 1].offsetMs;
         expect(v.durationMs).toBe(last);
       } else {
         expect(v.reason).toMatch(/^recording-/);
