@@ -2,8 +2,13 @@ import { Body, Controller, Get, Post, Query, Request } from '@nestjs/common';
 import { LiveTestingService } from './live-testing.service';
 import {
   ApplyPermissionPlanDto,
+  AvPlaybackDto,
+  AvStateDto,
+  AvSyncDto,
   CreatePersonaDto,
   CreateSessionDto,
+  CreativeOperationDto,
+  GestureStepDto,
   HandoffSessionDto,
   InviteParticipantDto,
   ParticipantRefDto,
@@ -11,11 +16,12 @@ import {
   PostMessageDto,
   RecordStepDto,
   ReportFindingDto,
+  SeedAccountsDto,
   SessionRefDto,
   SimulateInterruptionDto,
 } from './dto/live-testing.dto';
 
-// Live agent testing controller (FORGE TQ-001..025, TQ-030). Every route is
+// Live agent testing controller (FORGE TQ-001..030). Every route is
 // user-scoped through req.user.id: a session belongs to exactly one user,
 // and cross-user access is a uniform not-found refusal, never a leak.
 // Collaboration routes extend that wall: an active participant can act
@@ -183,5 +189,60 @@ export class LiveTestingController {
   @Post('sessions/handoff')
   async handoff(@Request() req: any, @Body() dto: HandoffSessionDto) {
     return this.liveTesting.handoffSession(req.user.id, dto);
+  }
+
+  @Get('gestures')
+  async gestures(@Query('platform') platform?: string) {
+    return this.liveTesting.listGestureCatalog(platform);
+  }
+
+  @Get('creative')
+  async creative() {
+    return this.liveTesting.listCreativeCatalog();
+  }
+
+  @Get('av/codecs')
+  async avCodecs(@Query('platform') platform?: string) {
+    return this.liveTesting.listAvCatalog(platform);
+  }
+
+  @Post('sessions/gesture')
+  async gesture(@Request() req: any, @Body() dto: GestureStepDto) {
+    return this.liveTesting.runGesture(req.user.id, dto);
+  }
+
+  @Post('sessions/creative')
+  async creativeOperation(@Request() req: any, @Body() dto: CreativeOperationDto) {
+    return this.liveTesting.applyCreativeOperation(req.user.id, dto);
+  }
+
+  @Post('sessions/av-playback')
+  async avPlayback(@Request() req: any, @Body() dto: AvPlaybackDto) {
+    return this.liveTesting.checkAvPlayback(req.user.id, dto);
+  }
+
+  @Post('sessions/av-sync')
+  async avSync(@Request() req: any, @Body() dto: AvSyncDto) {
+    return this.liveTesting.checkAvSync(req.user.id, dto);
+  }
+
+  @Post('sessions/av-state')
+  async avState(@Request() req: any, @Body() dto: AvStateDto) {
+    return this.liveTesting.runAvTransition(req.user.id, dto);
+  }
+
+  @Post('sessions/data/seed')
+  async seedAccounts(@Request() req: any, @Body() dto: SeedAccountsDto) {
+    return this.liveTesting.seedTestAccounts(req.user.id, dto);
+  }
+
+  @Post('sessions/data/cleanup')
+  async cleanupData(@Request() req: any, @Body() dto: SessionRefDto) {
+    return this.liveTesting.cleanupSessionData(req.user.id, dto);
+  }
+
+  @Get('sessions/data/accounts')
+  async sessionAccounts(@Request() req: any, @Query('sessionId') sessionId?: string) {
+    return this.liveTesting.listSessionAccounts(req.user.id, { sessionId: sessionId ?? '' });
   }
 }
