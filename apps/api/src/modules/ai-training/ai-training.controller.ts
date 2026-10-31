@@ -31,7 +31,7 @@ import {
   ReserveInstancesDto, ReleaseInstancesDto,
   PackageBuildDto, ReimportVerifyDto,
   RegisterProviderDto, GatewayRouteDto, RecordOutcomeDto, FailoverPlanDto,
-  ByokRegisterDto, ByokListDto, PolicyCheckDto, UsageRecordDto,
+  ByokRegisterDto, PolicyCheckDto, UsageRecordDto,
 } from './dto/ai-training.dto';
 
 @Controller('ai-training')
