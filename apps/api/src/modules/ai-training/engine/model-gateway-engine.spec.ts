@@ -271,7 +271,8 @@ describe('model gateway engine 500-case sweeps (mulberry32 seed 42)', () => {
       });
       const healthyCount = ps.filter((p) => health[p.id] < 3).length;
       if (healthyCount === 0) {
-        expect(v.reason).toBe('failover-no-healthy-providers');
+        expect(v.ok).toBe(false);
+        if (!v.ok) expect(v.reason).toBe('failover-no-healthy-providers');
       } else {
         expect(v.ok).toBe(true);
         if (!v.ok) continue;
@@ -298,9 +299,11 @@ describe('model gateway engine 500-case sweeps (mulberry32 seed 42)', () => {
       const clearance = CLASSIFICATION_ORDER[Math.floor(rand() * CLASSIFICATION_ORDER.length)];
       const v = enforceDataPolicy({ dataTags: [tag], providerClearance: clearance });
       if (tag === 'bogus') {
-        expect(v.reason).toBe('policy-unknown-tag:bogus');
+        expect(v.ok).toBe(false);
+        if (!v.ok) expect(v.reason).toBe('policy-unknown-tag:bogus');
       } else if (CLASSIFICATION_ORDER.indexOf(tag) > CLASSIFICATION_ORDER.indexOf(clearance)) {
-        expect(v.reason).toBe('policy-clearance-exceeded:' + tag + '>' + clearance);
+        expect(v.ok).toBe(false);
+        if (!v.ok) expect(v.reason).toBe('policy-clearance-exceeded:' + tag + '>' + clearance);
       } else {
         expect(v.ok).toBe(true);
       }
