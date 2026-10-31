@@ -121,6 +121,11 @@ import { GatewayRouteEvent } from './modules/ai-training/entities/gateway-route-
 import { ProviderHealth } from './modules/ai-training/entities/provider-health.entity';
 import { ByokKey } from './modules/ai-training/entities/byok-key.entity';
 import { ProviderUsageSample } from './modules/ai-training/entities/provider-usage-sample.entity';
+import { GatewayLogEntry } from './modules/ai-training/entities/gateway-log-entry.entity';
+import { RetentionPolicy } from './modules/ai-training/entities/retention-policy.entity';
+import { CapabilityMatrix } from './modules/ai-training/entities/capability-matrix.entity';
+import { ToolCallRecord } from './modules/ai-training/entities/tool-call-record.entity';
+import { OutputSchema } from './modules/ai-training/entities/output-schema.entity';
 import { LoyaltyAccount } from './modules/loyalty/entities/loyalty-account.entity';
 import { LoyaltyEvent } from './modules/loyalty/entities/loyalty-event.entity';
 import { ReferralCode } from './modules/referrals/entities/referral-code.entity';
@@ -222,6 +227,11 @@ import { ReferralsModule } from './modules/referrals/referrals.module';
       ProviderHealth,
       ByokKey,
       ProviderUsageSample,
+      GatewayLogEntry,
+      RetentionPolicy,
+      CapabilityMatrix,
+      ToolCallRecord,
+      OutputSchema,
             LoyaltyAccount,
             LoyaltyEvent,
             ReferralCode,
