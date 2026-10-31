@@ -87,6 +87,7 @@ const seedProviders = async (svc: AiTrainingService, userId: string) => {
 describe('AI-053..056 gateway operations (functional lifecycle)', () => {
   it('logs are redacted before storage, fingerprint idempotent over raw content, and duplicates never double-store', async () => {
     const { svc, logs } = makeService();
+    await seedProviders(svc, 'user-a');
     const first = await svc.recordGatewayLog('user-a', {
       providerId: 'p-cheap', modelId: 'm-v1', prompt: 'hello', response: 'world',
     });
@@ -118,6 +119,7 @@ describe('AI-053..056 gateway operations (functional lifecycle)', () => {
 
   it('retention law: zero-retention workspaces store no content, only redaction evidence, and refusals store nothing', async () => {
     const { svc, logs, retention } = makeService();
+    await seedProviders(svc, 'user-a');
     const set = await svc.setWorkspaceRetention('user-a', { workspaceId: 'ws1', mode: 'zero' });
     expect(set.mode).toBe('zero');
     expect(set.reused).toBe(false);
@@ -307,6 +309,7 @@ describe('AI-053..056 zero trust (adversarial)', () => {
       .rejects.toThrow('retention-policy-not-found:ws1');
     // user-b has its own providers seeded with its own retention truth;
     // user-a zero-retention providers never route for user-b.
+    await svc.registerGatewayProvider('user-b', { providerId: 'p-zero', costPer1kIn: 0.002, costPer1kOut: 0.004, maxTokens: 8000, retentionDays: 0 });
     const zeroForB = await svc.routeWorkspaceRequest('user-b', {
       workspaceId: 'ws1', promptTokens: 100, outputTokens: 50,
     });
