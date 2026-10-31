@@ -76,7 +76,7 @@ function makeService() {
     new RepoDouble<any>() as any,
     new RepoDouble<any>() as any,
     new RepoDouble<any>() as any
-  , new RepoDouble<any>() as any, new RepoDouble<any>() as any, new RepoDouble<any>() as any,);
+  , new RepoDouble<any>() as any, new RepoDouble<any>() as any, new RepoDouble<any>() as any, new RepoDouble<any>() as any, new RepoDouble<any>() as any, new RepoDouble<any>() as any, new RepoDouble<any>() as any, new RepoDouble<any>() as any,);
   return { svc, suites, votes };
 }
 
