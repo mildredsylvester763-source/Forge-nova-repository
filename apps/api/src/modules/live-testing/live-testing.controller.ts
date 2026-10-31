@@ -1,14 +1,16 @@
 import { Body, Controller, Get, Post, Query, Request } from '@nestjs/common';
 import { LiveTestingService } from './live-testing.service';
 import {
+  CreatePersonaDto,
   CreateSessionDto,
+  PersonaIdDto,
   PostMessageDto,
   RecordStepDto,
   ReportFindingDto,
   SessionRefDto,
 } from './dto/live-testing.dto';
 
-// Live agent testing controller (FORGE TQ-001..014, TQ-030). Every route is
+// Live agent testing controller (FORGE TQ-001..021, TQ-030). Every route is
 // user-scoped through req.user.id: a session belongs to exactly one user,
 // and cross-user access is a uniform not-found refusal, never a leak.
 
@@ -31,9 +33,44 @@ export class LiveTestingController {
     return this.liveTesting.getSession(req.user.id, sessionId ?? '');
   }
 
+  @Get('sessions/recording')
+  async recording(@Request() req: any, @Query('sessionId') sessionId?: string) {
+    return this.liveTesting.buildRecording(req.user.id, sessionId ?? '');
+  }
+
+  @Get('sessions/bug-report')
+  async bugReport(@Request() req: any, @Query('sessionId') sessionId?: string) {
+    return this.liveTesting.assembleBugReportForSession(req.user.id, sessionId ?? '');
+  }
+
+  @Get('sessions/convert')
+  async convert(@Request() req: any, @Query('sessionId') sessionId?: string) {
+    return this.liveTesting.convertSessionForUser(req.user.id, sessionId ?? '');
+  }
+
   @Get('personas')
   async personas() {
     return this.liveTesting.listPersonaCatalog();
+  }
+
+  @Get('device-catalog')
+  async deviceCatalog() {
+    return this.liveTesting.listDeviceCatalog();
+  }
+
+  @Get('personas/custom')
+  async customPersonas(@Request() req: any, @Query('workspace') workspace?: string) {
+    return this.liveTesting.listCustomPersonas(req.user.id, workspace);
+  }
+
+  @Post('personas/custom')
+  async createPersona(@Request() req: any, @Body() dto: CreatePersonaDto) {
+    return this.liveTesting.createPersona(req.user.id, dto);
+  }
+
+  @Post('personas/custom/delete')
+  async deletePersona(@Request() req: any, @Body() dto: PersonaIdDto) {
+    return this.liveTesting.deletePersona(req.user.id, dto);
   }
 
   @Post('sessions/start')
