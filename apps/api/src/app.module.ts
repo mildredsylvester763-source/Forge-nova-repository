@@ -142,6 +142,7 @@ import { SessionFinding } from './modules/live-testing/entities/session-finding.
 import { TestPersona } from './modules/live-testing/entities/test-persona.entity';
 import { SessionParticipant } from './modules/live-testing/entities/session-participant.entity';
 import { TestAccount } from './modules/live-testing/entities/test-account.entity';
+import { GeneratedSuite } from './modules/test-generation/entities/generated-suite.entity';
 import { WorkspaceContentItem } from './modules/workspace-retrieval/entities/workspace-content-item.entity';
 import { ResearchReport } from './modules/workspace-retrieval/entities/research-report.entity';
 import { SearchCacheEntry } from './modules/search-integrity/entities/search-cache-entry.entity';
@@ -155,6 +156,7 @@ import { WebSearchModule } from './modules/web-search/web-search.module';
 import { LiveTestingModule } from './modules/live-testing/live-testing.module';
 import { WorkspaceRetrievalModule } from './modules/workspace-retrieval/workspace-retrieval.module';
 import { SearchIntegrityModule } from './modules/search-integrity/search-integrity.module';
+import { TestGenerationModule } from './modules/test-generation/test-generation.module';
 
 @Module({
   imports: [
@@ -267,6 +269,7 @@ import { SearchIntegrityModule } from './modules/search-integrity/search-integri
             TestPersona,
             SessionParticipant,
             TestAccount,
+            GeneratedSuite,
             WorkspaceContentItem,
             ResearchReport,
             SearchCacheEntry,
@@ -326,6 +329,7 @@ import { SearchIntegrityModule } from './modules/search-integrity/search-integri
     LiveTestingModule,
     WorkspaceRetrievalModule,
     SearchIntegrityModule,
+    TestGenerationModule,
   ],
   providers: [
     {
