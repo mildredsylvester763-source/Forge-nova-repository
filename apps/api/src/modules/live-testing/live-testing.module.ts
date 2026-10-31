@@ -6,6 +6,7 @@ import { SessionMessage } from './entities/session-message.entity';
 import { SessionFinding } from './entities/session-finding.entity';
 import { TestPersona } from './entities/test-persona.entity';
 import { SessionParticipant } from './entities/session-participant.entity';
+import { TestAccount } from './entities/test-account.entity';
 import { LiveTestingService } from './live-testing.service';
 import { LiveTestingController } from './live-testing.controller';
 
@@ -18,6 +19,7 @@ import { LiveTestingController } from './live-testing.controller';
       SessionFinding,
       TestPersona,
       SessionParticipant,
+      TestAccount,
     ]),
   ],
   providers: [LiveTestingService],
