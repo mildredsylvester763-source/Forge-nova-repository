@@ -32,6 +32,9 @@ import {
   PackageBuildDto, ReimportVerifyDto,
   RegisterProviderDto, GatewayRouteDto, RecordOutcomeDto, FailoverPlanDto,
   ByokRegisterDto, PolicyCheckDto, UsageRecordDto,
+  LogRecordDto, RetentionSetDto, WorkspaceRouteDto,
+  CapabilityRegisterDto, CapabilityMatchDto, ToolCallRecordDto,
+  OutputSchemaRegisterDto, OutputValidateDto,
 } from './dto/ai-training.dto';
 
 @Controller('ai-training')
@@ -579,5 +582,79 @@ export class AiTrainingController {
   @Get('gateway/accounting')
   buildProviderAccounting(@Request() req: any, @Query('providerId') providerId: string) {
     return this.aiTrainingService.buildProviderAccounting(req.user.id, { providerId });
+  }
+
+  // --- AI-053..056: gateway logging with redaction, zero-retention
+  // routing, capability registry, unified tool-calling + structured
+  // output ---
+  // Static segments declared before :param routes.
+
+  @Post('gateway/logs')
+  @HttpCode(HttpStatus.CREATED)
+  recordGatewayLog(@Request() req: any, @Body() dto: LogRecordDto) {
+    return this.aiTrainingService.recordGatewayLog(req.user.id, dto);
+  }
+
+  @Get('gateway/logs')
+  listGatewayLogs(@Request() req: any, @Query('providerId') providerId?: string) {
+    return this.aiTrainingService.listGatewayLogs(req.user.id, providerId);
+  }
+
+  @Post('gateway/retention/route')
+  routeWorkspaceRequest(@Request() req: any, @Body() dto: WorkspaceRouteDto) {
+    return this.aiTrainingService.routeWorkspaceRequest(req.user.id, dto);
+  }
+
+  @Post('gateway/retention')
+  setWorkspaceRetention(@Request() req: any, @Body() dto: RetentionSetDto) {
+    return this.aiTrainingService.setWorkspaceRetention(req.user.id, dto);
+  }
+
+  @Get('gateway/retention/:workspaceId')
+  getWorkspaceRetention(@Request() req: any, @Param('workspaceId') workspaceId: string) {
+    return this.aiTrainingService.getWorkspaceRetention(req.user.id, workspaceId);
+  }
+
+  @Post('capabilities/register')
+  @HttpCode(HttpStatus.CREATED)
+  registerCapability(@Request() req: any, @Body() dto: CapabilityRegisterDto) {
+    return this.aiTrainingService.registerCapability(req.user.id, dto);
+  }
+
+  @Get('capabilities')
+  listCapabilityMatrices(@Request() req: any, @Query('modelId') modelId?: string) {
+    return this.aiTrainingService.listCapabilityMatrices(req.user.id, modelId);
+  }
+
+  @Post('capabilities/match')
+  matchModelCapabilities(@Request() req: any, @Body() dto: CapabilityMatchDto) {
+    return this.aiTrainingService.matchModelCapabilities(req.user.id, dto);
+  }
+
+  @Post('tools/calls')
+  @HttpCode(HttpStatus.CREATED)
+  recordToolCall(@Request() req: any, @Body() dto: ToolCallRecordDto) {
+    return this.aiTrainingService.recordToolCall(req.user.id, dto);
+  }
+
+  @Get('tools/calls')
+  listToolCalls(@Request() req: any, @Query('providerId') providerId?: string) {
+    return this.aiTrainingService.listToolCalls(req.user.id, providerId);
+  }
+
+  @Post('tools/schemas')
+  @HttpCode(HttpStatus.CREATED)
+  registerOutputSchema(@Request() req: any, @Body() dto: OutputSchemaRegisterDto) {
+    return this.aiTrainingService.registerOutputSchema(req.user.id, dto);
+  }
+
+  @Get('tools/schemas')
+  listOutputSchemas(@Request() req: any, @Query('schemaId') schemaId?: string) {
+    return this.aiTrainingService.listOutputSchemas(req.user.id, schemaId);
+  }
+
+  @Post('tools/validate-output')
+  validateOutputAgainstSchema(@Request() req: any, @Body() dto: OutputValidateDto) {
+    return this.aiTrainingService.validateOutputAgainstSchema(req.user.id, dto);
   }
 }
