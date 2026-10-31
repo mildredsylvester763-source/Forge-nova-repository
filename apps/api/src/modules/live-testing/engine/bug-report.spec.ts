@@ -27,22 +27,22 @@ describe('auto bug report assembly engine', () => {
       { narration: null, status: 'skipped' },
     ]);
     expect(v.ok).toBe(true);
-    expect(v.report.severityLabel).toBe('blocker');
-    expect(v.report.reproLines).toEqual([
+    expect(v.report?.severityLabel).toBe('blocker');
+    expect(v.report?.reproLines).toEqual([
       'Clicking add to cart button',
       'Clicking add to cart button',
       'Total shows 0 after adding two items.',
     ]);
-    expect(v.report.environmentLine).toBe('platform web, environment staging, safe mode on');
-    expect(v.report.dedupeKey).toBe('sess-1|5|cart total wrong');
-    expect(v.report.suspectedCommit).toBe('a1b2c3d');
+    expect(v.report?.environmentLine).toBe('platform web, environment staging, safe mode on');
+    expect(v.report?.dedupeKey).toBe('sess-1|5|cart total wrong');
+    expect(v.report?.suspectedCommit).toBe('a1b2c3d');
   });
 
   it('accepts a bare finding with no steps', () => {
     const v = assembleBugReport('sess-1', sess, { severity: 1, title: 'Typo on homepage', reproSteps: null, evidence: null, suspectedCommit: null }, []);
     expect(v.ok).toBe(true);
-    expect(v.report.severityLabel).toBe('trivial');
-    expect(v.report.reproLines).toHaveLength(0);
+    expect(v.report?.severityLabel).toBe('trivial');
+    expect(v.report?.reproLines).toHaveLength(0);
   });
 
   it('refuses out-of-range severities with the value in the reason', () => {
@@ -64,7 +64,7 @@ describe('auto bug report assembly engine', () => {
     const b = assembleBugReport('s', sess, { severity: 3, title: 'add to cart broken', reproSteps: null, evidence: null, suspectedCommit: null }, []);
     expect(a.ok).toBe(true);
     expect(b.ok).toBe(true);
-    expect(a.report.dedupeKey).toBe(b.report.dedupeKey);
+    expect(a.report?.dedupeKey).toBe(b.report?.dedupeKey);
   });
 
   it('survives a 500-case sweep of severities, titles and step sets', () => {
@@ -84,8 +84,8 @@ describe('auto bug report assembly engine', () => {
       const v = assembleBugReport('sw-' + i, sess, { severity: sev, title, reproSteps: null, evidence: null, suspectedCommit: null }, steps);
       if (sev >= 1 && sev <= 5 && title.length > 0) {
         expect(v.ok).toBe(true);
-        expect(v.report.severityLabel).toBe(SEVERITY_LABELS[sev - 1]);
-        expect(v.report.reproLines).toHaveLength(steps.filter((s) => s.narration !== null).length);
+        expect(v.report?.severityLabel).toBe(SEVERITY_LABELS[sev - 1]);
+        expect(v.report?.reproLines).toHaveLength(steps.filter((s) => s.narration !== null).length);
       } else if (sev < 1 || sev > 5) {
         expect(v.reason).toBe('bugreport-severity-invalid:' + sev);
       } else {
