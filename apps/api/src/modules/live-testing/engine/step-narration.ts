@@ -56,8 +56,7 @@ export function parseGoal(goal: unknown): GoalVerdict {
     return { ok: false, reason: 'goal-empty' };
   }
   const parts = trimmed
-    .split(/\r?\
-|;|\bthen\b/i)
+    .split(/\r?\n|;|\bthen\b/i)
     .map((p) => p.trim())
     .filter((p) => p.length > 0);
   if (parts.length === 0) {
