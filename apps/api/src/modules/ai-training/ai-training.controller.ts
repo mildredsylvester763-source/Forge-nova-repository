@@ -22,6 +22,11 @@ import {
   RegisterModelDto, BuildModelCardDto, PromoteModelDto,
   PlanServingScaleDto, BuildQuantizationDto, BuildBundleDto,
   RoutePromptDto,
+  CacheLookupDto, CacheAdmitDto,
+  StreamOpenDto, StreamChunkDto, StreamLifecycleDto, StreamResumeDto,
+  MetricSampleDto, AggregateMetricsDto,
+  ShadowCreateDto, ShadowPairDto, ShadowEvaluateDto,
+  RollbackDto,
 } from './dto/ai-training.dto';
 
 @Controller('ai-training')
@@ -360,5 +365,102 @@ export class AiTrainingController {
   @Get('serving/routing-decisions')
   listRoutingDecisions(@Request() req: any) {
     return this.aiTrainingService.listRoutingDecisions(req.user.id);
+  }
+
+  // --- Model operations: cache, streaming, metrics, shadow, rollback (AI-040..044) ---
+  // Static segments declared before :param routes.
+
+  @Post('serving/cache/lookup')
+  lookupResponse(@Request() req: any, @Body() dto: CacheLookupDto) {
+    return this.aiTrainingService.lookupResponse(req.user.id, dto);
+  }
+
+  @Post('serving/cache/admit')
+  @HttpCode(HttpStatus.CREATED)
+  admitResponseCache(@Request() req: any, @Body() dto: CacheAdmitDto) {
+    return this.aiTrainingService.admitResponseCache(req.user.id, dto);
+  }
+
+  @Get('serving/cache/entries')
+  listCacheEntries(@Request() req: any, @Query('modelId') modelId?: string) {
+    return this.aiTrainingService.listCacheEntries(req.user.id, modelId);
+  }
+
+  @Post('serving/streams/open')
+  @HttpCode(HttpStatus.CREATED)
+  openStream(@Request() req: any, @Body() dto: StreamOpenDto) {
+    return this.aiTrainingService.openStream(req.user.id, dto);
+  }
+
+  @Post('serving/streams/chunk')
+  appendStreamChunk(@Request() req: any, @Body() dto: StreamChunkDto) {
+    return this.aiTrainingService.appendStreamChunk(req.user.id, dto);
+  }
+
+  @Post('serving/streams/cancel')
+  cancelStream(@Request() req: any, @Body() dto: StreamLifecycleDto) {
+    return this.aiTrainingService.cancelStream(req.user.id, dto);
+  }
+
+  @Post('serving/streams/complete')
+  completeStream(@Request() req: any, @Body() dto: StreamLifecycleDto) {
+    return this.aiTrainingService.completeStream(req.user.id, dto);
+  }
+
+  @Post('serving/streams/resume')
+  resumeStream(@Request() req: any, @Body() dto: StreamResumeDto) {
+    return this.aiTrainingService.resumeStream(req.user.id, dto);
+  }
+
+  @Get('serving/streams/:streamId')
+  getStream(@Request() req: any, @Param('streamId') streamId: string) {
+    return this.aiTrainingService.getStream(req.user.id, streamId);
+  }
+
+  @Post('serving/metrics/samples')
+  @HttpCode(HttpStatus.CREATED)
+  recordServingMetric(@Request() req: any, @Body() dto: MetricSampleDto) {
+    return this.aiTrainingService.recordServingMetric(req.user.id, dto);
+  }
+
+  @Get('serving/metrics/samples')
+  listServingMetricSamples(@Request() req: any, @Query('modelId') modelId?: string) {
+    return this.aiTrainingService.listServingMetricSamples(req.user.id, modelId);
+  }
+
+  @Post('serving/metrics/aggregate')
+  buildServingMetrics(@Request() req: any, @Body() dto: AggregateMetricsDto) {
+    return this.aiTrainingService.buildServingMetrics(req.user.id, dto);
+  }
+
+  @Post('serving/shadow/create')
+  @HttpCode(HttpStatus.CREATED)
+  createShadowDeployment(@Request() req: any, @Body() dto: ShadowCreateDto) {
+    return this.aiTrainingService.createShadowDeployment(req.user.id, dto);
+  }
+
+  @Post('serving/shadow/pair')
+  recordShadowPair(@Request() req: any, @Body() dto: ShadowPairDto) {
+    return this.aiTrainingService.recordShadowPair(req.user.id, dto);
+  }
+
+  @Post('serving/shadow/evaluate')
+  evaluateShadowDeployment(@Request() req: any, @Body() dto: ShadowEvaluateDto) {
+    return this.aiTrainingService.evaluateShadowDeployment(req.user.id, dto);
+  }
+
+  @Get('serving/shadow')
+  listShadowDeployments(@Request() req: any, @Query('championId') championId?: string) {
+    return this.aiTrainingService.listShadowDeployments(req.user.id, championId);
+  }
+
+  @Post('serving/rollback')
+  rollbackModelVersion(@Request() req: any, @Body() dto: RollbackDto) {
+    return this.aiTrainingService.rollbackModelVersion(req.user.id, dto);
+  }
+
+  @Get('serving/rollback-events')
+  listRollbackEvents(@Request() req: any, @Query('modelId') modelId?: string) {
+    return this.aiTrainingService.listRollbackEvents(req.user.id, modelId);
   }
 }
