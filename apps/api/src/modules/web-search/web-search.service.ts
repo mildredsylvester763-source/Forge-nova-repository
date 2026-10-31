@@ -73,7 +73,7 @@ export class WebSearchService {
       }
       const verdict = evaluateDomain(parsed.source.host, policy);
       if (!verdict.ok) {
-        skipped.push({ url, reason: verdict.reason });
+        skipped.push({ url, reason: verdict.reason ?? 'domain-refused' });
         continue;
       }
       allowed.push(r);
