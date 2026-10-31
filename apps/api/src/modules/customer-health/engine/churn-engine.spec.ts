@@ -56,6 +56,7 @@ describe('churn-engine (pinned vectors)', () => {
       spendTrendPercent: 0,
       latestNpsScore: 4,
     });
+    if (!verdict.ok) throw new Error('expected success');
     expect(verdict.value).toEqual({
       band: 'medium',
       points: 45,
@@ -71,6 +72,7 @@ describe('churn-engine (pinned vectors)', () => {
       spendTrendPercent: 0,
       latestNpsScore: null,
     });
+    if (!verdict.ok) throw new Error('expected success');
     expect(verdict.value).toEqual({
       band: 'low',
       points: 20,
@@ -86,6 +88,7 @@ describe('churn-engine (pinned vectors)', () => {
       spendTrendPercent: 0,
       latestNpsScore: null,
     });
+    if (!verdict.ok) throw new Error('expected success');
     expect(verdict.value).toEqual({
       band: 'medium',
       points: 30,
