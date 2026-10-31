@@ -18,6 +18,7 @@ import {
   evaluateShadow,
   planRollback,
   Verdict,
+  StreamState,
   PREFIX_INPUT_COST_FACTOR,
   DEFAULT_MAX_CACHE_ENTRIES,
   STREAM_MAX_CHUNKS,
@@ -430,7 +431,7 @@ describe('model-operations engine 500-case mulberry32(42) sweeps', () => {
     const rnd = mulberry32(42);
     for (let i = 0; i < 500; i++) {
       const n = Math.floor(rnd() * 20);
-      let st = { streamId: 's', status: 'open' as const, chunks: [] as string[] };
+      let st: StreamState = { streamId: 's', status: 'open', chunks: [] };
       for (let c = 0; c < n; c++) {
         const ev = applyStreamEvent(st, { type: 'chunk', index: c, content: 'x' + c });
         expect(ok(ev)).toBe(true);
