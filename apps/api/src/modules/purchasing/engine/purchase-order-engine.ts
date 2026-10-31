@@ -37,17 +37,17 @@ export function validatePoSku(sku: unknown): Verdict<string> {
 }
 
 export function validatePoQty(qty: unknown): Verdict<number> {
-  if (!Number.isInteger(qty) || qty < 1 || qty > PO_MAX_QTY) {
+  if (typeof qty !== 'number' || !Number.isInteger(qty) || qty < 1 || qty > PO_MAX_QTY) {
     return { ok: false, reason: 'po-invalid-qty' };
   }
-  return { ok: true, value: qty as number };
+  return { ok: true, value: qty };
 }
 
 export function validatePoUnitCost(cost: unknown): Verdict<number> {
-  if (!Number.isInteger(cost) || cost < 0 || cost > PO_MAX_UNIT_COST_CENTS) {
+  if (typeof cost !== 'number' || !Number.isInteger(cost) || cost < 0 || cost > PO_MAX_UNIT_COST_CENTS) {
     return { ok: false, reason: 'po-invalid-cost' };
   }
-  return { ok: true, value: cost as number };
+  return { ok: true, value: cost };
 }
 
 export interface PoPlan {
