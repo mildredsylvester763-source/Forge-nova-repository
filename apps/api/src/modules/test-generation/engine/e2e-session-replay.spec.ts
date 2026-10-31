@@ -32,7 +32,7 @@ describe('e2e-session-replay engine (FORGE TQ-033)', () => {
       'checkpoint:after:click:5',
     ]);
     expect(out.assertions?.map((a) => a.kind)).toEqual(['explicit', 'checkpoint']);
-    expect(out.steps?.[3]).toEqual({ action: 'type', target: '#email', value: 'a@b.c' });
+    expect(out.steps?.[2]).toEqual({ action: 'type', target: '#email', value: 'a@b.c' });
   });
 
   it('exposes the action catalog and refuses invalid sessions by name', () => {
