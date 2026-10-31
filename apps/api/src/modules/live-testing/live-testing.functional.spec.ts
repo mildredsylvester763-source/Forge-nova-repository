@@ -13,6 +13,7 @@ import { TestSession } from './entities/test-session.entity';
 import { SessionStep } from './entities/session-step.entity';
 import { SessionMessage } from './entities/session-message.entity';
 import { SessionFinding } from './entities/session-finding.entity';
+import { TestPersona } from './entities/test-persona.entity';
 import { LiveTestingService } from './live-testing.service';
 
 // ---- minimal TypeORM repository double (behavior-true, no DB needed) ----
@@ -63,13 +64,15 @@ function makeService() {
   const steps = new RepoDouble<SessionStep>();
   const messages = new RepoDouble<SessionMessage>();
   const findings = new RepoDouble<SessionFinding>();
+  const personas = new RepoDouble<TestPersona>();
   const svc = new LiveTestingService(
     sessions as any,
     steps as any,
     messages as any,
     findings as any,
+    personas as any,
   );
-  return { svc, sessions, steps, messages, findings };
+  return { svc, sessions, steps, messages, findings, personas };
 }
 
 const USER = '11111111-1111-4111-8111-111111111111';
