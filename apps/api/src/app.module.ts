@@ -108,7 +108,10 @@ import { ReviewRequest } from './modules/reviews/entities/review-request.entity'
 import { ReviewResponse } from './modules/reviews/entities/review-response.entity';
 import { CustomerCredit } from './modules/credit-limits/entities/customer-credit.entity';
 import { CreditEvent } from './modules/credit-limits/entities/credit-event.entity';
+import { PortalSession } from './modules/portal/entities/portal-session.entity';
+import { PortalVisit } from './modules/portal/entities/portal-visit.entity';
 import { CreditLimitsModule } from './modules/credit-limits/credit-limits.module';
+import { PortalModule } from './modules/portal/portal.module';
 
 @Module({
   imports: [
@@ -180,6 +183,8 @@ import { CreditLimitsModule } from './modules/credit-limits/credit-limits.module
             ReviewResponse,
             CustomerCredit,
             CreditEvent,
+            PortalSession,
+            PortalVisit,
           ],
           synchronize: isDevelopment,
           logging: isDevelopment,
@@ -234,6 +239,7 @@ import { CreditLimitsModule } from './modules/credit-limits/credit-limits.module
     BirthdaysModule,
     ReviewsModule,
     CreditLimitsModule,
+    PortalModule,
   ],
   providers: [
     {
