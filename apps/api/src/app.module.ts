@@ -142,6 +142,8 @@ import { SessionFinding } from './modules/live-testing/entities/session-finding.
 import { TestPersona } from './modules/live-testing/entities/test-persona.entity';
 import { SessionParticipant } from './modules/live-testing/entities/session-participant.entity';
 import { TestAccount } from './modules/live-testing/entities/test-account.entity';
+import { WorkspaceContentItem } from './modules/workspace-retrieval/entities/workspace-content-item.entity';
+import { ResearchReport } from './modules/workspace-retrieval/entities/research-report.entity';
 import { AiTrainingModule } from './modules/ai-training/ai-training.module';
 import { EgressUniversalModule } from './modules/egress-universal/egress-universal.module';
 import { SystemModule } from './modules/system/system.module';
@@ -149,6 +151,7 @@ import { LoyaltyModule } from './modules/loyalty/loyalty.module';
 import { ReferralsModule } from './modules/referrals/referrals.module';
 import { WebSearchModule } from './modules/web-search/web-search.module';
 import { LiveTestingModule } from './modules/live-testing/live-testing.module';
+import { WorkspaceRetrievalModule } from './modules/workspace-retrieval/workspace-retrieval.module';
 
 @Module({
   imports: [
@@ -261,6 +264,8 @@ import { LiveTestingModule } from './modules/live-testing/live-testing.module';
             TestPersona,
             SessionParticipant,
             TestAccount,
+            WorkspaceContentItem,
+            ResearchReport,
           ],
           synchronize: isDevelopment,
           logging: isDevelopment,
@@ -314,6 +319,7 @@ import { LiveTestingModule } from './modules/live-testing/live-testing.module';
     ReferralsModule,
     WebSearchModule,
     LiveTestingModule,
+    WorkspaceRetrievalModule,
   ],
   providers: [
     {
