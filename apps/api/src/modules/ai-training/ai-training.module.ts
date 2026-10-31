@@ -30,6 +30,11 @@ import { RollbackEvent } from './entities/rollback-event.entity';
 import { ModelPin } from './entities/model-pin.entity';
 import { InstanceReservation } from './entities/instance-reservation.entity';
 import { OnPremPackage } from './entities/on-prem-package.entity';
+import { GatewayProvider } from './entities/gateway-provider.entity';
+import { GatewayRouteEvent } from './entities/gateway-route-event.entity';
+import { ProviderHealth } from './entities/provider-health.entity';
+import { ByokKey } from './entities/byok-key.entity';
+import { ProviderUsageSample } from './entities/provider-usage-sample.entity';
 
 @Module({
   imports: [
@@ -62,6 +67,11 @@ import { OnPremPackage } from './entities/on-prem-package.entity';
     ModelPin,
     InstanceReservation,
     OnPremPackage,
+      GatewayProvider,
+      GatewayRouteEvent,
+      ProviderHealth,
+      ByokKey,
+      ProviderUsageSample,
     ]),
   ],
   controllers: [AiTrainingController],
