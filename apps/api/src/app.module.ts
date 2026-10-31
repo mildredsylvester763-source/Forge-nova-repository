@@ -116,6 +116,11 @@ import { RollbackEvent } from './modules/ai-training/entities/rollback-event.ent
 import { ModelPin } from './modules/ai-training/entities/model-pin.entity';
 import { InstanceReservation } from './modules/ai-training/entities/instance-reservation.entity';
 import { OnPremPackage } from './modules/ai-training/entities/on-prem-package.entity';
+import { GatewayProvider } from './modules/ai-training/entities/gateway-provider.entity';
+import { GatewayRouteEvent } from './modules/ai-training/entities/gateway-route-event.entity';
+import { ProviderHealth } from './modules/ai-training/entities/provider-health.entity';
+import { ByokKey } from './modules/ai-training/entities/byok-key.entity';
+import { ProviderUsageSample } from './modules/ai-training/entities/provider-usage-sample.entity';
 import { LoyaltyAccount } from './modules/loyalty/entities/loyalty-account.entity';
 import { LoyaltyEvent } from './modules/loyalty/entities/loyalty-event.entity';
 import { ReferralCode } from './modules/referrals/entities/referral-code.entity';
@@ -212,6 +217,11 @@ import { ReferralsModule } from './modules/referrals/referrals.module';
     ModelPin,
     InstanceReservation,
     OnPremPackage,
+      GatewayProvider,
+      GatewayRouteEvent,
+      ProviderHealth,
+      ByokKey,
+      ProviderUsageSample,
             LoyaltyAccount,
             LoyaltyEvent,
             ReferralCode,
