@@ -126,6 +126,10 @@ import { StockLocation } from './modules/warehousing/entities/stock-location.ent
 import { LocationStock } from './modules/warehousing/entities/location-stock.entity';
 import { StockBatch } from './modules/warehousing/entities/stock-batch.entity';
 import { WarehousingModule } from './modules/warehousing/warehousing.module';
+import { ItemCost } from './modules/stock-insights/entities/item-cost.entity';
+import { CostReceipt } from './modules/stock-insights/entities/cost-receipt.entity';
+import { LowStockAlert } from './modules/stock-insights/entities/low-stock-alert.entity';
+import { StockInsightsModule } from './modules/stock-insights/stock-insights.module';
 
 @Module({
   imports: [
@@ -209,6 +213,9 @@ import { WarehousingModule } from './modules/warehousing/warehousing.module';
             StockLocation,
             LocationStock,
             StockBatch,
+            ItemCost,
+            CostReceipt,
+            LowStockAlert,
           ],
           synchronize: isDevelopment,
           logging: isDevelopment,
@@ -268,6 +275,7 @@ import { WarehousingModule } from './modules/warehousing/warehousing.module';
     PurchasingModule,
     CatalogModule,
     WarehousingModule,
+    StockInsightsModule,
   ],
   providers: [
     {
