@@ -2,6 +2,7 @@ import {
   IsArray,
   IsBoolean,
   IsInt,
+  IsNumber,
   IsObject,
   IsOptional,
   IsString,
@@ -151,4 +152,46 @@ export class ReportFindingDto {
   @IsString()
   @MaxLength(40)
   suspectedCommit?: string;
+}
+
+export class CreatePersonaDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  name: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  workspace?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  traits?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  checklist?: string[];
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0.25)
+  @Max(4)
+  paceMultiplier?: number;
+}
+
+export class PersonaIdDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  personaId: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  workspace?: string;
 }
