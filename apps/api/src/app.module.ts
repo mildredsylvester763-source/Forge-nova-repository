@@ -119,6 +119,9 @@ import { Supplier } from './modules/purchasing/entities/supplier.entity';
 import { PurchaseOrder } from './modules/purchasing/entities/purchase-order.entity';
 import { PurchaseOrderLine } from './modules/purchasing/entities/purchase-order-line.entity';
 import { PurchasingModule } from './modules/purchasing/purchasing.module';
+import { CatalogItem } from './modules/catalog/entities/catalog-item.entity';
+import { CatalogVariant } from './modules/catalog/entities/catalog-variant.entity';
+import { CatalogModule } from './modules/catalog/catalog.module';
 
 @Module({
   imports: [
@@ -197,6 +200,8 @@ import { PurchasingModule } from './modules/purchasing/purchasing.module';
             Supplier,
             PurchaseOrder,
             PurchaseOrderLine,
+            CatalogItem,
+            CatalogVariant,
           ],
           synchronize: isDevelopment,
           logging: isDevelopment,
@@ -254,6 +259,7 @@ import { PurchasingModule } from './modules/purchasing/purchasing.module';
     PortalModule,
     CustomerHealthModule,
     PurchasingModule,
+    CatalogModule,
   ],
   providers: [
     {
