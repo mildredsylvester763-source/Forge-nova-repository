@@ -94,6 +94,7 @@ describe('nps-engine (500-case sweep, seed 42)', () => {
       expect(verdict.ok).toBe(valid);
       if (valid) {
         const expected = score >= 9 ? 'promoter' : score >= 7 ? 'passive' : 'detractor';
+        if (!verdict.ok) throw new Error('expected success');
         expect(verdict.value).toBe(expected);
       }
     }
