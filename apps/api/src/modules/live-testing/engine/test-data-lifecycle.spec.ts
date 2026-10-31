@@ -22,7 +22,7 @@ describe('test data lifecycle engine', () => {
   });
 
   it('pins the password shape and the default count', () => {
-    const v = deriveTestAccounts('checkout-flow');
+    const v = deriveTestAccounts('checkout-flow', undefined);
     expect(v.accounts).toHaveLength(3);
     expect(v.accounts?.map((a) => a.role)).toEqual(['shopper', 'editor', 'viewer']);
     for (const a of v.accounts ?? []) {
