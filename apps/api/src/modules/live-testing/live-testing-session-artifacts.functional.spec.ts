@@ -204,7 +204,7 @@ describe('live testing session artifacts and custom personas', () => {
     expect(report?.evidence).toBe('{"shot":"a.png"}');
     const lines = report?.reproLines ?? [];
     expect(lines.length).toBe(2);
-    expect(lines[0]).toBe('Clicking cart icon button');
+    expect(lines[0]).toBe('Clicking cart icon');
     expect(lines[1]).toBe('Total shows 0 after adding two items.');
   });
 
