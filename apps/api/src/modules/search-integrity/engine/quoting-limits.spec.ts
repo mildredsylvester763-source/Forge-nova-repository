@@ -47,9 +47,10 @@ describe('quoting-limits engine (FORGE AI-068)', () => {
       ok: false,
       reason: 'quote-too-long:51:50',
     });
-    const forty = Array(40).fill('w').join(' ');
-    const sixty = Array(61).fill('w').join(' ');
-    expect(planQuotes({ license: 'cc0', quotes: [forty, sixty] })).toMatchObject({
+    const first = Array(40).fill('w').join(' ');
+    const second = Array(30).fill('w').join(' ');
+    const third = Array(31).fill('w').join(' ');
+    expect(planQuotes({ license: 'cc0', quotes: [first, second, third] })).toMatchObject({
       ok: false,
       reason: 'quote-total-exceeded:101:100',
     });
