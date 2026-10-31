@@ -136,7 +136,7 @@ describe('hybrid search engine AI-064', () => {
       const gs: Record<string, number> = {};
       for (const doc of sdocs) {
         let best = 0;
-        for (const link of doc.links) {
+        for (const link of doc.links ?? []) {
           if ((kw[link] ?? 0) > best) {
             best = kw[link];
           }
