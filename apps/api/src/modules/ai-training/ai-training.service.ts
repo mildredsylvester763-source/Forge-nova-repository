@@ -2124,14 +2124,14 @@ export class AiTrainingService {
   // outputs validate against registered schemas with named refusals.
   // Refusals store nothing. Zero-trust scoped throughout.
 
-  async recordGatewayLog(userId: string, dto: LogRecordDto): Promise<GatewayLogEntry> {
+  async recordGatewayLog(userId: string, dto: LogRecordDto): Promise<GatewayLogEntry & { duplicate: boolean }> {
     let persistContent = true;
     if (dto.workspaceId) {
       const policy = await this.retentionPolicyRepository.findOne({
         where: { userId, workspaceId: dto.workspaceId },
       });
       const retention = planLogRetentionEngine({
-        workspaceRetentionMode: policy ? policy.mode : standard,
+        workspaceRetentionMode: policy ? policy.mode : 'standard',
       });
       if (!retention.ok) {
         throw new BadRequestException(retention.reason);
@@ -2179,7 +2179,7 @@ export class AiTrainingService {
     return this.gatewayLogEntryRepository.find({ where, order: { createdAt: 'ASC' } });
   }
 
-  async setWorkspaceRetention(userId: string, dto: RetentionSetDto): Promise<RetentionPolicy> {
+  async setWorkspaceRetention(userId: string, dto: RetentionSetDto): Promise<RetentionPolicy & { reused: boolean }> {
     const verdict = planLogRetentionEngine({ workspaceRetentionMode: dto.mode });
     if (!verdict.ok) {
       throw new BadRequestException(verdict.reason);
@@ -2237,7 +2237,7 @@ export class AiTrainingService {
     return verdict.value;
   }
 
-  async registerCapability(userId: string, dto: CapabilityRegisterDto): Promise<CapabilityMatrix> {
+  async registerCapability(userId: string, dto: CapabilityRegisterDto): Promise<CapabilityMatrix & { duplicate: boolean }> {
     const rows = await this.capabilityMatrixRepository.find({
       where: { userId, modelId: dto.modelId },
       order: { createdAt: 'ASC' },
@@ -2295,7 +2295,7 @@ export class AiTrainingService {
     return verdict.value;
   }
 
-  async recordToolCall(userId: string, dto: ToolCallRecordDto): Promise<ToolCallRecord> {
+  async recordToolCall(userId: string, dto: ToolCallRecordDto): Promise<ToolCallRecord & { duplicate: boolean }> {
     const verdict = normalizeToolCallEngine({
       providerId: dto.providerId,
       name: dto.name,
@@ -2327,7 +2327,7 @@ export class AiTrainingService {
     return this.toolCallRecordRepository.find({ where, order: { createdAt: 'ASC' } });
   }
 
-  async registerOutputSchema(userId: string, dto: OutputSchemaRegisterDto): Promise<OutputSchema> {
+  async registerOutputSchema(userId: string, dto: OutputSchemaRegisterDto): Promise<OutputSchema & { reused: boolean }> {
     const rows = await this.outputSchemaRepository.find({
       where: { userId, schemaId: dto.schemaId },
       order: { createdAt: 'ASC' },
