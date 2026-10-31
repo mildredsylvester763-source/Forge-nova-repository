@@ -218,7 +218,7 @@ export class SearchIntegrityService {
         topics: verdict.topics ?? [],
         sizeKb: verdict.sizeKb ?? 0,
         checksum: verdict.checksum ?? '',
-        articles: verdict.articles ?? [],
+        articles: (verdict.articles ?? []) as KnowledgePack['articles'],
       }),
     );
     return {
