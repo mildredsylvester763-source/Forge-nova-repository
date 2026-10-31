@@ -67,7 +67,6 @@ function seedVariant(
     itemId,
     sku,
     optionValuesJson: '[]',
-    barcode: null,
     unitPriceCents,
     createdAt: new Date(),
   } as CatalogVariant);
