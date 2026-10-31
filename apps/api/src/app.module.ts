@@ -144,6 +144,7 @@ import { SessionParticipant } from './modules/live-testing/entities/session-part
 import { TestAccount } from './modules/live-testing/entities/test-account.entity';
 import { GeneratedSuite } from './modules/test-generation/entities/generated-suite.entity';
 import { OrchestratorPlan } from './modules/orchestrator/entities/orchestrator-plan.entity';
+import { TestQualityGolden } from './modules/test-quality/entities/test-quality-golden.entity';
 import { WorkspaceContentItem } from './modules/workspace-retrieval/entities/workspace-content-item.entity';
 import { ResearchReport } from './modules/workspace-retrieval/entities/research-report.entity';
 import { SearchCacheEntry } from './modules/search-integrity/entities/search-cache-entry.entity';
@@ -159,6 +160,7 @@ import { WorkspaceRetrievalModule } from './modules/workspace-retrieval/workspac
 import { SearchIntegrityModule } from './modules/search-integrity/search-integrity.module';
 import { TestGenerationModule } from './modules/test-generation/test-generation.module';
 import { OrchestratorModule } from './modules/orchestrator/orchestrator.module';
+import { TestQualityModule } from './modules/test-quality/test-quality.module';
 
 @Module({
   imports: [
@@ -273,6 +275,7 @@ import { OrchestratorModule } from './modules/orchestrator/orchestrator.module';
             TestAccount,
             GeneratedSuite,
             OrchestratorPlan,
+            TestQualityGolden,
             WorkspaceContentItem,
             ResearchReport,
             SearchCacheEntry,
@@ -334,6 +337,7 @@ import { OrchestratorModule } from './modules/orchestrator/orchestrator.module';
     SearchIntegrityModule,
     TestGenerationModule,
     OrchestratorModule,
+    TestQualityModule,
   ],
   providers: [
     {
