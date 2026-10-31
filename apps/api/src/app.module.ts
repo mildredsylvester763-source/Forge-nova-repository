@@ -122,6 +122,10 @@ import { PurchasingModule } from './modules/purchasing/purchasing.module';
 import { CatalogItem } from './modules/catalog/entities/catalog-item.entity';
 import { CatalogVariant } from './modules/catalog/entities/catalog-variant.entity';
 import { CatalogModule } from './modules/catalog/catalog.module';
+import { StockLocation } from './modules/warehousing/entities/stock-location.entity';
+import { LocationStock } from './modules/warehousing/entities/location-stock.entity';
+import { StockBatch } from './modules/warehousing/entities/stock-batch.entity';
+import { WarehousingModule } from './modules/warehousing/warehousing.module';
 
 @Module({
   imports: [
@@ -202,6 +206,9 @@ import { CatalogModule } from './modules/catalog/catalog.module';
             PurchaseOrderLine,
             CatalogItem,
             CatalogVariant,
+            StockLocation,
+            LocationStock,
+            StockBatch,
           ],
           synchronize: isDevelopment,
           logging: isDevelopment,
@@ -260,6 +267,7 @@ import { CatalogModule } from './modules/catalog/catalog.module';
     CustomerHealthModule,
     PurchasingModule,
     CatalogModule,
+    WarehousingModule,
   ],
   providers: [
     {
