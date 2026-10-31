@@ -42,6 +42,9 @@ export class SessionStep {
   @Column({ type: 'varchar', length: 16, default: 'recorded' })
   status: string;
 
+  @Column({ type: 'timestamp', nullable: true })
+  occurredAt: Date | null;
+
   @CreateDateColumn()
   createdAt: Date;
 
