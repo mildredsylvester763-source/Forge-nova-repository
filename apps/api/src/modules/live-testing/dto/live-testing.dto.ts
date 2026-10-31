@@ -266,3 +266,132 @@ export class HandoffSessionDto {
   @MaxLength(64)
   device: string;
 }
+
+export class GestureStepDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  sessionId: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(32)
+  gesture: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  contacts?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(1)
+  pressure?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(16)
+  direction?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(100)
+  @Max(10000)
+  durationMs?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  target?: string;
+}
+
+export class CreativeOperationDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  sessionId: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(16)
+  editor: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(32)
+  operation: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  target?: string;
+}
+
+export class AvPlaybackDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  sessionId: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(16)
+  kind: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(16)
+  codec: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  target?: string;
+}
+
+export class AvSyncDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  sessionId: string;
+
+  @IsNumber()
+  driftMs: number;
+}
+
+export class AvStateDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  sessionId: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(16)
+  from: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(16)
+  to: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  target?: string;
+}
+
+export class SeedAccountsDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  sessionId: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(12)
+  count?: number;
+}
