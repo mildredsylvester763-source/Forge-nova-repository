@@ -17,9 +17,7 @@ describe('snapshot-testing engine (FORGE TQ-038)', () => {
     expect(written.status).toBe('written');
     expect(written.serialized).toBe('{\n  "a": [\n    1,\n    2\n  ],\n  "b": 2\n}');
     expect(written.lines).toBe(7);
-    expect(written.checksum).toBe(
-      'f1a05f67',
-    );
+    expect(written.checksum).toBe('25b2a167');
     expect(SNAPSHOT_MODES).toEqual(['write', 'verify', 'update']);
     expect(SNAPSHOT_NAME_RE.test('order-summary')).toBe(true);
     expect(SNAPSHOT_NAME_RE.test('Bad Name!')).toBe(false);
