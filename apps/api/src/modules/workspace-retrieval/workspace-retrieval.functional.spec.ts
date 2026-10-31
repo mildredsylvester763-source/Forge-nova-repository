@@ -7,7 +7,6 @@
 // hybrid lane fusion, MMR re-ranking, and research reports that are only
 // ever recorded with zero-trust isolation between users.
 
-import { BadRequestException } from '@nestjs/common';
 import { WorkspaceContentItem } from './entities/workspace-content-item.entity';
 import { ResearchReport } from './entities/research-report.entity';
 import { WorkspaceRetrievalService } from './workspace-retrieval.service';
