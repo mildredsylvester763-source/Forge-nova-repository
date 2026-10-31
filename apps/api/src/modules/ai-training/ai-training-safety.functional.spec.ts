@@ -81,7 +81,12 @@ function makeService() {
     new RepoDouble<any>() as any,
     new RepoDouble<any>() as any,
     new RepoDouble<any>() as any
-  , new RepoDouble<any>() as any, new RepoDouble<any>() as any, new RepoDouble<any>() as any, new RepoDouble<any>() as any, new RepoDouble<any>() as any, new RepoDouble<any>() as any, new RepoDouble<any>() as any, new RepoDouble<any>() as any,);
+  , new RepoDouble<any>() as any, new RepoDouble<any>() as any, new RepoDouble<any>() as any, new RepoDouble<any>() as any, new RepoDouble<any>() as any, new RepoDouble<any>() as any, new RepoDouble<any>() as any, new RepoDouble<any>() as any,
+    new RepoDouble<any>() as any,
+    new RepoDouble<any>() as any,
+    new RepoDouble<any>() as any,
+    new RepoDouble<any>() as any,
+    new RepoDouble<any>() as any,);
   return { svc, batteries, grades, ballots };
 }
 
