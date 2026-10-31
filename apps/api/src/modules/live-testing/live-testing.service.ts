@@ -6,6 +6,7 @@ import { SessionStep } from './entities/session-step.entity';
 import { SessionMessage } from './entities/session-message.entity';
 import { SessionFinding } from './entities/session-finding.entity';
 import { TestPersona } from './entities/test-persona.entity';
+import { SessionParticipant } from './entities/session-participant.entity';
 import { canHandBack, canTakeControl, isActing, transition } from './engine/session-lifecycle';
 import { checkAction, isPlatform } from './engine/platform-capability';
 import { evaluateStep, isEnvironment, resolveSafeMode } from './engine/safe-mode';
@@ -14,22 +15,35 @@ import { narrate, parseGoal } from './engine/step-narration';
 import { buildTimeline } from './engine/session-recording';
 import { assembleBugReport } from './engine/bug-report';
 import { convertSession } from './engine/test-conversion';
-import { deviceCatalog, networkCatalog } from './engine/device-profile';
+import { DEVICES, deviceCatalog, networkCatalog } from './engine/device-profile';
+import { checkInterruption, interruptionCatalog } from './engine/interruption-scenario';
+import { checkPermissionPlan, permissionCatalog } from './engine/permission-matrix';
+import { checkCapability, checkInvitation, normalizeRole, roleCatalog } from './engine/session-collaboration';
+import { checkHandoff } from './engine/cross-device-handoff';
 import {
+  ApplyPermissionPlanDto,
   CreatePersonaDto,
   CreateSessionDto,
+  HandoffSessionDto,
+  InviteParticipantDto,
+  ParticipantRefDto,
   PersonaIdDto,
   PostMessageDto,
   RecordStepDto,
   ReportFindingDto,
   SessionRefDto,
+  SimulateInterruptionDto,
 } from './dto/live-testing.dto';
 
-// Live agent testing service (FORGE TQ-001..021, TQ-030). Sessions run
+// Live agent testing service (FORGE TQ-001..025, TQ-030). Sessions run
 // against the real app under engine law: every state change is a legal
 // lifecycle transition, every step is evaluated by safe mode FIRST and the
 // platform vocabulary second (security before mechanics), and every
-// refusal is a named BadRequestException, never a silent guess.
+// refusal is a named BadRequestException, never a silent guess. Multi-user
+// sessions resolve capability through the collaboration engine: the owner
+// can do everything, an active participant can do exactly what their role
+// allows, and anyone else gets the same session-not-found wall as a
+// stranger.
 
 @Injectable()
 export class LiveTestingService {
@@ -44,6 +58,8 @@ export class LiveTestingService {
     private readonly findings: Repository<SessionFinding>,
     @InjectRepository(TestPersona)
     private readonly personas: Repository<TestPersona>,
+    @InjectRepository(SessionParticipant)
+    private readonly participants: Repository<SessionParticipant>,
   ) {}
 
   private workspaceOf(dto: { workspace?: string }): string {
@@ -63,6 +79,31 @@ export class LiveTestingService {
     const row = await this.sessions.findOne({ where: { id: sessionId } });
     if (!row || row.userId !== userId) {
       throw new BadRequestException('session-not-found:' + sessionId);
+    }
+    return row;
+  }
+
+  private async requireSessionCapability(
+    userId: string,
+    sessionId: string,
+    capability: string,
+  ): Promise<TestSession> {
+    const row = await this.sessions.findOne({ where: { id: sessionId } });
+    if (!row) {
+      throw new BadRequestException('session-not-found:' + sessionId);
+    }
+    if (row.userId === userId) {
+      return row;
+    }
+    const participant = await this.participants.findOne({
+      where: { sessionId, userId, state: 'active' },
+    });
+    if (!participant) {
+      throw new BadRequestException('session-not-found:' + sessionId);
+    }
+    const verdict = checkCapability({ role: participant.role, capability });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason ?? 'collaboration-refused');
     }
     return row;
   }
@@ -185,7 +226,7 @@ export class LiveTestingService {
 
   async recordStep(userId: string, dto: RecordStepDto) {
     const sessionId = this.sessionIdOf(dto);
-    const row = await this.requireSession(userId, sessionId);
+    const row = await this.requireSessionCapability(userId, sessionId, 'steps');
     if (!isActing(row.status)) {
       throw new BadRequestException('session-not-acting:' + row.status);
     }
@@ -238,7 +279,7 @@ export class LiveTestingService {
 
   async postMessage(userId: string, dto: PostMessageDto) {
     const sessionId = this.sessionIdOf(dto);
-    await this.requireSession(userId, sessionId);
+    await this.requireSessionCapability(userId, sessionId, 'messages');
     const body = typeof dto?.body === 'string' ? dto.body.trim() : '';
     if (body.length === 0) {
       throw new BadRequestException('message-empty');
@@ -250,7 +291,7 @@ export class LiveTestingService {
 
   async reportFinding(userId: string, dto: ReportFindingDto) {
     const sessionId = this.sessionIdOf(dto);
-    await this.requireSession(userId, sessionId);
+    await this.requireSessionCapability(userId, sessionId, 'findings');
     const severity = Number(dto?.severity);
     if (!Number.isInteger(severity) || severity < 1 || severity > 5) {
       throw new BadRequestException('finding-severity-invalid');
@@ -451,5 +492,214 @@ export class LiveTestingService {
 
   async listPersonaCatalog() {
     return { personas: listPersonas() };
+  }
+
+  async listInterruptionCatalog(platform?: string) {
+    return { scenarios: interruptionCatalog(platform) };
+  }
+
+  async simulateInterruption(userId: string, dto: SimulateInterruptionDto) {
+    const sessionId = this.sessionIdOf(dto);
+    const row = await this.requireSession(userId, sessionId);
+    const verdict = checkInterruption({
+      platform: row.platform,
+      scenario: dto?.scenario,
+      status: row.status,
+    });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason ?? 'interruption-refused');
+    }
+    const existing = await this.steps.find({ where: { sessionId } });
+    const seq = existing.length + 1;
+    const step = await this.steps.save(
+      this.steps.create({
+        sessionId,
+        seq,
+        actor: 'ai',
+        action: 'interrupt',
+        target: verdict.scenario ?? '',
+        narration: 'Interrupting the session with ' + (verdict.name ?? ''),
+        payload: {
+          scenario: verdict.scenario,
+          resume: verdict.resume,
+          dataLossRisk: verdict.dataLossRisk,
+          expectation: verdict.expectation,
+        },
+        occurredAt: new Date(),
+      }),
+    );
+    let session = row;
+    if (verdict.resume === 'manual') {
+      const paused = transition(row.status, 'paused');
+      if (paused.ok) {
+        row.status = 'paused';
+        session = await this.sessions.save(row);
+      }
+    }
+    return {
+      step,
+      session,
+      resume: verdict.resume,
+      dataLossRisk: verdict.dataLossRisk,
+      expectation: verdict.expectation,
+    };
+  }
+
+  async listPermissionCatalog(platform?: string) {
+    return { permissions: permissionCatalog(platform) };
+  }
+
+  async applyPermissionPlan(userId: string, dto: ApplyPermissionPlanDto) {
+    const sessionId = this.sessionIdOf(dto);
+    const row = await this.requireSessionCapability(userId, sessionId, 'control');
+    if (row.status === 'completed' || row.status === 'failed' || row.status === 'cancelled') {
+      throw new BadRequestException('permission-session-terminal:' + row.status);
+    }
+    const verdict = checkPermissionPlan({ platform: row.platform, grants: dto?.grants });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason ?? 'permission-refused');
+    }
+    const existing = await this.steps.find({ where: { sessionId } });
+    const seq = existing.length + 1;
+    const step = await this.steps.save(
+      this.steps.create({
+        sessionId,
+        seq,
+        actor: 'ai',
+        action: 'permissions',
+        target: null,
+        narration: 'Applying permission plan with ' + (verdict.plan?.length ?? 0) + ' entries',
+        payload: { grants: verdict.plan ?? [] },
+        occurredAt: new Date(),
+      }),
+    );
+    return { step, granted: verdict.granted, denied: verdict.denied, ask: verdict.ask };
+  }
+
+  async listRoleCatalog() {
+    return { roles: roleCatalog() };
+  }
+
+  async inviteParticipant(userId: string, dto: InviteParticipantDto) {
+    const sessionId = this.sessionIdOf(dto);
+    const row = await this.requireSession(userId, sessionId);
+    if (row.status === 'completed' || row.status === 'failed' || row.status === 'cancelled') {
+      throw new BadRequestException('collaboration-session-terminal:' + row.status);
+    }
+    const role = normalizeRole(dto?.role ?? 'tester');
+    if (!role) {
+      throw new BadRequestException('collaboration-role-unknown:' + String(dto?.role));
+    }
+    const invitee = typeof dto?.userId === 'string' ? dto.userId.trim() : '';
+    if (invitee.length === 0) {
+      throw new BadRequestException('collaboration-user-missing');
+    }
+    if (invitee === userId) {
+      throw new BadRequestException('collaboration-self-invite');
+    }
+    const existing = await this.participants.findOne({
+      where: { sessionId, userId: invitee },
+    });
+    if (existing) {
+      throw new BadRequestException('collaboration-participant-duplicate:' + invitee);
+    }
+    return this.participants.save(
+      this.participants.create({
+        sessionId,
+        userId: invitee,
+        role,
+        state: 'invited',
+        invitedBy: userId,
+      }),
+    );
+  }
+
+  async acceptInvitation(userId: string, dto: ParticipantRefDto) {
+    const row = await this.participants.findOne({ where: { id: dto?.participantId ?? '' } });
+    if (!row || row.userId !== userId) {
+      throw new BadRequestException('participant-not-found:' + String(dto?.participantId));
+    }
+    const verdict = checkInvitation({ state: row.state, action: 'accept' });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason ?? 'collaboration-refused');
+    }
+    row.state = 'active';
+    return this.participants.save(row);
+  }
+
+  async revokeParticipant(userId: string, dto: ParticipantRefDto) {
+    const row = await this.participants.findOne({ where: { id: dto?.participantId ?? '' } });
+    if (!row) {
+      throw new BadRequestException('participant-not-found:' + String(dto?.participantId));
+    }
+    await this.requireSession(userId, row.sessionId);
+    const verdict = checkInvitation({ state: row.state, action: 'revoke' });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason ?? 'collaboration-refused');
+    }
+    await this.participants.remove(row);
+    return { deleted: true, id: row.id };
+  }
+
+  async listParticipants(userId: string, dto: SessionRefDto) {
+    const sessionId = this.sessionIdOf(dto);
+    await this.requireSession(userId, sessionId);
+    const rows = await this.participants.find({ where: { sessionId } });
+    return { sessionId, participants: rows };
+  }
+
+  async handoffSession(userId: string, dto: HandoffSessionDto) {
+    const sessionId = this.sessionIdOf(dto);
+    const row = await this.requireSession(userId, sessionId);
+    const profileRaw: unknown = row.deviceProfile;
+    const profile =
+      profileRaw !== null && typeof profileRaw === 'object' && !Array.isArray(profileRaw)
+        ? (profileRaw as Record<string, unknown>)
+        : {};
+    const fromDevice =
+      typeof profile.device === 'string' && profile.device.trim().length > 0
+        ? profile.device
+        : null;
+    const verdict = checkHandoff({
+      status: row.status,
+      fromDevice,
+      toDevice: dto?.device,
+      platform: row.platform,
+    });
+    if (!verdict.ok || !verdict.handoff) {
+      throw new BadRequestException(verdict.reason ?? 'handoff-refused');
+    }
+    const spec = DEVICES.find((d) => d.device === verdict.handoff?.toDevice);
+    if (!spec) {
+      throw new BadRequestException('handoff-device-unknown:' + String(dto?.device));
+    }
+    row.deviceProfile = {
+      device: spec.device,
+      platform: spec.platform,
+      lowEnd: spec.lowEnd,
+      cpuThrottle: spec.cpuThrottle,
+    };
+    const session = await this.sessions.save(row);
+    const existing = await this.steps.find({ where: { sessionId } });
+    const seq = existing.length + 1;
+    const step = await this.steps.save(
+      this.steps.create({
+        sessionId,
+        seq,
+        actor: 'ai',
+        action: 'handoff',
+        target: verdict.handoff.toDevice,
+        narration: verdict.handoff.platformChanged
+          ? 'Handing off to ' + verdict.handoff.toDevice + ' across platforms'
+          : 'Handing off to ' + verdict.handoff.toDevice,
+        payload: {
+          fromDevice: verdict.handoff.fromDevice,
+          platformChanged: verdict.handoff.platformChanged,
+          resume: verdict.handoff.resume,
+        },
+        occurredAt: new Date(),
+      }),
+    );
+    return { session, step, handoff: verdict.handoff };
   }
 }
