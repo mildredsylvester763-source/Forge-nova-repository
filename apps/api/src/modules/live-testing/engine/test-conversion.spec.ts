@@ -19,25 +19,25 @@ describe('one-click test conversion engine', () => {
       { seq: 3, action: 'click', target: 'checkout button' },
     ]);
     expect(v.ok).toBe(true);
-    expect(v.testCase.name).toBe('purchase a red mug');
-    expect(v.testCase.caseSteps).toEqual([
+    expect(v.testCase?.name).toBe('purchase a red mug');
+    expect(v.testCase?.caseSteps).toEqual([
       { id: 'case-1', line: 'navigate shop page' },
       { id: 'case-2', line: 'click red mug card' },
       { id: 'case-3', line: 'click checkout button' },
     ]);
-    expect(v.testCase.expected).toBe('All 3 steps replay in the same order');
+    expect(v.testCase?.expected).toBe('All 3 steps replay in the same order');
   });
 
   it('falls back to the session title, then to a fixed name', () => {
     let v = convertSession({ title: 'Buy the mug', tasks: null }, [{ seq: 1, action: 'navigate', target: null }]);
-    expect(v.testCase.name).toBe('Buy the mug');
+    expect(v.testCase?.name).toBe('Buy the mug');
     v = convertSession({ title: null, tasks: null }, [{ seq: 1, action: 'navigate', target: null }]);
-    expect(v.testCase.name).toBe('Converted session');
+    expect(v.testCase?.name).toBe('Converted session');
   });
 
   it('drops the target clause when a step has no target', () => {
     const v = convertSession({ title: 'X', tasks: [] }, [{ seq: 1, action: 'navigate', target: null }]);
-    expect(v.testCase.caseSteps[0].line).toBe('navigate');
+    expect(v.testCase?.caseSteps[0].line).toBe('navigate');
   });
 
   it('refuses empty sessions and broken step sequences with named reasons', () => {
@@ -81,8 +81,8 @@ describe('one-click test conversion engine', () => {
           expect(v.reason).toBe('conversion-step-action-empty:' + last.seq);
         } else {
           expect(v.ok).toBe(true);
-          expect(v.testCase.caseSteps).toHaveLength(steps.length);
-          v.testCase.caseSteps.forEach((s, idx) => expect(s.id).toBe('case-' + (idx + 1)));
+          expect(v.testCase?.caseSteps).toHaveLength(steps.length);
+          v.testCase?.caseSteps.forEach((s, idx) => expect(s.id).toBe('case-' + (idx + 1)));
         }
       }
     }
