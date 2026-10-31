@@ -115,6 +115,10 @@ import { ChurnAssessment } from './modules/customer-health/entities/churn-assess
 import { CreditLimitsModule } from './modules/credit-limits/credit-limits.module';
 import { PortalModule } from './modules/portal/portal.module';
 import { CustomerHealthModule } from './modules/customer-health/customer-health.module';
+import { Supplier } from './modules/purchasing/entities/supplier.entity';
+import { PurchaseOrder } from './modules/purchasing/entities/purchase-order.entity';
+import { PurchaseOrderLine } from './modules/purchasing/entities/purchase-order-line.entity';
+import { PurchasingModule } from './modules/purchasing/purchasing.module';
 
 @Module({
   imports: [
@@ -190,6 +194,9 @@ import { CustomerHealthModule } from './modules/customer-health/customer-health.
             PortalVisit,
             NpsResponse,
             ChurnAssessment,
+            Supplier,
+            PurchaseOrder,
+            PurchaseOrderLine,
           ],
           synchronize: isDevelopment,
           logging: isDevelopment,
@@ -246,6 +253,7 @@ import { CustomerHealthModule } from './modules/customer-health/customer-health.
     CreditLimitsModule,
     PortalModule,
     CustomerHealthModule,
+    PurchasingModule,
   ],
   providers: [
     {
