@@ -15,6 +15,7 @@ import { SessionMessage } from './entities/session-message.entity';
 import { SessionFinding } from './entities/session-finding.entity';
 import { TestPersona } from './entities/test-persona.entity';
 import { SessionParticipant } from './entities/session-participant.entity';
+import { TestAccount } from './entities/test-account.entity';
 import { LiveTestingService } from './live-testing.service';
 
 // ---- minimal TypeORM repository double (behavior-true, no DB needed) ----
@@ -67,6 +68,7 @@ function makeService() {
   const findings = new RepoDouble<SessionFinding>();
   const personas = new RepoDouble<TestPersona>();
   const participants = new RepoDouble<SessionParticipant>();
+  const accounts = new RepoDouble<TestAccount>();
   const svc = new LiveTestingService(
     sessions as any,
     steps as any,
@@ -74,8 +76,9 @@ function makeService() {
     findings as any,
     personas as any,
     participants as any,
+    accounts as any,
   );
-  return { svc, sessions, steps, messages, findings, personas, participants };
+  return { svc, sessions, steps, messages, findings, personas, participants, accounts };
 }
 
 const USER = '11111111-1111-4111-8111-111111111111';
