@@ -11,7 +11,8 @@ import {
 // The marketing overlay for a catalog item when it is listed to external
 // sales channels. Mirrors the fields shops sync to Meta catalogs: title,
 // description, image, link, brand, availability, condition, currency and
-// the optional gtin and mpn identifiers.
+// the optional gtin and mpn identifiers. The optional identifiers are
+// nullable because a full overlay re-save can clear them.
 @Entity('feed_listings')
 @Index(['userId', 'itemId'], { unique: true })
 export class FeedListing {
@@ -37,7 +38,7 @@ export class FeedListing {
   productUrl: string;
 
   @Column({ type: 'text', nullable: true })
-  brand?: string;
+  brand: string | null;
 
   @Column({ type: 'text', default: 'in stock' })
   availability: string;
@@ -49,10 +50,10 @@ export class FeedListing {
   currency: string;
 
   @Column({ type: 'text', nullable: true })
-  gtin?: string;
+  gtin: string | null;
 
   @Column({ type: 'text', nullable: true })
-  mpn?: string;
+  mpn: string | null;
 
   @CreateDateColumn()
   createdAt: Date;
