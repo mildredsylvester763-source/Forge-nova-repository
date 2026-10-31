@@ -36,7 +36,7 @@ describe('location-engine (pinned vectors)', () => {
 
   it('plans receipts and refuses broken states and oversized totals', () => {
     expect(planStockReceipt(10, 5)).toEqual({ ok: true, value: 15 });
-    expect(planStockReceipt(9999999, 1)).toEqual({ ok: false, reason: 'location-stock-too-large' });
+    expect(planStockReceipt(10000000, 1)).toEqual({ ok: false, reason: 'location-stock-too-large' });
     expect(planStockReceipt(-1, 5)).toEqual({ ok: false, reason: 'location-invalid-state' });
     expect(planStockReceipt(10, 0)).toEqual({ ok: false, reason: 'location-invalid-qty' });
   });
@@ -44,7 +44,7 @@ describe('location-engine (pinned vectors)', () => {
   it('plans transfers and refuses uncovered sources by name', () => {
     expect(planStockTransfer(10, 3, 4)).toEqual({ ok: true, value: { newFrom: 6, newTo: 7 } });
     expect(planStockTransfer(3, 3, 4)).toEqual({ ok: false, reason: 'location-insufficient-stock' });
-    expect(planStockTransfer(10, 9999999, 1)).toEqual({ ok: false, reason: 'location-stock-too-large' });
+    expect(planStockTransfer(10, 10000000, 1)).toEqual({ ok: false, reason: 'location-stock-too-large' });
     expect(planStockTransfer(10, 3, 0)).toEqual({ ok: false, reason: 'location-invalid-qty' });
   });
 });
