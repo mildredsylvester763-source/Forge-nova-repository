@@ -1224,3 +1224,138 @@ export class ReimportVerifyDto {
   @IsBoolean()
   licenseAccepted: boolean;
 }
+
+// ============================================================================
+// AI-048..052: provider-neutral model gateway, circuit health, BYOK keys,
+// per-request data policy, honest per-provider accounting
+// ============================================================================
+
+export class RegisterProviderDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  providerId: string;
+
+  @IsNumber({ maxDecimalPlaces: 6 })
+  @Min(0)
+  costPer1kIn: number;
+
+  @IsNumber({ maxDecimalPlaces: 6 })
+  @Min(0)
+  costPer1kOut: number;
+
+  @IsInt()
+  @Min(1)
+  @Max(1000000)
+  maxTokens: number;
+
+  /** Omit for active; inactive providers are refused by name at the engine. */
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
+}
+
+export class GatewayRouteDto {
+  @IsInt()
+  @Min(0)
+  promptTokens: number;
+
+  @IsInt()
+  @Min(0)
+  outputTokens: number;
+}
+
+export class RecordOutcomeDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  providerId: string;
+
+  /** Failures count toward the circuit breaker; success resets it. */
+  @IsBoolean()
+  ok: boolean;
+}
+
+export class FailoverPlanDto {
+  @IsInt()
+  @Min(0)
+  promptTokens: number;
+
+  @IsInt()
+  @Min(0)
+  outputTokens: number;
+
+  @IsInt()
+  @Min(1)
+  @Max(10)
+  maxRetriesPerProvider: number;
+}
+
+export class ByokRegisterDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  workspaceId: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  providerId: string;
+
+  /** The raw key is validated and fingerprinted, then NEVER stored (AI-050). */
+  @IsString()
+  @MinLength(8)
+  @MaxLength(512)
+  apiKey: string;
+}
+
+export class ByokListDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  workspaceId: string;
+}
+
+export class PolicyCheckDto {
+  @IsArray()
+  @ArrayMaxSize(32)
+  @IsString({ each: true })
+  dataTags: string[];
+
+  /** public | internal | confidential | restricted — unknown is refused by name. */
+  @IsString()
+  @MinLength(1)
+  @MaxLength(32)
+  providerClearance: string;
+}
+
+export class UsageRecordDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  providerId: string;
+
+  @IsInt()
+  @Min(0)
+  tokensIn: number;
+
+  @IsInt()
+  @Min(0)
+  tokensOut: number;
+
+  @IsNumber({ maxDecimalPlaces: 6 })
+  @Min(0)
+  latencyMs: number;
+
+  /** Omit for success; false counts in the honest error rate. */
+  @IsOptional()
+  @IsBoolean()
+  ok?: boolean;
+}
+
+export class AccountingDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  providerId: string;
+}
