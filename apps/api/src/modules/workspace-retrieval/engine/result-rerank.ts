@@ -57,7 +57,7 @@ export function rerank(input: {
     return { ok: false, reason: 'rerank-lambda-invalid' };
   }
   const depth = input?.depth === undefined || input?.depth === null ? 10 : input.depth;
-  if (!Number.isInteger(depth) || depth < 1 || depth > 50) {
+  if (typeof depth !== 'number' || !Number.isInteger(depth) || depth < 1 || depth > 50) {
     return { ok: false, reason: 'rerank-depth-invalid' };
   }
   const seen = new Set<string>();
