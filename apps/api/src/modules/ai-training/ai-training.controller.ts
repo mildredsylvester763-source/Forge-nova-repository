@@ -27,6 +27,9 @@ import {
   MetricSampleDto, AggregateMetricsDto,
   ShadowCreateDto, ShadowPairDto, ShadowEvaluateDto,
   RollbackDto,
+  PinModelDto, UnpinModelDto, ResolveModelDto,
+  ReserveInstancesDto, ReleaseInstancesDto,
+  PackageBuildDto, ReimportVerifyDto,
 } from './dto/ai-training.dto';
 
 @Controller('ai-training')
@@ -462,5 +465,57 @@ export class AiTrainingController {
   @Get('serving/rollback-events')
   listRollbackEvents(@Request() req: any, @Query('modelId') modelId?: string) {
     return this.aiTrainingService.listRollbackEvents(req.user.id, modelId);
+  }
+
+  // --- Workspace model access: pins, dedicated instances, on-prem packages (AI-045..047) ---
+
+  @Post('access/pins')
+  pinWorkspaceModel(@Request() req: any, @Body() dto: PinModelDto) {
+    return this.aiTrainingService.pinWorkspaceModel(req.user.id, dto);
+  }
+
+  @Post('access/pins/unpin')
+  unpinWorkspaceModel(@Request() req: any, @Body() dto: UnpinModelDto) {
+    return this.aiTrainingService.unpinWorkspaceModel(req.user.id, dto);
+  }
+
+  @Get('access/pins')
+  listWorkspacePins(@Request() req: any, @Query('workspaceId') workspaceId?: string) {
+    return this.aiTrainingService.listWorkspacePins(req.user.id, workspaceId);
+  }
+
+  @Post('access/resolve')
+  resolveWorkspaceModel(@Request() req: any, @Body() dto: ResolveModelDto) {
+    return this.aiTrainingService.resolveWorkspaceModel(req.user.id, dto);
+  }
+
+  @Post('instances/reserve')
+  reserveDedicatedInstances(@Request() req: any, @Body() dto: ReserveInstancesDto) {
+    return this.aiTrainingService.reserveDedicatedInstances(req.user.id, dto);
+  }
+
+  @Post('instances/release')
+  releaseDedicatedInstances(@Request() req: any, @Body() dto: ReleaseInstancesDto) {
+    return this.aiTrainingService.releaseDedicatedInstances(req.user.id, dto);
+  }
+
+  @Get('instances')
+  listInstanceReservations(@Request() req: any, @Query('modelId') modelId?: string) {
+    return this.aiTrainingService.listInstanceReservations(req.user.id, modelId);
+  }
+
+  @Post('packages/build')
+  buildOnPremPackageForModel(@Request() req: any, @Body() dto: PackageBuildDto) {
+    return this.aiTrainingService.buildOnPremPackageForModel(req.user.id, dto);
+  }
+
+  @Post('packages/verify-reimport')
+  verifyOnPremReimport(@Request() req: any, @Body() dto: ReimportVerifyDto) {
+    return this.aiTrainingService.verifyOnPremReimport(req.user.id, dto);
+  }
+
+  @Get('packages')
+  listOnPremPackages(@Request() req: any, @Query('modelId') modelId?: string) {
+    return this.aiTrainingService.listOnPremPackages(req.user.id, modelId);
   }
 }
