@@ -103,10 +103,11 @@ describe('search-integrity functional lifecycle (FORGE AI-067..072)', () => {
     expect(() =>
       svc.planQuotes({ license: 'cc0', quotes: ['a', 'b', 'c', 'd'] } as any),
     ).toThrow('quote-count-exceeded:4:3');
-    const forty = Array(40).fill('w').join(' ');
-    const sixtyOne = Array(61).fill('w').join(' ');
+    const first = Array(40).fill('w').join(' ');
+    const second = Array(30).fill('w').join(' ');
+    const third = Array(31).fill('w').join(' ');
     expect(() =>
-      svc.planQuotes({ license: 'cc0', quotes: [forty, sixtyOne] } as any),
+      svc.planQuotes({ license: 'cc0', quotes: [first, second, third] } as any),
     ).toThrow('quote-total-exceeded:101:100');
   });
 
