@@ -28,7 +28,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { Experiment } from './modules/experiments/entities/experiment.entity';
 import { ExperimentsModule } from './modules/experiments/experiments.module';
 import { Pattern } from './modules/patterns/entities/pattern.entity';
-import { PatternsModule } from './modules/patterns/entities/patterns.module';
+import { PatternsModule } from './modules/patterns/patterns.module';
 import { PortfolioModule } from './modules/portfolio/portfolio.module';
 import { TimeBudget } from './modules/time-budget/entities/time-budget.entity';
 import { TimeBudgetModule } from './modules/time-budget/time-budget.module';
