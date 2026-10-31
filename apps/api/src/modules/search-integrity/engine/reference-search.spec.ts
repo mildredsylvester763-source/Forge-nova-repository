@@ -1,4 +1,4 @@
-import { searchReferences, REFERENCE_MEDIA, REFERENCE_LICENSES } from './reference-search';
+import { searchReferences, REFERENCE_MEDIA, REFERENCE_LICENSES, REFERENCE_CATALOG } from './reference-search';
 
 function mulberry32(seed: number) {
   let a = seed >>> 0;
@@ -64,7 +64,7 @@ describe('reference-search engine (FORGE AI-069)', () => {
       const medium = rand() < 0.4 ? pick(REFERENCE_MEDIA) : undefined;
       const license = rand() < 0.4 ? pick(REFERENCE_LICENSES) : undefined;
       const got = searchReferences({ query, medium, license });
-      const want = (REFERENCE_CATALOG as any).filter((a: any) => {
+      const want = REFERENCE_CATALOG.filter((a) => {
         if (medium && a.medium !== medium) return false;
         if (license && a.license !== license) return false;
         const hay = (a.title + ' ' + a.tags.join(' ')).toLowerCase();
