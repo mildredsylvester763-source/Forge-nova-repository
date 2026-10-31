@@ -88,7 +88,7 @@ describe('AI-053..056 gateway operations (functional lifecycle)', () => {
   it('logs are redacted before storage, fingerprint idempotent over raw content, and duplicates never double-store', async () => {
     const { svc, logs } = makeService();
     await seedProviders(svc, 'user-a');
-    const first = await svc.recordGatewayLog('user-a', {
+    const first: any = await svc.recordGatewayLog('user-a', {
       providerId: 'p-cheap', modelId: 'm-v1', prompt: 'hello', response: 'world',
     });
     expect(first.fingerprint).toBe('log_5aae836e');
@@ -96,7 +96,7 @@ describe('AI-053..056 gateway operations (functional lifecycle)', () => {
     expect(first.entry.prompt).toBe('hello');
     expect(first.entry.redactionCount).toBe(0);
     expect(logs.rows.length).toBe(1);
-    const second = await svc.recordGatewayLog('user-a', {
+    const second: any = await svc.recordGatewayLog('user-a', {
       providerId: 'p-cheap', modelId: 'm-v1', prompt: 'hello', response: 'world',
     });
     expect(second.duplicate).toBe(true);
@@ -120,11 +120,11 @@ describe('AI-053..056 gateway operations (functional lifecycle)', () => {
   it('retention law: zero-retention workspaces store no content, only redaction evidence, and refusals store nothing', async () => {
     const { svc, logs, retention } = makeService();
     await seedProviders(svc, 'user-a');
-    const set = await svc.setWorkspaceRetention('user-a', { workspaceId: 'ws1', mode: 'zero' });
+    const set: any = await svc.setWorkspaceRetention('user-a', { workspaceId: 'ws1', mode: 'zero' });
     expect(set.mode).toBe('zero');
     expect(set.reused).toBe(false);
     expect(retention.rows.length).toBe(1);
-    const again = await svc.setWorkspaceRetention('user-a', { workspaceId: 'ws1', mode: 'zero' });
+    const again: any = await svc.setWorkspaceRetention('user-a', { workspaceId: 'ws1', mode: 'zero' });
     expect(again.reused).toBe(true);
     expect(retention.rows.length).toBe(1);
     const fetched = await svc.getWorkspaceRetention('user-a', 'ws1');
@@ -178,7 +178,7 @@ describe('AI-053..056 gateway operations (functional lifecycle)', () => {
 
   it('capability registry: registration is idempotent per model and matching routes to the cheapest capable active model', async () => {
     const { svc, capabilities } = makeService();
-    const reg = await svc.registerCapability('user-a', {
+    const reg: any = await svc.registerCapability('user-a', {
       modelId: 'm-code', capabilities: ['tools', 'code'], maxContextTokens: 8192,
       costPer1kIn: 0.001, costPer1kOut: 0.002, active: true,
     });
@@ -186,7 +186,7 @@ describe('AI-053..056 gateway operations (functional lifecycle)', () => {
     expect(reg.duplicate).toBe(false);
     expect(reg.matrix.capabilities).toEqual(['code', 'tools']);
     expect(capabilities.rows.length).toBe(1);
-    const dup = await svc.registerCapability('user-a', {
+    const dup: any = await svc.registerCapability('user-a', {
       modelId: 'm-code', capabilities: ['code', 'tools'], maxContextTokens: 8192,
       costPer1kIn: 0.001, costPer1kOut: 0.002, active: true,
     });
@@ -214,14 +214,14 @@ describe('AI-053..056 gateway operations (functional lifecycle)', () => {
 
   it('tool calls normalize to one shape, ignore argument key order, and unknown providers are refused by name', async () => {
     const { svc, toolCalls } = makeService();
-    const a = await svc.recordToolCall('user-a', {
+    const a: any = await svc.recordToolCall('user-a', {
       providerId: 'openai', name: 'get_weather', argumentsJson: JSON.stringify({ city: 'lagos', unit: 'c' }),
     });
     expect(a.fingerprint).toBe('tc_81603f96');
     expect(a.duplicate).toBe(false);
     expect(a.call.args).toEqual({ city: 'lagos', unit: 'c' });
     expect(toolCalls.rows.length).toBe(1);
-    const permuted = await svc.recordToolCall('user-a', {
+    const permuted: any = await svc.recordToolCall('user-a', {
       providerId: 'openai', name: 'get_weather', argumentsJson: JSON.stringify({ unit: 'c', city: 'lagos' }),
     });
     expect(permuted.duplicate).toBe(true);
@@ -242,7 +242,7 @@ describe('AI-053..056 gateway operations (functional lifecycle)', () => {
 
   it('output schemas are idempotent per id and validation names the exact failing field', async () => {
     const { svc, schemas } = makeService();
-    const reg = await svc.registerOutputSchema('user-a', {
+    const reg: any = await svc.registerOutputSchema('user-a', {
       schemaId: 'weather-output',
       fields: [
         { name: 'summary', type: 'string', required: true },
@@ -253,7 +253,7 @@ describe('AI-053..056 gateway operations (functional lifecycle)', () => {
     expect(reg.fingerprint).toBe('os_60d0eeb2');
     expect(reg.reused).toBe(false);
     expect(schemas.rows.length).toBe(1);
-    const dup = await svc.registerOutputSchema('user-a', {
+    const dup: any = await svc.registerOutputSchema('user-a', {
       schemaId: 'weather-output',
       fields: [
         { name: 'verdict', type: 'string', required: true, enumValues: ['pass', 'fail'] },
