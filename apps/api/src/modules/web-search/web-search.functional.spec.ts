@@ -50,7 +50,7 @@ class RepoDouble<T extends { id?: string }> {
     if (opts.order?.createdAt === 'ASC') {
       out = out
         .slice()
-        .sort((a: any, b: any) => String(a.createdAt).localeCompare(String(a.createdAt)));
+        .sort((a: any, b: any) => String(a.createdAt).localeCompare(String(b.createdAt)));
     }
     return out;
   }
