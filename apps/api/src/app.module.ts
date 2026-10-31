@@ -110,8 +110,11 @@ import { CustomerCredit } from './modules/credit-limits/entities/customer-credit
 import { CreditEvent } from './modules/credit-limits/entities/credit-event.entity';
 import { PortalSession } from './modules/portal/entities/portal-session.entity';
 import { PortalVisit } from './modules/portal/entities/portal-visit.entity';
+import { NpsResponse } from './modules/customer-health/entities/nps-response.entity';
+import { ChurnAssessment } from './modules/customer-health/entities/churn-assessment.entity';
 import { CreditLimitsModule } from './modules/credit-limits/credit-limits.module';
 import { PortalModule } from './modules/portal/portal.module';
+import { CustomerHealthModule } from './modules/customer-health/customer-health.module';
 
 @Module({
   imports: [
@@ -185,6 +188,8 @@ import { PortalModule } from './modules/portal/portal.module';
             CreditEvent,
             PortalSession,
             PortalVisit,
+            NpsResponse,
+            ChurnAssessment,
           ],
           synchronize: isDevelopment,
           logging: isDevelopment,
@@ -240,6 +245,7 @@ import { PortalModule } from './modules/portal/portal.module';
     ReviewsModule,
     CreditLimitsModule,
     PortalModule,
+    CustomerHealthModule,
   ],
   providers: [
     {
