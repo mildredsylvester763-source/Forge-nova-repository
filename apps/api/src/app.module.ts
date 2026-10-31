@@ -135,12 +135,17 @@ import { WebSearchQuery } from './modules/web-search/entities/web-search-query.e
 import { DomainRule } from './modules/web-search/entities/domain-rule.entity';
 import { FetchedPage } from './modules/web-search/entities/fetched-page.entity';
 import { CitationRecord } from './modules/web-search/entities/citation-record.entity';
+import { TestSession } from './modules/live-testing/entities/test-session.entity';
+import { SessionStep } from './modules/live-testing/entities/session-step.entity';
+import { SessionMessage } from './modules/live-testing/entities/session-message.entity';
+import { SessionFinding } from './modules/live-testing/entities/session-finding.entity';
 import { AiTrainingModule } from './modules/ai-training/ai-training.module';
 import { EgressUniversalModule } from './modules/egress-universal/egress-universal.module';
 import { SystemModule } from './modules/system/system.module';
 import { LoyaltyModule } from './modules/loyalty/loyalty.module';
 import { ReferralsModule } from './modules/referrals/referrals.module';
 import { WebSearchModule } from './modules/web-search/web-search.module';
+import { LiveTestingModule } from './modules/live-testing/live-testing.module';
 
 @Module({
   imports: [
@@ -246,6 +251,10 @@ import { WebSearchModule } from './modules/web-search/web-search.module';
             DomainRule,
             FetchedPage,
             CitationRecord,
+            TestSession,
+            SessionStep,
+            SessionMessage,
+            SessionFinding,
           ],
           synchronize: isDevelopment,
           logging: isDevelopment,
@@ -298,6 +307,7 @@ import { WebSearchModule } from './modules/web-search/web-search.module';
     LoyaltyModule,
     ReferralsModule,
     WebSearchModule,
+    LiveTestingModule,
   ],
   providers: [
     {
