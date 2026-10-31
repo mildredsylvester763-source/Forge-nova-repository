@@ -7,6 +7,7 @@ import { SessionMessage } from './entities/session-message.entity';
 import { SessionFinding } from './entities/session-finding.entity';
 import { TestPersona } from './entities/test-persona.entity';
 import { SessionParticipant } from './entities/session-participant.entity';
+import { TestAccount } from './entities/test-account.entity';
 import { canHandBack, canTakeControl, isActing, transition } from './engine/session-lifecycle';
 import { checkAction, isPlatform } from './engine/platform-capability';
 import { evaluateStep, isEnvironment, resolveSafeMode } from './engine/safe-mode';
@@ -20,10 +21,19 @@ import { checkInterruption, interruptionCatalog } from './engine/interruption-sc
 import { checkPermissionPlan, permissionCatalog } from './engine/permission-matrix';
 import { checkCapability, checkInvitation, normalizeRole, roleCatalog } from './engine/session-collaboration';
 import { checkHandoff } from './engine/cross-device-handoff';
+import { checkGesture, gestureCatalog } from './engine/gesture-mechanics';
+import { applyCreativeOperation, creativeEditorCatalog } from './engine/creative-tool-operation';
+import { avCatalog, avStateTransition, checkPlayback, checkSync } from './engine/av-output';
+import { checkCleanup, deriveTestAccounts } from './engine/test-data-lifecycle';
 import {
   ApplyPermissionPlanDto,
+  AvPlaybackDto,
+  AvStateDto,
+  AvSyncDto,
   CreatePersonaDto,
   CreateSessionDto,
+  CreativeOperationDto,
+  GestureStepDto,
   HandoffSessionDto,
   InviteParticipantDto,
   ParticipantRefDto,
@@ -31,11 +41,12 @@ import {
   PostMessageDto,
   RecordStepDto,
   ReportFindingDto,
+  SeedAccountsDto,
   SessionRefDto,
   SimulateInterruptionDto,
 } from './dto/live-testing.dto';
 
-// Live agent testing service (FORGE TQ-001..025, TQ-030). Sessions run
+// Live agent testing service (FORGE TQ-001..030). Sessions run
 // against the real app under engine law: every state change is a legal
 // lifecycle transition, every step is evaluated by safe mode FIRST and the
 // platform vocabulary second (security before mechanics), and every
@@ -60,6 +71,8 @@ export class LiveTestingService {
     private readonly personas: Repository<TestPersona>,
     @InjectRepository(SessionParticipant)
     private readonly participants: Repository<SessionParticipant>,
+    @InjectRepository(TestAccount)
+    private readonly accounts: Repository<TestAccount>,
   ) {}
 
   private workspaceOf(dto: { workspace?: string }): string {
@@ -701,5 +714,280 @@ export class LiveTestingService {
       }),
     );
     return { session, step, handoff: verdict.handoff };
+  }
+
+  async listGestureCatalog(platform?: string) {
+    return { gestures: gestureCatalog(platform) };
+  }
+
+  async listCreativeCatalog() {
+    return { editors: creativeEditorCatalog() };
+  }
+
+  async listAvCatalog(platform?: string) {
+    return avCatalog(platform);
+  }
+
+  async runGesture(userId: string, dto: GestureStepDto) {
+    const sessionId = this.sessionIdOf(dto);
+    const row = await this.requireSessionCapability(userId, sessionId, 'steps');
+    if (!isActing(row.status)) {
+      throw new BadRequestException('session-not-acting:' + row.status);
+    }
+    const verdict = checkGesture({
+      platform: row.platform,
+      gesture: dto?.gesture,
+      contacts: dto?.contacts,
+      pressure: dto?.pressure,
+      direction: dto?.direction,
+      durationMs: dto?.durationMs,
+    });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason ?? 'gesture-refused');
+    }
+    const existing = await this.steps.find({ where: { sessionId } });
+    const seq = existing.length + 1;
+    return this.steps.save(
+      this.steps.create({
+        sessionId,
+        seq,
+        actor: 'ai',
+        action: verdict.gesture ?? '',
+        target: dto?.target ?? null,
+        narration: verdict.text ?? '',
+        payload: {
+          contacts: verdict.contacts,
+          direction: verdict.direction,
+          pressure: verdict.pressure,
+          durationMs: verdict.durationMs,
+        },
+        occurredAt: new Date(),
+      }),
+    );
+  }
+
+  async applyCreativeOperation(userId: string, dto: CreativeOperationDto) {
+    const sessionId = this.sessionIdOf(dto);
+    const row = await this.requireSessionCapability(userId, sessionId, 'steps');
+    if (!isActing(row.status)) {
+      throw new BadRequestException('session-not-acting:' + row.status);
+    }
+    const editor = typeof dto?.editor === 'string' ? dto.editor.trim().toLowerCase() : '';
+    const existingSteps = await this.steps.find({ where: { sessionId } });
+    let state: unknown = null;
+    for (let i = existingSteps.length - 1; i >= 0; i--) {
+      const step = existingSteps[i];
+      if (step.action !== 'creative') {
+        continue;
+      }
+      const payloadRaw: unknown = step.payload;
+      if (payloadRaw === null || typeof payloadRaw !== 'object' || Array.isArray(payloadRaw)) {
+        continue;
+      }
+      const payload = payloadRaw as Record<string, unknown>;
+      if (payload.editor === editor && payload.state !== undefined && payload.state !== null) {
+        state = payload.state;
+        break;
+      }
+    }
+    const verdict = applyCreativeOperation(state, { editor, operation: dto?.operation });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason ?? 'creative-refused');
+    }
+    const seq = existingSteps.length + 1;
+    const step = await this.steps.save(
+      this.steps.create({
+        sessionId,
+        seq,
+        actor: 'ai',
+        action: 'creative',
+        target: dto?.target ?? null,
+        narration: verdict.text ?? '',
+        payload: { editor: verdict.editor, operation: verdict.operation, state: verdict.state },
+        occurredAt: new Date(),
+      }),
+    );
+    return { step, state: verdict.state };
+  }
+
+  async checkAvPlayback(userId: string, dto: AvPlaybackDto) {
+    const sessionId = this.sessionIdOf(dto);
+    const row = await this.requireSessionCapability(userId, sessionId, 'steps');
+    if (!isActing(row.status)) {
+      throw new BadRequestException('session-not-acting:' + row.status);
+    }
+    const verdict = checkPlayback({ platform: row.platform, kind: dto?.kind, codec: dto?.codec });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason ?? 'av-refused');
+    }
+    const existing = await this.steps.find({ where: { sessionId } });
+    const seq = existing.length + 1;
+    const step = await this.steps.save(
+      this.steps.create({
+        sessionId,
+        seq,
+        actor: 'ai',
+        action: 'av-check',
+        target: dto?.target ?? null,
+        narration: verdict.text ?? '',
+        payload: { kind: verdict.kind, codec: verdict.codec, plays: verdict.plays },
+        occurredAt: new Date(),
+      }),
+    );
+    return { step, plays: verdict.plays };
+  }
+
+  async checkAvSync(userId: string, dto: AvSyncDto) {
+    const sessionId = this.sessionIdOf(dto);
+    const row = await this.requireSessionCapability(userId, sessionId, 'steps');
+    if (!isActing(row.status)) {
+      throw new BadRequestException('session-not-acting:' + row.status);
+    }
+    const verdict = checkSync(dto?.driftMs);
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason ?? 'av-refused');
+    }
+    const existing = await this.steps.find({ where: { sessionId } });
+    const seq = existing.length + 1;
+    const step = await this.steps.save(
+      this.steps.create({
+        sessionId,
+        seq,
+        actor: 'ai',
+        action: 'av-sync',
+        target: null,
+        narration: verdict.text ?? '',
+        payload: { driftMs: verdict.driftMs, sync: verdict.sync },
+        occurredAt: new Date(),
+      }),
+    );
+    return { step, sync: verdict.sync, driftMs: verdict.driftMs };
+  }
+
+  async runAvTransition(userId: string, dto: AvStateDto) {
+    const sessionId = this.sessionIdOf(dto);
+    const row = await this.requireSessionCapability(userId, sessionId, 'steps');
+    if (!isActing(row.status)) {
+      throw new BadRequestException('session-not-acting:' + row.status);
+    }
+    const verdict = avStateTransition(dto?.from, dto?.to);
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason ?? 'av-refused');
+    }
+    const existing = await this.steps.find({ where: { sessionId } });
+    const seq = existing.length + 1;
+    const step = await this.steps.save(
+      this.steps.create({
+        sessionId,
+        seq,
+        actor: 'ai',
+        action: 'av-state',
+        target: dto?.target ?? null,
+        narration: verdict.text ?? '',
+        payload: { from: verdict.from, to: verdict.to },
+        occurredAt: new Date(),
+      }),
+    );
+    return { step, from: verdict.from, to: verdict.to };
+  }
+
+  async seedTestAccounts(userId: string, dto: SeedAccountsDto) {
+    const sessionId = this.sessionIdOf(dto);
+    const row = await this.requireSessionCapability(userId, sessionId, 'steps');
+    if (!isActing(row.status)) {
+      throw new BadRequestException('session-not-acting:' + row.status);
+    }
+    const existingRows = await this.accounts.find({ where: { sessionId } });
+    if (existingRows.length > 0) {
+      throw new BadRequestException('data-already-seeded:' + existingRows.length);
+    }
+    const verdict = deriveTestAccounts(sessionId, dto?.count);
+    if (!verdict.ok || !verdict.accounts) {
+      throw new BadRequestException(verdict.reason ?? 'data-refused');
+    }
+    const saved: TestAccount[] = [];
+    for (const account of verdict.accounts) {
+      saved.push(
+        await this.accounts.save(
+          this.accounts.create({
+            sessionId,
+            username: account.username,
+            email: account.email,
+            password: account.password,
+            role: account.role,
+            state: 'created',
+          }),
+        ),
+      );
+    }
+    const existing = await this.steps.find({ where: { sessionId } });
+    const seq = existing.length + 1;
+    const step = await this.steps.save(
+      this.steps.create({
+        sessionId,
+        seq,
+        actor: 'ai',
+        action: 'seed',
+        target: null,
+        narration: 'Seeding ' + verdict.accounts.length + ' test accounts',
+        payload: { count: verdict.accounts.length, domain: verdict.domain },
+        occurredAt: new Date(),
+      }),
+    );
+    return { step, accounts: saved };
+  }
+
+  async cleanupSessionData(userId: string, dto: SessionRefDto) {
+    const sessionId = this.sessionIdOf(dto);
+    const row = await this.requireSession(userId, sessionId);
+    const rows = await this.accounts.find({ where: { sessionId } });
+    const pendingRows = rows.filter((r) => r.state !== 'cleaned');
+    const verdict = checkCleanup({
+      status: row.status,
+      pending: pendingRows.length,
+      cleaned: rows.length - pendingRows.length,
+    });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason ?? 'data-refused');
+    }
+    if (verdict.alreadyClean) {
+      return { sessionId, alreadyClean: true, plan: [], pending: 0 };
+    }
+    const cleanedIds: string[] = [];
+    for (const pendingRow of pendingRows) {
+      pendingRow.state = 'cleaned';
+      pendingRow.cleanedAt = new Date();
+      await this.accounts.save(pendingRow);
+      cleanedIds.push(pendingRow.id);
+    }
+    const existing = await this.steps.find({ where: { sessionId } });
+    const seq = existing.length + 1;
+    const step = await this.steps.save(
+      this.steps.create({
+        sessionId,
+        seq,
+        actor: 'ai',
+        action: 'cleanup',
+        target: null,
+        narration: 'Cleaning up ' + pendingRows.length + ' seeded test accounts',
+        payload: { plan: verdict.plan ?? [], pending: pendingRows.length },
+        occurredAt: new Date(),
+      }),
+    );
+    return {
+      sessionId,
+      alreadyClean: false,
+      plan: verdict.plan ?? [],
+      pending: pendingRows.length,
+      cleanedIds,
+      step,
+    };
+  }
+
+  async listSessionAccounts(userId: string, dto: SessionRefDto) {
+    const sessionId = this.sessionIdOf(dto);
+    await this.requireSessionCapability(userId, sessionId, 'steps');
+    const rows = await this.accounts.find({ where: { sessionId } });
+    return { sessionId, accounts: rows };
   }
 }
