@@ -418,6 +418,15 @@ describe('live testing quality surfaces: gestures, creative tools, AV and test d
     expect((defaulted as any).accounts[2].role).toBe('viewer');
     expect(
       await reasonOf(() => ctx.service.seedTestAccounts(USER, { sessionId: freshId, count: 13 })),
+    ).toBe('data-already-seeded:3');
+    const countSession = await ctx.service.createSession(USER, {
+      platform: 'web',
+      goal: 'count refusal',
+    });
+    const countId = (countSession as any).id;
+    await ctx.service.startSession(USER, { sessionId: countId });
+    expect(
+      await reasonOf(() => ctx.service.seedTestAccounts(USER, { sessionId: countId, count: 13 })),
     ).toBe('data-count-invalid:13');
     expect(
       await reasonOf(() => ctx.service.seedTestAccounts(OTHER, { sessionId: freshId })),
@@ -455,7 +464,7 @@ describe('live testing quality surfaces: gestures, creative tools, AV and test d
     const again = await ctx.service.cleanupSessionData(USER, { sessionId: sid });
     expect((again as any).alreadyClean).toBe(true);
     expect((again as any).plan).toEqual([]);
-    expect(ctx.steps.rows.length).toBe(3);
+    expect(ctx.steps.rows.length).toBe(2);
   });
 
   it('keeps seeded test data invisible and untouchable across users', async () => {
