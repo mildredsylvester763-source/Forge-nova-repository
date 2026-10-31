@@ -146,6 +146,10 @@ import { SeoAudit } from './modules/content/entities/seo-audit.entity';
 import { ContentModule } from './modules/content/content.module';
 import { SocialPost } from './modules/social/entities/social-post.entity';
 import { SocialModule } from './modules/social/social.module';
+import { FeedListing } from './modules/commerce-feeds/entities/feed-listing.entity';
+import { ShopSyncPlan } from './modules/commerce-feeds/entities/shop-sync-plan.entity';
+import { ShoppingFeedRecord } from './modules/commerce-feeds/entities/shopping-feed-record.entity';
+import { CommerceFeedsModule } from './modules/commerce-feeds/commerce-feeds.module';
 
 @Module({
   imports: [
@@ -244,6 +248,9 @@ import { SocialModule } from './modules/social/social.module';
             NewsletterIssue,
             SeoAudit,
             SocialPost,
+            FeedListing,
+            ShopSyncPlan,
+            ShoppingFeedRecord,
           ],
           synchronize: isDevelopment,
           logging: isDevelopment,
@@ -308,6 +315,7 @@ import { SocialModule } from './modules/social/social.module';
     WebsitesModule,
     ContentModule,
     SocialModule,
+    CommerceFeedsModule,
   ],
   providers: [
     {
