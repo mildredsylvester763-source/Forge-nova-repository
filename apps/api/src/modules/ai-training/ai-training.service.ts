@@ -104,6 +104,17 @@ import {
   ByokKeyMeta,
   UsageSample,
 } from './engine/model-gateway-engine';
+
+import {
+  admitGatewayLog as admitGatewayLogEngine,
+  planLogRetention as planLogRetentionEngine,
+  planZeroRetentionRoute as planZeroRetentionRouteEngine,
+  registerCapabilityMatrix as registerCapabilityMatrixEngine,
+  matchModelCapabilities as matchModelCapabilitiesEngine,
+  normalizeToolCall as normalizeToolCallEngine,
+  registerOutputSchema as registerOutputSchemaEngine,
+  validateStructuredOutput as validateStructuredOutputEngine,
+} from './engine/model-gateway-ops-engine';
 import { EvalSuiteVersion } from './entities/eval-suite-version.entity';
 import { PanelVoteRecord } from './entities/panel-vote.entity';
 import { SafetyProbeBattery } from './entities/safety-battery.entity';
@@ -134,6 +145,11 @@ import { GatewayRouteEvent } from './entities/gateway-route-event.entity';
 import { ProviderHealth } from './entities/provider-health.entity';
 import { ByokKey } from './entities/byok-key.entity';
 import { ProviderUsageSample } from './entities/provider-usage-sample.entity';
+import { GatewayLogEntry } from './entities/gateway-log-entry.entity';
+import { RetentionPolicy } from './entities/retention-policy.entity';
+import { CapabilityMatrix } from './entities/capability-matrix.entity';
+import { ToolCallRecord } from './entities/tool-call-record.entity';
+import { OutputSchema } from './entities/output-schema.entity';
 import { TrainingRun } from './entities/training-run.entity';
 import {
   CreateTrainingAssetDto, BuildDatasetDto,
@@ -158,6 +174,9 @@ import {
   PackageBuildDto, ReimportVerifyDto,
   RegisterProviderDto, GatewayRouteDto, RecordOutcomeDto, FailoverPlanDto,
   ByokRegisterDto, PolicyCheckDto, UsageRecordDto, AccountingDto,
+  LogRecordDto, RetentionSetDto, WorkspaceRouteDto,
+  CapabilityRegisterDto, CapabilityMatchDto, ToolCallRecordDto,
+  OutputSchemaRegisterDto, OutputValidateDto,
 } from './dto/ai-training.dto';
 
 @Injectable()
@@ -229,6 +248,16 @@ export class AiTrainingService {
     private readonly byokKeyRepository: Repository<ByokKey>,
     @InjectRepository(ProviderUsageSample)
     private readonly providerUsageSampleRepository: Repository<ProviderUsageSample>,
+    @InjectRepository(GatewayLogEntry)
+    private readonly gatewayLogEntryRepository: Repository<GatewayLogEntry>,
+    @InjectRepository(RetentionPolicy)
+    private readonly retentionPolicyRepository: Repository<RetentionPolicy>,
+    @InjectRepository(CapabilityMatrix)
+    private readonly capabilityMatrixRepository: Repository<CapabilityMatrix>,
+    @InjectRepository(ToolCallRecord)
+    private readonly toolCallRecordRepository: Repository<ToolCallRecord>,
+    @InjectRepository(OutputSchema)
+    private readonly outputSchemaRepository: Repository<OutputSchema>,
   ) {}
 
   // --- 1. Admit an asset through the gates (AI-002/003/004) ---
@@ -1876,6 +1905,7 @@ export class AiTrainingService {
       costPer1kOut: dto.costPer1kOut,
       maxTokens: dto.maxTokens,
       active: dto.active ?? true,
+      ...(dto.retentionDays !== undefined ? { retentionDays: dto.retentionDays } : {}),
     };
     const fingerprint = byokFingerprint(
       dto.providerId,
@@ -2080,6 +2110,275 @@ export class AiTrainingService {
     if (!verdict.ok) {
       throw new BadRequestException(verdict.reason);
     }
+    return verdict.value;
+  }
+
+  // --- AI-053..056: gateway logging with redaction, zero-retention
+  // routing, capability registry, unified tool-calling + structured
+  // output ---
+  // Every log is redacted BEFORE it is stored and is fingerprint-
+  // idempotent over raw content; a zero-retention workspace stores no
+  // prompt/response content at all — the redaction evidence is kept,
+  // the words are not. Capability routing matches registered matrices,
+  // never marketing names. Tool calls normalize to one shape and
+  // outputs validate against registered schemas with named refusals.
+  // Refusals store nothing. Zero-trust scoped throughout.
+
+  async recordGatewayLog(userId: string, dto: LogRecordDto): Promise<GatewayLogEntry> {
+    let persistContent = true;
+    if (dto.workspaceId) {
+      const policy = await this.retentionPolicyRepository.findOne({
+        where: { userId, workspaceId: dto.workspaceId },
+      });
+      const retention = planLogRetentionEngine({
+        workspaceRetentionMode: policy ? policy.mode : standard,
+      });
+      if (!retention.ok) {
+        throw new BadRequestException(retention.reason);
+      }
+      persistContent = retention.value.persistContent;
+    }
+    const entries = await this.gatewayLogEntryRepository.find({
+      where: { userId, modelId: dto.modelId },
+      order: { createdAt: 'ASC' },
+    });
+    const verdict = admitGatewayLogEngine({
+      providerId: dto.providerId,
+      modelId: dto.modelId,
+      prompt: dto.prompt,
+      response: dto.response,
+      persistContent,
+      now: Date.now(),
+      entries: entries.map((r) => r.entry),
+    });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason);
+    }
+    const result = verdict.value;
+    if (result.duplicate) {
+      const existing = entries.find((r) => r.fingerprint === result.admitted.id);
+      if (existing) {
+        return { ...existing, duplicate: true };
+      }
+    }
+    const row = this.gatewayLogEntryRepository.create({
+      userId,
+      providerId: dto.providerId,
+      modelId: dto.modelId,
+      fingerprint: result.admitted.id,
+      entry: result.admitted,
+      redactionCount: result.admitted.redactionCount,
+    });
+    const saved = await this.gatewayLogEntryRepository.save(row);
+    return { ...saved, duplicate: false };
+  }
+
+  async listGatewayLogs(userId: string, providerId?: string): Promise<GatewayLogEntry[]> {
+    const where: any = { userId };
+    if (providerId) where.providerId = providerId;
+    return this.gatewayLogEntryRepository.find({ where, order: { createdAt: 'ASC' } });
+  }
+
+  async setWorkspaceRetention(userId: string, dto: RetentionSetDto): Promise<RetentionPolicy> {
+    const verdict = planLogRetentionEngine({ workspaceRetentionMode: dto.mode });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason);
+    }
+    const existing = await this.retentionPolicyRepository.findOne({
+      where: { userId, workspaceId: dto.workspaceId },
+    });
+    if (existing) {
+      if (existing.mode === dto.mode) {
+        return { ...existing, reused: true };
+      }
+      existing.mode = dto.mode;
+      existing.policy = verdict.value;
+      const saved = await this.retentionPolicyRepository.save(existing);
+      return { ...saved, reused: false };
+    }
+    const row = this.retentionPolicyRepository.create({
+      userId,
+      workspaceId: dto.workspaceId,
+      mode: dto.mode,
+      policy: verdict.value,
+    });
+    const saved = await this.retentionPolicyRepository.save(row);
+    return { ...saved, reused: false };
+  }
+
+  async getWorkspaceRetention(userId: string, workspaceId: string): Promise<RetentionPolicy> {
+    const row = await this.retentionPolicyRepository.findOne({
+      where: { userId, workspaceId },
+    });
+    if (!row) {
+      throw new NotFoundException('retention-policy-not-found:' + workspaceId);
+    }
+    return row;
+  }
+
+  async routeWorkspaceRequest(userId: string, dto: WorkspaceRouteDto) {
+    const policy = await this.retentionPolicyRepository.findOne({
+      where: { userId, workspaceId: dto.workspaceId },
+    });
+    const providers = await this.gatewayProviderRepository.find({
+      where: { userId },
+      order: { createdAt: 'ASC' },
+    });
+    const verdict = planZeroRetentionRouteEngine({
+      providers: providers.map((r) => r.provider),
+      workspaceRetentionMode: policy ? policy.mode : 'standard',
+      promptTokens: dto.promptTokens,
+      outputTokens: dto.outputTokens,
+    });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason);
+    }
+    // Retention routing is stateless: the decision, not a row.
+    return verdict.value;
+  }
+
+  async registerCapability(userId: string, dto: CapabilityRegisterDto): Promise<CapabilityMatrix> {
+    const rows = await this.capabilityMatrixRepository.find({
+      where: { userId, modelId: dto.modelId },
+      order: { createdAt: 'ASC' },
+    });
+    const verdict = registerCapabilityMatrixEngine({
+      modelId: dto.modelId,
+      capabilities: dto.capabilities,
+      maxContextTokens: dto.maxContextTokens,
+      costPer1kIn: dto.costPer1kIn,
+      costPer1kOut: dto.costPer1kOut,
+      active: dto.active ?? true,
+      existing: rows.map((r) => r.matrix),
+    });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason);
+    }
+    const result = verdict.value;
+    if (result.duplicate) {
+      const existing = rows.find((r) => r.fingerprint === result.fingerprint);
+      if (existing) {
+        return { ...existing, duplicate: true };
+      }
+    }
+    const row = this.capabilityMatrixRepository.create({
+      userId,
+      modelId: dto.modelId,
+      fingerprint: result.fingerprint,
+      matrix: result.matrix,
+    });
+    const saved = await this.capabilityMatrixRepository.save(row);
+    return { ...saved, duplicate: false };
+  }
+
+  async listCapabilityMatrices(userId: string, modelId?: string): Promise<CapabilityMatrix[]> {
+    const where: any = { userId };
+    if (modelId) where.modelId = modelId;
+    return this.capabilityMatrixRepository.find({ where, order: { createdAt: 'ASC' } });
+  }
+
+  async matchModelCapabilities(userId: string, dto: CapabilityMatchDto) {
+    const rows = await this.capabilityMatrixRepository.find({
+      where: { userId },
+      order: { createdAt: 'ASC' },
+    });
+    const verdict = matchModelCapabilitiesEngine({
+      required: dto.required,
+      models: rows.map((r) => r.matrix),
+      promptTokens: dto.promptTokens,
+      outputTokens: dto.outputTokens,
+    });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason);
+    }
+    // Capability matching is stateless: a decision, not a row.
+    return verdict.value;
+  }
+
+  async recordToolCall(userId: string, dto: ToolCallRecordDto): Promise<ToolCallRecord> {
+    const verdict = normalizeToolCallEngine({
+      providerId: dto.providerId,
+      name: dto.name,
+      argumentsJson: dto.argumentsJson,
+      args: dto.args,
+    });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason);
+    }
+    const existing = await this.toolCallRecordRepository.findOne({
+      where: { userId, fingerprint: verdict.value.fingerprint },
+    });
+    if (existing) {
+      return { ...existing, duplicate: true };
+    }
+    const row = this.toolCallRecordRepository.create({
+      userId,
+      providerId: dto.providerId,
+      fingerprint: verdict.value.fingerprint,
+      call: verdict.value,
+    });
+    const saved = await this.toolCallRecordRepository.save(row);
+    return { ...saved, duplicate: false };
+  }
+
+  async listToolCalls(userId: string, providerId?: string): Promise<ToolCallRecord[]> {
+    const where: any = { userId };
+    if (providerId) where.providerId = providerId;
+    return this.toolCallRecordRepository.find({ where, order: { createdAt: 'ASC' } });
+  }
+
+  async registerOutputSchema(userId: string, dto: OutputSchemaRegisterDto): Promise<OutputSchema> {
+    const rows = await this.outputSchemaRepository.find({
+      where: { userId, schemaId: dto.schemaId },
+      order: { createdAt: 'ASC' },
+    });
+    const verdict = registerOutputSchemaEngine({
+      schemaId: dto.schemaId,
+      fields: dto.fields,
+      existing: rows.map((r) => r.schema),
+    });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason);
+    }
+    const result = verdict.value;
+    if (result.duplicate) {
+      const existing = rows.find((r) => r.fingerprint === result.fingerprint);
+      if (existing) {
+        return { ...existing, reused: true };
+      }
+    }
+    const row = this.outputSchemaRepository.create({
+      userId,
+      schemaId: dto.schemaId,
+      fingerprint: result.fingerprint,
+      schema: result.schema,
+    });
+    const saved = await this.outputSchemaRepository.save(row);
+    return { ...saved, reused: false };
+  }
+
+  async listOutputSchemas(userId: string, schemaId?: string): Promise<OutputSchema[]> {
+    const where: any = { userId };
+    if (schemaId) where.schemaId = schemaId;
+    return this.outputSchemaRepository.find({ where, order: { createdAt: 'ASC' } });
+  }
+
+  async validateOutputAgainstSchema(userId: string, dto: OutputValidateDto) {
+    const rows = await this.outputSchemaRepository.find({
+      where: { userId, schemaId: dto.schemaId },
+      order: { createdAt: 'ASC' },
+    });
+    if (rows.length === 0) {
+      throw new NotFoundException('output-schema-not-found:' + dto.schemaId);
+    }
+    const verdict = validateStructuredOutputEngine({
+      fields: rows[rows.length - 1].schema.fields,
+      output: dto.output,
+    });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason);
+    }
+    // Output validation is stateless: a verdict, not a row.
     return verdict.value;
   }
 }
