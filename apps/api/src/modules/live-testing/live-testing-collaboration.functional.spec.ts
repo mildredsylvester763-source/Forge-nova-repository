@@ -62,6 +62,7 @@ function makeService() {
   const findings = new RepoDouble();
   const personas = new RepoDouble();
   const participants = new RepoDouble();
+  const accounts = new RepoDouble();
   const service = new LiveTestingService(
     sessions as any,
     steps as any,
@@ -69,8 +70,9 @@ function makeService() {
     findings as any,
     personas as any,
     participants as any,
+    accounts as any,
   );
-  return { sessions, steps, messages, findings, personas, participants, service };
+  return { sessions, steps, messages, findings, personas, participants, accounts, service };
 }
 
 async function reasonOf(fn: () => Promise<unknown>): Promise<string> {
