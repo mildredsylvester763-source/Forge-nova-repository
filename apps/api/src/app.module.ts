@@ -139,6 +139,11 @@ import { Site } from './modules/websites/entities/site.entity';
 import { SitePage } from './modules/websites/entities/site-page.entity';
 import { SiteDomain } from './modules/websites/entities/site-domain.entity';
 import { WebsitesModule } from './modules/websites/websites.module';
+import { Post } from './modules/content/entities/post.entity';
+import { Subscriber } from './modules/content/entities/subscriber.entity';
+import { NewsletterIssue } from './modules/content/entities/newsletter-issue.entity';
+import { SeoAudit } from './modules/content/entities/seo-audit.entity';
+import { ContentModule } from './modules/content/content.module';
 
 @Module({
   imports: [
@@ -232,6 +237,10 @@ import { WebsitesModule } from './modules/websites/websites.module';
             Site,
             SitePage,
             SiteDomain,
+            Post,
+            Subscriber,
+            NewsletterIssue,
+            SeoAudit,
           ],
           synchronize: isDevelopment,
           logging: isDevelopment,
@@ -294,6 +303,7 @@ import { WebsitesModule } from './modules/websites/websites.module';
     StockInsightsModule,
     GoodsTrackingModule,
     WebsitesModule,
+    ContentModule,
   ],
   providers: [
     {
