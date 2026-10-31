@@ -18,11 +18,32 @@ export interface GoalVerdict {
 
 export const GOAL_TASK_LIMIT = 12;
 
+// Filler words carry no task semantics: goals are matched by what the user
+// wants done, not by their articles and connectives, so determiners and
+// connectives are dropped before keywords are drawn. Short tokens are
+// already gone by the length rule; these are the words that survive length
+// but still mean nothing.
+const STOPWORDS = new Set([
+  'the',
+  'and',
+  'but',
+  'for',
+  'with',
+  'into',
+  'onto',
+  'then',
+  'that',
+  'this',
+  'from',
+  'your',
+  'you',
+]);
+
 export function keywordsOf(text: string): string[] {
   const tokens = text
     .toLowerCase()
     .split(/[^a-z0-9]+/)
-    .filter((t) => t.length >= 3);
+    .filter((t) => t.length >= 3 && !STOPWORDS.has(t));
   return Array.from(new Set(tokens));
 }
 
@@ -35,7 +56,8 @@ export function parseGoal(goal: unknown): GoalVerdict {
     return { ok: false, reason: 'goal-empty' };
   }
   const parts = trimmed
-    .split(/\r?\n|;|\bthen\b/i)
+    .split(/\r?\
+|;|\bthen\b/i)
     .map((p) => p.trim())
     .filter((p) => p.length > 0);
   if (parts.length === 0) {
