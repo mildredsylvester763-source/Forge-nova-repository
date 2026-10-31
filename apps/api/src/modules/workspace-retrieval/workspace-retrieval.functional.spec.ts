@@ -92,12 +92,15 @@ describe('workspace-retrieval functional lifecycle (FORGE AI-062..066)', () => {
     expect(newer.results.map((r) => r.symbol)).toEqual(['useState']);
     expect(newer.results[0].summary).toBe('Adds state with actions support');
 
-    await expect(
+    // searchLibraryDocs is a SYNC service method: its refusals throw
+    // synchronously, so these must be asserted with a plain throw matcher,
+    // not .rejects (a sync throw never becomes a rejected promise).
+    expect(() =>
       svc.searchLibraryDocs({ library: 'react', version: '17.0.2', query: 'state' } as any),
-    ).rejects.toThrow('docs-version-unknown:react:17.0.2');
-    await expect(
+    ).toThrow('docs-version-unknown:react:17.0.2');
+    expect(() =>
       svc.searchLibraryDocs({ library: 'react', version: '18.2.0', query: '   ' } as any),
-    ).rejects.toThrow('docs-query-missing');
+    ).toThrow('docs-query-missing');
   });
 
   it('records items all-or-nothing and refuses unknown sources or links with zero rows', async () => {
