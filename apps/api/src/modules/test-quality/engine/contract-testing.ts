@@ -186,7 +186,7 @@ export function verifyContract(input: VerifyContractInput): PactResult {
     ok: true,
     consumer: pact.consumer,
     provider: pact.provider,
-    interactions: pact.count,
+    interactions: pact.interactions,
     verified: pact.count,
   };
 }
