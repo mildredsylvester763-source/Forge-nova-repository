@@ -93,7 +93,12 @@ function makeService() {
     new RepoDouble<any>() as any,
     new RepoDouble<any>() as any,
     new RepoDouble<any>() as any
-  , new RepoDouble<any>() as any, new RepoDouble<any>() as any, new RepoDouble<any>() as any, new RepoDouble<any>() as any, new RepoDouble<any>() as any, new RepoDouble<any>() as any, new RepoDouble<any>() as any, new RepoDouble<any>() as any,);
+  , new RepoDouble<any>() as any, new RepoDouble<any>() as any, new RepoDouble<any>() as any, new RepoDouble<any>() as any, new RepoDouble<any>() as any, new RepoDouble<any>() as any, new RepoDouble<any>() as any, new RepoDouble<any>() as any,
+    new RepoDouble<any>() as any,
+    new RepoDouble<any>() as any,
+    new RepoDouble<any>() as any,
+    new RepoDouble<any>() as any,
+    new RepoDouble<any>() as any,);
   return { svc, experiments, subjects, events, trends, batches };
 }
 
