@@ -1,18 +1,25 @@
 import { Body, Controller, Get, Post, Query, Request } from '@nestjs/common';
 import { LiveTestingService } from './live-testing.service';
 import {
+  ApplyPermissionPlanDto,
   CreatePersonaDto,
   CreateSessionDto,
+  HandoffSessionDto,
+  InviteParticipantDto,
+  ParticipantRefDto,
   PersonaIdDto,
   PostMessageDto,
   RecordStepDto,
   ReportFindingDto,
   SessionRefDto,
+  SimulateInterruptionDto,
 } from './dto/live-testing.dto';
 
-// Live agent testing controller (FORGE TQ-001..021, TQ-030). Every route is
+// Live agent testing controller (FORGE TQ-001..025, TQ-030). Every route is
 // user-scoped through req.user.id: a session belongs to exactly one user,
 // and cross-user access is a uniform not-found refusal, never a leak.
+// Collaboration routes extend that wall: an active participant can act
+// within their role, anyone else sees the same not-found refusal.
 
 @Controller('live-testing')
 export class LiveTestingController {
@@ -56,6 +63,21 @@ export class LiveTestingController {
   @Get('device-catalog')
   async deviceCatalog() {
     return this.liveTesting.listDeviceCatalog();
+  }
+
+  @Get('interruptions')
+  async interruptions(@Query('platform') platform?: string) {
+    return this.liveTesting.listInterruptionCatalog(platform);
+  }
+
+  @Get('permissions')
+  async permissions(@Query('platform') platform?: string) {
+    return this.liveTesting.listPermissionCatalog(platform);
+  }
+
+  @Get('collaboration/roles')
+  async roles() {
+    return this.liveTesting.listRoleCatalog();
   }
 
   @Get('personas/custom')
@@ -126,5 +148,40 @@ export class LiveTestingController {
   @Post('sessions/cancel')
   async cancel(@Request() req: any, @Body() dto: SessionRefDto) {
     return this.liveTesting.cancelSession(req.user.id, dto);
+  }
+
+  @Post('sessions/interrupt')
+  async interrupt(@Request() req: any, @Body() dto: SimulateInterruptionDto) {
+    return this.liveTesting.simulateInterruption(req.user.id, dto);
+  }
+
+  @Post('sessions/permissions')
+  async applyPermissions(@Request() req: any, @Body() dto: ApplyPermissionPlanDto) {
+    return this.liveTesting.applyPermissionPlan(req.user.id, dto);
+  }
+
+  @Get('sessions/participants')
+  async participants(@Request() req: any, @Query('sessionId') sessionId?: string) {
+    return this.liveTesting.listParticipants(req.user.id, { sessionId: sessionId ?? '' });
+  }
+
+  @Post('sessions/participants/invite')
+  async invite(@Request() req: any, @Body() dto: InviteParticipantDto) {
+    return this.liveTesting.inviteParticipant(req.user.id, dto);
+  }
+
+  @Post('sessions/participants/accept')
+  async accept(@Request() req: any, @Body() dto: ParticipantRefDto) {
+    return this.liveTesting.acceptInvitation(req.user.id, dto);
+  }
+
+  @Post('sessions/participants/revoke')
+  async revoke(@Request() req: any, @Body() dto: ParticipantRefDto) {
+    return this.liveTesting.revokeParticipant(req.user.id, dto);
+  }
+
+  @Post('sessions/handoff')
+  async handoff(@Request() req: any, @Body() dto: HandoffSessionDto) {
+    return this.liveTesting.handoffSession(req.user.id, dto);
   }
 }
