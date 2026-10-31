@@ -386,6 +386,12 @@ describe('model gateway ops engine 500-case sweeps (mulberry32 seed 42)', () => 
       }
       const prompt = segments.join(' ');
       const v = redactGatewayLog({ prompt, response: '' });
+      // An empty prompt with an empty response is refused by name; the sweep
+      // honors the refusal instead of blindly asserting ok.
+      if (prompt.trim().length === 0) {
+        expect(v).toMatchObject({ ok: false, reason: 'log-empty-entry' });
+        continue;
+      }
       expect(v.ok).toBe(true);
       if (!v.ok) continue;
       expect(v.value.redactionCount).toBe(placed.length);
@@ -570,20 +576,23 @@ describe('model gateway ops engine 500-case sweeps (mulberry32 seed 42)', () => 
         }
       }
       const v = validateStructuredOutput({ fields, output });
+      // The engine walks the fields in declaration order and reports the
+      // first failure it meets: missing, then type, then enum, per field.
       let expected: { ok: boolean; reason?: string } = { ok: true };
-      if (fields.some((f) => f.required !== false && output[f.name] === undefined)) {
-        const miss = fields.find((f) => f.required !== false && output[f.name] === undefined);
-        if (miss) expected = { ok: false, reason: 'output-missing-field:' + miss.name };
-      } else {
-        for (const f of fields) {
-          const val = output[f.name];
-          if (val === undefined) continue;
-          const t = typeof val;
-          if (f.type === 'array' && !Array.isArray(val)) { expected = { ok: false, reason: 'output-wrong-type:' + f.name + ':array' }; break; }
-          if (f.type === 'object' && (t !== 'object' || Array.isArray(val))) { expected = { ok: false, reason: 'output-wrong-type:' + f.name + ':object' }; break; }
-          if (f.type !== 'array' && f.type !== 'object' && t !== f.type) { expected = { ok: false, reason: 'output-wrong-type:' + f.name + ':' + f.type }; break; }
-          if (f.enumValues && f.enumValues.length > 0 && !f.enumValues.includes(val as string)) { expected = { ok: false, reason: 'output-not-enum:' + f.name + ':' + String(val) }; break; }
+      for (const f of fields) {
+        const val = output[f.name];
+        if (val === undefined) {
+          if (f.required !== false) {
+            expected = { ok: false, reason: 'output-missing-field:' + f.name };
+            break;
+          }
+          continue;
         }
+        const t = typeof val;
+        if (f.type === 'array' && !Array.isArray(val)) { expected = { ok: false, reason: 'output-wrong-type:' + f.name + ':array' }; break; }
+        if (f.type === 'object' && (t !== 'object' || Array.isArray(val))) { expected = { ok: false, reason: 'output-wrong-type:' + f.name + ':object' }; break; }
+        if (f.type !== 'array' && f.type !== 'object' && t !== f.type) { expected = { ok: false, reason: 'output-wrong-type:' + f.name + ':' + f.type }; break; }
+        if (f.enumValues && f.enumValues.length > 0 && !f.enumValues.includes(val as string)) { expected = { ok: false, reason: 'output-not-enum:' + f.name + ':' + String(val) }; break; }
       }
       if (expected.ok) {
         expect(v.ok).toBe(true);
