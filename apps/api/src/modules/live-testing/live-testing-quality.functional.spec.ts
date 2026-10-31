@@ -339,7 +339,7 @@ describe('live testing quality surfaces: gestures, creative tools, AV and test d
     const broken = await ctx.service.checkAvSync(USER, { sessionId: sid, driftMs: -200 });
     expect((broken as any).sync).toBe('out-of-sync');
     expect(
-      await reasonOf(() => ctx.service.checkAvSync(USER, { sessionId: sid })),
+      await reasonOf(() => ctx.service.checkAvSync(USER, { sessionId: sid } as any)),
     ).toBe('av-drift-missing');
   });
 
@@ -493,7 +493,7 @@ describe('live testing quality surfaces: gestures, creative tools, AV and test d
     expect((webGestures as any).gestures).toEqual([]);
     const editors = await ctx.service.listCreativeCatalog();
     expect((editors as any).editors.manhwa).toContain('layer-merge');
-    expect((editors as any).editors.three-d).toContain('camera-orbit');
+    expect((editors as any).editors['three-d']).toContain('camera-orbit');
     expect((editors as any).editors.music).toContain('note-place');
     expect((editors as any).editors.manhwa).toContain('undo');
     expect((editors as any).editors.manhwa).toContain('redo');
