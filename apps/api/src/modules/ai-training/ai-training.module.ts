@@ -35,6 +35,11 @@ import { GatewayRouteEvent } from './entities/gateway-route-event.entity';
 import { ProviderHealth } from './entities/provider-health.entity';
 import { ByokKey } from './entities/byok-key.entity';
 import { ProviderUsageSample } from './entities/provider-usage-sample.entity';
+import { GatewayLogEntry } from './entities/gateway-log-entry.entity';
+import { RetentionPolicy } from './entities/retention-policy.entity';
+import { CapabilityMatrix } from './entities/capability-matrix.entity';
+import { ToolCallRecord } from './entities/tool-call-record.entity';
+import { OutputSchema } from './entities/output-schema.entity';
 
 @Module({
   imports: [
@@ -72,6 +77,11 @@ import { ProviderUsageSample } from './entities/provider-usage-sample.entity';
       ProviderHealth,
       ByokKey,
       ProviderUsageSample,
+      GatewayLogEntry,
+      RetentionPolicy,
+      CapabilityMatrix,
+      ToolCallRecord,
+      OutputSchema,
     ]),
   ],
   controllers: [AiTrainingController],
