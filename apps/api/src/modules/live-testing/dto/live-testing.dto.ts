@@ -195,3 +195,74 @@ export class PersonaIdDto {
   @MaxLength(64)
   workspace?: string;
 }
+
+export class SimulateInterruptionDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  sessionId: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(32)
+  scenario: string;
+}
+
+export class PermissionGrantDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  permission: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(16)
+  state: string;
+}
+
+export class ApplyPermissionPlanDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  sessionId: string;
+
+  @IsArray()
+  grants: PermissionGrantDto[];
+}
+
+export class InviteParticipantDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  sessionId: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  userId: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(16)
+  role?: string;
+}
+
+export class ParticipantRefDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  participantId: string;
+}
+
+export class HandoffSessionDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  sessionId: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  device: string;
+}
