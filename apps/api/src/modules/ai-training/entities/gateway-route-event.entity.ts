@@ -11,7 +11,6 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
-  Index,
 } from 'typeorm';
 import { RouteDecision } from '../engine/model-gateway-engine';
 
