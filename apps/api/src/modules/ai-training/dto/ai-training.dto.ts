@@ -1076,3 +1076,151 @@ export class RollbackDto {
   @IsString({ each: true })
   servedVersions: string[];
 }
+
+// --- AI-045..047: workspace model access, dedicated instances, on-prem packages ---
+
+export class PinModelDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  workspaceId: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  modelId: string;
+
+  /** Omit to pin the latest registered version. Must exist in the registry. */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  versionId?: number;
+
+  /** Per-model registry tier (MT-104) — never a blanket plan tier. */
+  @IsString()
+  @MinLength(1)
+  @MaxLength(32)
+  modelTier: string;
+
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(16)
+  @IsString({ each: true })
+  planTiers: string[];
+}
+
+export class UnpinModelDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  workspaceId: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  modelId: string;
+}
+
+export class ResolveModelDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  workspaceId: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  modelId: string;
+
+  /** Omit to fall back to the latest registered version. */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  fallbackVersionId?: number;
+}
+
+export class ReserveInstancesDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  workspaceId: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  modelId: string;
+
+  @IsInt()
+  @Min(1)
+  @Max(10000)
+  slots: number;
+
+  @IsInt()
+  @Min(1)
+  @Max(100000)
+  poolTotal: number;
+}
+
+export class ReleaseInstancesDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  workspaceId: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  modelId: string;
+}
+
+export class PackageBuildDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  modelId: string;
+
+  @IsInt()
+  @Min(1)
+  versionId: number;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(500)
+  licenseTerms: string;
+
+  @IsOptional()
+  @IsBoolean()
+  quantized?: boolean;
+}
+
+export class ReimportVerifyDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  modelId: string;
+
+  @IsInt()
+  @Min(1)
+  versionId: number;
+
+  @IsBoolean()
+  quantized: boolean;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(128)
+  weightsFingerprint: string;
+
+  @IsNumber({ maxDecimalPlaces: 6 })
+  @Min(0)
+  @Max(1)
+  qualityScore: number;
+
+  @IsNumber({ maxDecimalPlaces: 6 })
+  @Min(0)
+  @Max(1)
+  qualityGate: number;
+
+  @IsBoolean()
+  licenseAccepted: boolean;
+}
