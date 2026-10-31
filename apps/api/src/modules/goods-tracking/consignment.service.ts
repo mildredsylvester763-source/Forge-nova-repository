@@ -48,8 +48,11 @@ export class ConsignmentService {
     if (!pctVerdict.ok) {
       throw new BadRequestException(pctVerdict.reason);
     }
-    const existing = await this.consignorRepository.findOne({ where: { userId, name: nameVerdict.value } });
-    if (existing) {
+    const owned = await this.consignorRepository.find({ where: { userId } });
+    const duplicate = owned.find(
+      (candidate) => candidate.name.toLowerCase() === nameVerdict.value.toLowerCase(),
+    );
+    if (duplicate) {
       throw new ConflictException('consignor-name-exists');
     }
     return this.consignorRepository.save(
