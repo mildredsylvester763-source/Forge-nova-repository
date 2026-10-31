@@ -122,7 +122,7 @@ export function runFuzzCampaign(input: {
     }
     return { ok: true, kind: kindRaw, budget, seed, cases };
   }
-  const samples = input.samples as unknown[];
+  const samples = input.samples as string[];
   if (samples.length === 0) {
     return { ok: false, reason: 'fuzz-samples-empty' };
   }
