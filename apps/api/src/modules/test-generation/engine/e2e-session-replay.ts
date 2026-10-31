@@ -59,6 +59,7 @@ export function planE2eSuite(input: { session?: unknown; steps?: unknown }): E2e
     }
   }
   const steps: E2eStep[] = [];
+  const checkpoints: boolean[] = [];
   let deduped = 0;
   for (const s of stepsRaw) {
     const action = (s.action as string).trim().toLowerCase();
@@ -70,6 +71,7 @@ export function planE2eSuite(input: { session?: unknown; steps?: unknown }): E2e
       continue;
     }
     steps.push({ action, target, value });
+    checkpoints.push(s.checkpoint === true);
   }
   const assertions: E2eAssertion[] = [];
   for (let i = 0; i < steps.length; i++) {
@@ -77,21 +79,12 @@ export function planE2eSuite(input: { session?: unknown; steps?: unknown }): E2e
     const stepNumber = i + 1;
     if (s.action === 'assert') {
       assertions.push({ name: 'assert:' + s.target, afterStep: stepNumber, kind: 'explicit' });
-    } else if (stepsRaw[(function () { return 0; })() as never] === undefined) {
-      const raw = stepsRaw.find(
-        (r) =>
-          (typeof r.action === 'string' ? r.action.trim().toLowerCase() : '') === s.action &&
-          (typeof r.target === 'string' ? r.target : '') === s.target &&
-          (typeof r.value === 'string' ? r.value : '') === s.value &&
-          r.checkpoint === true,
-      );
-      if (raw) {
-        assertions.push({
-          name: 'checkpoint:after:' + s.action + ':' + stepNumber,
-          afterStep: stepNumber,
-          kind: 'checkpoint',
-        });
-      }
+    } else if (checkpoints[i]) {
+      assertions.push({
+        name: 'checkpoint:after:' + s.action + ':' + stepNumber,
+        afterStep: stepNumber,
+        kind: 'checkpoint',
+      });
     }
   }
   return { ok: true, session: sname, steps, deduped, assertions };
