@@ -854,3 +854,225 @@ export class RoutePromptDto {
   @Max(1)
   confidenceThreshold?: number;
 }
+
+// ============================================================================
+// AI-040..044: response cache + prefix reuse, streaming cancel/resume,
+// serving metrics, shadow deployment, instant rollback
+// ============================================================================
+
+export class CacheLookupDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  modelId: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100_000)
+  prompt: string;
+}
+
+export class CacheAdmitDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  modelId: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100_000)
+  prompt: string;
+
+  @IsInt()
+  @Min(1)
+  promptTokens: number;
+
+  @IsInt()
+  @Min(1)
+  outputTokens: number;
+
+  /** Per-model cache capacity; the engine defaults to 128 (named). */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(100000)
+  maxEntries?: number;
+
+  /** Pinned entries are never evicted — an all-pinned full pool is refused. */
+  @IsOptional()
+  @IsBoolean()
+  pinned?: boolean;
+
+  /** Deterministic clock override for LRU ordering; defaults to now. */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  now?: number;
+}
+
+export class StreamOpenDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  streamId: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  modelId: string;
+}
+
+export class StreamChunkDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  streamId: string;
+
+  /** Must equal chunks.length — a gap is refused by name, never stitched. */
+  @IsInt()
+  @Min(0)
+  index: number;
+
+  @IsString()
+  @MaxLength(100_000)
+  content: string;
+}
+
+export class StreamLifecycleDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  streamId: string;
+}
+
+export class StreamResumeDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  streamId: string;
+
+  /** Last chunk index the client saw; -1 means it saw nothing yet. */
+  @IsInt()
+  @Min(-1)
+  @Max(65535)
+  clientLastIndex: number;
+}
+
+export class MetricSampleDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  modelId: string;
+
+  @IsNumber({ maxDecimalPlaces: 6 })
+  @Min(0.000001)
+  latencyMs: number;
+
+  @IsInt()
+  @Min(1)
+  tokens: number;
+
+  @IsNumber({ maxDecimalPlaces: 6 })
+  @Min(0)
+  costUsd: number;
+
+  /** Omit for success; false counts in the honest error rate. */
+  @IsOptional()
+  @IsBoolean()
+  ok?: boolean;
+
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 6 })
+  @Min(0)
+  ttftMs?: number;
+}
+
+export class AggregateMetricsDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  modelId: string;
+
+  /** p95 SLO budget; the engine defaults to 2000ms (named). */
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 6 })
+  @Min(0.000001)
+  latencyBudgetMs?: number;
+}
+
+export class ShadowCreateDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  championId: string;
+
+  /** The challenger answers beside the champion and NEVER reaches users. */
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  challengerId: string;
+
+  /** Agreement rate needed to leave the shadow; the engine defaults to 0.95. */
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 6 })
+  @Min(0.000001)
+  @Max(1)
+  agreementThreshold?: number;
+}
+
+export class ShadowPairDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  championId: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  challengerId: string;
+
+  @IsBoolean()
+  agree: boolean;
+}
+
+export class ShadowEvaluateDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  championId: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  challengerId: string;
+
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 6 })
+  @Min(0.000001)
+  @Max(1)
+  agreementThreshold?: number;
+}
+
+export class RollbackDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  modelId: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  currentVersion: string;
+
+  /** Must be a version that previously served — blind flips are refused. */
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  targetVersion: string;
+
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(100)
+  @IsString({ each: true })
+  servedVersions: string[];
+}
