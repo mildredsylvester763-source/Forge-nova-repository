@@ -192,6 +192,16 @@ describe('AI-053..056 gateway operations (functional lifecycle)', () => {
     });
     expect(dup.duplicate).toBe(true);
     expect(capabilities.rows.length).toBe(1);
+    // While only m-code is registered it is the whole chain, and a
+    // capability no registered model has is refused by name.
+    const early = await svc.matchModelCapabilities('user-a', {
+      required: ['code', 'tools'], promptTokens: 1000, outputTokens: 500,
+    });
+    expect(early.primaryId).toBe('m-code');
+    expect(early.chain).toEqual(['m-code']);
+    await expect(svc.matchModelCapabilities('user-a', {
+      required: ['vision'], promptTokens: 100, outputTokens: 50,
+    })).rejects.toThrow('capability-no-model-supports:vision');
     await svc.registerCapability('user-a', {
       modelId: 'm-omni', capabilities: ['code', 'vision', 'audio', 'tools'], maxContextTokens: 32000,
       costPer1kIn: 0.01, costPer1kOut: 0.05, active: true,
@@ -201,9 +211,6 @@ describe('AI-053..056 gateway operations (functional lifecycle)', () => {
     });
     expect(match.primaryId).toBe('m-code');
     expect(match.chain).toEqual(['m-code', 'm-omni']);
-    await expect(svc.matchModelCapabilities('user-a', {
-      required: ['vision'], promptTokens: 100, outputTokens: 50,
-    })).rejects.toThrow('capability-no-model-supports:vision');
     // Unknown capability names are refused and store nothing.
     await expect(svc.registerCapability('user-a', {
       modelId: 'm-bad', capabilities: ['smell'], maxContextTokens: 8192,
@@ -299,7 +306,7 @@ describe('AI-053..056 zero trust (adversarial)', () => {
       costPer1kIn: 0.001, costPer1kOut: 0.002, active: true,
     });
     await svc.recordToolCall('user-a', {
-      providerId: 'openai', name: 't', args: { x: 1 },
+      providerId: 'anthropic', name: 't', args: { x: 1 },
     });
     await svc.registerOutputSchema('user-a', {
       schemaId: 's1', fields: [{ name: 'f', type: 'string', required: true }],
