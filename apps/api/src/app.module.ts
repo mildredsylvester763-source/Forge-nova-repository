@@ -28,7 +28,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { Experiment } from './modules/experiments/entities/experiment.entity';
 import { ExperimentsModule } from './modules/experiments/experiments.module';
 import { Pattern } from './modules/patterns/entities/pattern.entity';
-import { PatternsModule } from './modules/patterns/patterns.module';
+import { PatternsModule } from './modules/patterns/entities/patterns.module';
 import { PortfolioModule } from './modules/portfolio/portfolio.module';
 import { TimeBudget } from './modules/time-budget/entities/time-budget.entity';
 import { TimeBudgetModule } from './modules/time-budget/time-budget.module';
@@ -131,11 +131,16 @@ import { LoyaltyEvent } from './modules/loyalty/entities/loyalty-event.entity';
 import { ReferralCode } from './modules/referrals/entities/referral-code.entity';
 import { ReferralBinding } from './modules/referrals/entities/referral-binding.entity';
 import { ReferralReward } from './modules/referrals/entities/referral-reward.entity';
+import { WebSearchQuery } from './modules/web-search/entities/web-search-query.entity';
+import { DomainRule } from './modules/web-search/entities/domain-rule.entity';
+import { FetchedPage } from './modules/web-search/entities/fetched-page.entity';
+import { CitationRecord } from './modules/web-search/entities/citation-record.entity';
 import { AiTrainingModule } from './modules/ai-training/ai-training.module';
 import { EgressUniversalModule } from './modules/egress-universal/egress-universal.module';
 import { SystemModule } from './modules/system/system.module';
 import { LoyaltyModule } from './modules/loyalty/loyalty.module';
 import { ReferralsModule } from './modules/referrals/referrals.module';
+import { WebSearchModule } from './modules/web-search/web-search.module';
 
 @Module({
   imports: [
@@ -237,6 +242,10 @@ import { ReferralsModule } from './modules/referrals/referrals.module';
             ReferralCode,
             ReferralBinding,
             ReferralReward,
+            WebSearchQuery,
+            DomainRule,
+            FetchedPage,
+            CitationRecord,
           ],
           synchronize: isDevelopment,
           logging: isDevelopment,
@@ -288,6 +297,7 @@ import { ReferralsModule } from './modules/referrals/referrals.module';
     SystemModule,
     LoyaltyModule,
     ReferralsModule,
+    WebSearchModule,
   ],
   providers: [
     {
