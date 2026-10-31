@@ -169,7 +169,7 @@ describe('unit-test-generation engine (FORGE TQ-031)', () => {
         expect(got.cases?.length).toBe(boundary + behaviors.length);
         expect(got.boundaryCount).toBe(boundary);
       } else {
-        expect(got.reason).toBe(expectReason.length > 20 ? expectReason : got.reason);
+        expect(got.reason ?? '').toContain(expectReason);
       }
     }
   });
