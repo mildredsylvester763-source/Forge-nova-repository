@@ -82,6 +82,15 @@ import {
   planRollback as planRollbackEngine,
   StreamEvent,
 } from './engine/model-operations-engine';
+import {
+  pinModel as pinModelEngine,
+  unpinModel as unpinModelEngine,
+  resolvePinnedModel as resolvePinnedModelEngine,
+  reserveInstances as reserveInstancesEngine,
+  releaseInstances as releaseInstancesEngine,
+  buildOnPremPackage as buildOnPremPackageEngine,
+  verifyReimport as verifyReimportEngine,
+} from './engine/model-access-engine';
 import { EvalSuiteVersion } from './entities/eval-suite-version.entity';
 import { PanelVoteRecord } from './entities/panel-vote.entity';
 import { SafetyProbeBattery } from './entities/safety-battery.entity';
@@ -104,6 +113,9 @@ import { StreamSession } from './entities/stream-session.entity';
 import { ServingMetricSample } from './entities/serving-metric-sample.entity';
 import { ShadowDeployment } from './entities/shadow-deployment.entity';
 import { RollbackEvent } from './entities/rollback-event.entity';
+import { ModelPin } from './entities/model-pin.entity';
+import { InstanceReservation } from './entities/instance-reservation.entity';
+import { OnPremPackage } from './entities/on-prem-package.entity';
 import { TrainingRun } from './entities/training-run.entity';
 import {
   CreateTrainingAssetDto, BuildDatasetDto,
@@ -123,6 +135,9 @@ import {
   MetricSampleDto, AggregateMetricsDto,
   ShadowCreateDto, ShadowPairDto, ShadowEvaluateDto,
   RollbackDto,
+  PinModelDto, UnpinModelDto, ResolveModelDto,
+  ReserveInstancesDto, ReleaseInstancesDto,
+  PackageBuildDto, ReimportVerifyDto,
 } from './dto/ai-training.dto';
 
 @Injectable()
@@ -178,6 +193,12 @@ export class AiTrainingService {
     private readonly shadowDeploymentRepository: Repository<ShadowDeployment>,
     @InjectRepository(RollbackEvent)
     private readonly rollbackEventRepository: Repository<RollbackEvent>,
+    @InjectRepository(ModelPin)
+    private readonly modelPinRepository: Repository<ModelPin>,
+    @InjectRepository(InstanceReservation)
+    private readonly instanceReservationRepository: Repository<InstanceReservation>,
+    @InjectRepository(OnPremPackage)
+    private readonly onPremPackageRepository: Repository<OnPremPackage>,
   ) {}
 
   // --- 1. Admit an asset through the gates (AI-002/003/004) ---
@@ -1592,5 +1613,227 @@ export class AiTrainingService {
     const where: any = { userId };
     if (modelId) where.modelId = modelId;
     return this.rollbackEventRepository.find({ where, order: { createdAt: 'ASC' } });
+  }
+
+  // --- 11. Workspace model access: pins, dedicated instances, on-prem packages (AI-045..047) ---
+  // A pin freezes which exact version serves a workspace and keeps the
+  // switch-back trace (GP-016); the tier law is per model in the registry,
+  // never a blanket plan tier (MT-104). Dedicated instances refuse
+  // over-commit by name with exact free-capacity arithmetic — the shared
+  // pool is capacity truth, never silently downsized. On-prem packages
+  // only leave with card, license and weights attached (SY), and re-import
+  // passes the same gates that allowed export. Zero-trust scoped.
+
+  async pinWorkspaceModel(userId: string, dto: PinModelDto) {
+    const versions = await this.modelVersionRepository.find({
+      where: { userId, modelId: dto.modelId },
+      order: { version: 'ASC' },
+    });
+    const existing = await this.modelPinRepository.findOne({
+      where: { userId, workspaceId: dto.workspaceId, modelId: dto.modelId },
+    });
+    const verdict = pinModelEngine({
+      workspaceId: dto.workspaceId,
+      modelId: dto.modelId,
+      versionId: dto.versionId,
+      modelTier: dto.modelTier,
+      planTiers: dto.planTiers,
+      versions: versions.map((r) => r.version),
+      existingPin: existing ? existing.pin : null,
+    });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason);
+    }
+    if (verdict.value.duplicate && existing) {
+      return { ...existing, duplicate: true };
+    }
+    if (existing) {
+      existing.pin = verdict.value;
+      existing.fingerprint = verdict.value.fingerprint;
+      const saved = await this.modelPinRepository.save(existing);
+      return { ...saved, duplicate: false };
+    }
+    const row = this.modelPinRepository.create({
+      userId,
+      workspaceId: dto.workspaceId,
+      modelId: dto.modelId,
+      pin: verdict.value,
+      fingerprint: verdict.value.fingerprint,
+    });
+    const saved = await this.modelPinRepository.save(row);
+    return { ...saved, duplicate: false };
+  }
+
+  async unpinWorkspaceModel(userId: string, dto: UnpinModelDto) {
+    const existing = await this.modelPinRepository.findOne({
+      where: { userId, workspaceId: dto.workspaceId, modelId: dto.modelId },
+    });
+    const verdict = unpinModelEngine({
+      workspaceId: dto.workspaceId,
+      modelId: dto.modelId,
+      currentPin: existing ? existing.pin : null,
+    });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason);
+    }
+    await this.modelPinRepository.remove(existing!);
+    return verdict.value;
+  }
+
+  async listWorkspacePins(userId: string, workspaceId?: string): Promise<ModelPin[]> {
+    const where: any = { userId };
+    if (workspaceId) where.workspaceId = workspaceId;
+    return this.modelPinRepository.find({ where, order: { createdAt: 'ASC' } });
+  }
+
+  async resolveWorkspaceModel(userId: string, dto: ResolveModelDto) {
+    const pins = await this.modelPinRepository.find({
+      where: { userId, workspaceId: dto.workspaceId },
+      order: { createdAt: 'ASC' },
+    });
+    let fallbackVersionId: number | undefined = dto.fallbackVersionId;
+    if (fallbackVersionId === undefined) {
+      const rows = await this.modelVersionRepository.find({
+        where: { userId, modelId: dto.modelId },
+        order: { version: 'DESC' },
+      });
+      if (rows.length > 0) fallbackVersionId = rows[0].version;
+    }
+    const verdict = resolvePinnedModelEngine({
+      workspaceId: dto.workspaceId,
+      modelId: dto.modelId,
+      pins: pins.map((r) => r.pin),
+      fallbackVersionId,
+    });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason);
+    }
+    return verdict.value;
+  }
+
+  async reserveDedicatedInstances(userId: string, dto: ReserveInstancesDto) {
+    const own = await this.instanceReservationRepository.findOne({
+      where: { userId, workspaceId: dto.workspaceId, modelId: dto.modelId },
+    });
+    // The pool is shared infrastructure: other users' reservations count
+    // against free capacity. This is capacity accounting, not data
+    // exposure — no other user's rows are ever returned.
+    const others = await this.instanceReservationRepository.find({
+      where: { modelId: dto.modelId },
+      order: { createdAt: 'ASC' },
+    });
+    const reservedByOthers = others
+      .filter((r) => r.userId !== userId)
+      .reduce((sum, r) => sum + (r.reservation?.slots ?? 0), 0);
+    const verdict = reserveInstancesEngine({
+      workspaceId: dto.workspaceId,
+      modelId: dto.modelId,
+      slots: dto.slots,
+      poolTotal: dto.poolTotal,
+      reservedByOthers,
+      currentReservation: own ? own.reservation : null,
+    });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason);
+    }
+    if (verdict.value.duplicate && own) {
+      return { ...own, duplicate: true };
+    }
+    if (own) {
+      own.reservation = verdict.value;
+      own.fingerprint = verdict.value.fingerprint;
+      const saved = await this.instanceReservationRepository.save(own);
+      return { ...saved, duplicate: false };
+    }
+    const row = this.instanceReservationRepository.create({
+      userId,
+      workspaceId: dto.workspaceId,
+      modelId: dto.modelId,
+      reservation: verdict.value,
+      fingerprint: verdict.value.fingerprint,
+    });
+    const saved = await this.instanceReservationRepository.save(row);
+    return { ...saved, duplicate: false };
+  }
+
+  async releaseDedicatedInstances(userId: string, dto: ReleaseInstancesDto) {
+    const own = await this.instanceReservationRepository.findOne({
+      where: { userId, workspaceId: dto.workspaceId, modelId: dto.modelId },
+    });
+    const verdict = releaseInstancesEngine({
+      workspaceId: dto.workspaceId,
+      modelId: dto.modelId,
+      currentReservation: own ? own.reservation : null,
+    });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason);
+    }
+    await this.instanceReservationRepository.remove(own!);
+    return verdict.value;
+  }
+
+  async listInstanceReservations(userId: string, modelId?: string): Promise<InstanceReservation[]> {
+    const where: any = { userId };
+    if (modelId) where.modelId = modelId;
+    return this.instanceReservationRepository.find({ where, order: { createdAt: 'ASC' } });
+  }
+
+  async buildOnPremPackageForModel(userId: string, dto: PackageBuildDto) {
+    const entry = await this.getModelVersion(userId, dto.modelId, dto.versionId);
+    const card = await this.modelCardRepository.findOne({
+      where: { userId, modelId: dto.modelId, version: dto.versionId },
+    });
+    const verdict = buildOnPremPackageEngine({
+      modelId: dto.modelId,
+      versionId: dto.versionId,
+      stage: entry.stage,
+      weightsFingerprint: entry.weightsFingerprint,
+      hasCard: Boolean(card),
+      licenseTerms: dto.licenseTerms,
+      quantized: dto.quantized,
+    });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason);
+    }
+    const existing = await this.onPremPackageRepository.findOne({
+      where: { userId, fingerprint: verdict.value.fingerprint },
+    });
+    if (existing) {
+      return { ...existing, reused: true };
+    }
+    const row = this.onPremPackageRepository.create({
+      userId,
+      modelId: dto.modelId,
+      pkg: verdict.value,
+      fingerprint: verdict.value.fingerprint,
+    });
+    const saved = await this.onPremPackageRepository.save(row);
+    return { ...saved, reused: false };
+  }
+
+  async verifyOnPremReimport(userId: string, dto: ReimportVerifyDto) {
+    const rows = await this.onPremPackageRepository.find({
+      where: { userId, modelId: dto.modelId },
+      order: { createdAt: 'ASC' },
+    });
+    const pkgRow = rows.find((r) => r.pkg.versionId === dto.versionId && r.pkg.quantized === dto.quantized);
+    const verdict = verifyReimportEngine({
+      pkg: pkgRow ? pkgRow.pkg : null,
+      weightsFingerprint: dto.weightsFingerprint,
+      qualityScore: dto.qualityScore,
+      qualityGate: dto.qualityGate,
+      licenseAccepted: dto.licenseAccepted,
+    });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason);
+    }
+    // Verification stores nothing: acceptance is a decision, not a row.
+    return verdict.value;
+  }
+
+  async listOnPremPackages(userId: string, modelId?: string): Promise<OnPremPackage[]> {
+    const where: any = { userId };
+    if (modelId) where.modelId = modelId;
+    return this.onPremPackageRepository.find({ where, order: { createdAt: 'ASC' } });
   }
 }
