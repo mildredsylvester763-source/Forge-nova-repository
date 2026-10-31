@@ -11,6 +11,7 @@ import {
   buildShoppingFeedXml,
   planGoogleFeed,
   validateChannel,
+  GoogleFeedCandidate,
 } from './engine/shop-feed-engine';
 
 // Shop syncs and Google feeds are HONEST records. There is no Meta or Google
@@ -69,6 +70,7 @@ export class CommerceFeedsService {
       brand: listing.brand,
     });
     if (!verdict.ok) throw new BadRequestException(verdict.reason);
+    const payload: Record<string, unknown> = { ...verdict.value };
     return this.plans.save(
       this.plans.create({
         userId: ownerUserId,
@@ -76,7 +78,7 @@ export class CommerceFeedsService {
         itemId: item.id,
         variantId: variant.id,
         sku: variant.sku,
-        payload: verdict.value,
+        payload,
         status: 'planned',
         createdAt: new Date(),
       }),
@@ -94,7 +96,7 @@ export class CommerceFeedsService {
     const listings = await this.listings.find({
       where: { userId: ownerUserId },
     });
-    const candidates: { id: string; input: Record<string, unknown> }[] = [];
+    const candidates: GoogleFeedCandidate[] = [];
     const mySkipped: { id: string; reason: string }[] = [];
     for (const listing of listings) {
       const item = await this.items.findOne({
