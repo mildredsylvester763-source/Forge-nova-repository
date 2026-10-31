@@ -144,6 +144,8 @@ import { Subscriber } from './modules/content/entities/subscriber.entity';
 import { NewsletterIssue } from './modules/content/entities/newsletter-issue.entity';
 import { SeoAudit } from './modules/content/entities/seo-audit.entity';
 import { ContentModule } from './modules/content/content.module';
+import { SocialPost } from './modules/social/entities/social-post.entity';
+import { SocialModule } from './modules/social/social.module';
 
 @Module({
   imports: [
@@ -241,6 +243,7 @@ import { ContentModule } from './modules/content/content.module';
             Subscriber,
             NewsletterIssue,
             SeoAudit,
+            SocialPost,
           ],
           synchronize: isDevelopment,
           logging: isDevelopment,
@@ -304,6 +307,7 @@ import { ContentModule } from './modules/content/content.module';
     GoodsTrackingModule,
     WebsitesModule,
     ContentModule,
+    SocialModule,
   ],
   providers: [
     {
