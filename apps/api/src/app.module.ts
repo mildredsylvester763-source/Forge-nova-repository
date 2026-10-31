@@ -108,6 +108,11 @@ import { ServingScalePlan } from './modules/ai-training/entities/serving-scale-p
 import { QuantizationPlanRow } from './modules/ai-training/entities/quantization-plan.entity';
 import { OnDeviceBundle } from './modules/ai-training/entities/on-device-bundle.entity';
 import { RoutingDecision } from './modules/ai-training/entities/routing-decision.entity';
+import { ResponseCacheEntry } from './modules/ai-training/entities/response-cache-entry.entity';
+import { StreamSession } from './modules/ai-training/entities/stream-session.entity';
+import { ServingMetricSample } from './modules/ai-training/entities/serving-metric-sample.entity';
+import { ShadowDeployment } from './modules/ai-training/entities/shadow-deployment.entity';
+import { RollbackEvent } from './modules/ai-training/entities/rollback-event.entity';
 import { LoyaltyAccount } from './modules/loyalty/entities/loyalty-account.entity';
 import { LoyaltyEvent } from './modules/loyalty/entities/loyalty-event.entity';
 import { ReferralCode } from './modules/referrals/entities/referral-code.entity';
@@ -196,6 +201,11 @@ import { ReferralsModule } from './modules/referrals/referrals.module';
     QuantizationPlanRow,
     OnDeviceBundle,
     RoutingDecision,
+    ResponseCacheEntry,
+    StreamSession,
+    ServingMetricSample,
+    ShadowDeployment,
+    RollbackEvent,
             LoyaltyAccount,
             LoyaltyEvent,
             ReferralCode,
