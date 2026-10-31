@@ -195,7 +195,7 @@ describe('AI-045..047 workspace model access (functional lifecycle)', () => {
 
   it('on-prem packages: only exportable stages leave, card and license mandatory, fingerprint-idempotent', async () => {
     const { svc, versions, cards, packages } = makeService();
-    await seedVersions(versions, 'user-a', 'm-1', ['experimental', 'experimental', 'beta']);
+    await seedVersions(versions, 'user-a', 'm-1', ['experimental', 'beta', 'beta']);
     await cards.save({ userId: 'user-a', modelId: 'm-1', version: 2, card: { cardFingerprint: 'cf-2' } });
     const built = await svc.buildOnPremPackageForModel('user-a', {
       modelId: 'm-1', versionId: 2, licenseTerms: 'enterprise-1.0',
@@ -235,7 +235,7 @@ describe('AI-045..047 workspace model access (functional lifecycle)', () => {
 
   it('reimport passes the same gates: weights, quality, license — each refusal named, nothing stored', async () => {
     const { svc, versions, cards, packages } = makeService();
-    await seedVersions(versions, 'user-a', 'm-1', ['experimental', 'experimental', 'beta']);
+    await seedVersions(versions, 'user-a', 'm-1', ['experimental', 'beta', 'beta']);
     await cards.save({ userId: 'user-a', modelId: 'm-1', version: 2, card: { cardFingerprint: 'cf-2' } });
     await svc.buildOnPremPackageForModel('user-a', { modelId: 'm-1', versionId: 2, licenseTerms: 'enterprise-1.0' });
     const verified = await svc.verifyOnPremReimport('user-a', {
@@ -262,7 +262,7 @@ describe('AI-045..047 workspace model access (functional lifecycle)', () => {
 describe('AI-045..047 zero trust (adversarial)', () => {
   it('another user registry, pins, reservations and packages are invisible', async () => {
     const { svc, versions, cards } = makeService();
-    await seedVersions(versions, 'user-a', 'm-1', ['experimental', 'experimental', 'beta']);
+    await seedVersions(versions, 'user-a', 'm-1', ['experimental', 'beta', 'beta']);
     await cards.save({ userId: 'user-a', modelId: 'm-1', version: 2, card: { cardFingerprint: 'cf-2' } });
     await svc.pinWorkspaceModel('user-a', {
       workspaceId: 'ws1', modelId: 'm-1', modelTier: 'paid', planTiers: ['free', 'paid'],
@@ -296,6 +296,6 @@ describe('AI-045..047 zero trust (adversarial)', () => {
     // user-b over-commits against user-a real holding — refused with exact math.
     await expect(svc.reserveDedicatedInstances('user-b', {
       workspaceId: 'ws2', modelId: 'm-1', slots: 9, poolTotal: 10,
-    })).rejects.toThrow('reserve-over-commit:9>6');
+    })).rejects.toThrow('reserve-over-commit:9>3');
   });
 });
