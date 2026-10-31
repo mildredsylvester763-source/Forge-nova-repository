@@ -139,6 +139,7 @@ import { TestSession } from './modules/live-testing/entities/test-session.entity
 import { SessionStep } from './modules/live-testing/entities/session-step.entity';
 import { SessionMessage } from './modules/live-testing/entities/session-message.entity';
 import { SessionFinding } from './modules/live-testing/entities/session-finding.entity';
+import { TestPersona } from './modules/live-testing/entities/test-persona.entity';
 import { AiTrainingModule } from './modules/ai-training/ai-training.module';
 import { EgressUniversalModule } from './modules/egress-universal/egress-universal.module';
 import { SystemModule } from './modules/system/system.module';
@@ -255,6 +256,7 @@ import { LiveTestingModule } from './modules/live-testing/live-testing.module';
             SessionStep,
             SessionMessage,
             SessionFinding,
+            TestPersona,
           ],
           synchronize: isDevelopment,
           logging: isDevelopment,
