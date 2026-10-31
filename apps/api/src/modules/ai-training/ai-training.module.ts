@@ -22,6 +22,11 @@ import { ServingScalePlan } from './entities/serving-scale-plan.entity';
 import { QuantizationPlanRow } from './entities/quantization-plan.entity';
 import { OnDeviceBundle } from './entities/on-device-bundle.entity';
 import { RoutingDecision } from './entities/routing-decision.entity';
+import { ResponseCacheEntry } from './entities/response-cache-entry.entity';
+import { StreamSession } from './entities/stream-session.entity';
+import { ServingMetricSample } from './entities/serving-metric-sample.entity';
+import { ShadowDeployment } from './entities/shadow-deployment.entity';
+import { RollbackEvent } from './entities/rollback-event.entity';
 
 @Module({
   imports: [
@@ -46,6 +51,11 @@ import { RoutingDecision } from './entities/routing-decision.entity';
     QuantizationPlanRow,
     OnDeviceBundle,
     RoutingDecision,
+    ResponseCacheEntry,
+    StreamSession,
+    ServingMetricSample,
+    ShadowDeployment,
+    RollbackEvent,
     ]),
   ],
   controllers: [AiTrainingController],
