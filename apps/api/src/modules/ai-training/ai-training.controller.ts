@@ -30,6 +30,8 @@ import {
   PinModelDto, UnpinModelDto, ResolveModelDto,
   ReserveInstancesDto, ReleaseInstancesDto,
   PackageBuildDto, ReimportVerifyDto,
+  RegisterProviderDto, GatewayRouteDto, RecordOutcomeDto, FailoverPlanDto,
+  ByokRegisterDto, ByokListDto, PolicyCheckDto, UsageRecordDto,
 } from './dto/ai-training.dto';
 
 @Controller('ai-training')
@@ -517,5 +519,65 @@ export class AiTrainingController {
   @Get('packages')
   listOnPremPackages(@Request() req: any, @Query('modelId') modelId?: string) {
     return this.aiTrainingService.listOnPremPackages(req.user.id, modelId);
+  }
+  // --- AI-048..052: provider-neutral model gateway, circuit health,
+  // BYOK keys, data policy, honest accounting ---
+
+  @Post('gateway/providers')
+  @HttpCode(HttpStatus.CREATED)
+  registerGatewayProvider(@Request() req: any, @Body() dto: RegisterProviderDto) {
+    return this.aiTrainingService.registerGatewayProvider(req.user.id, dto);
+  }
+
+  @Get('gateway/providers')
+  listGatewayProviders(@Request() req: any) {
+    return this.aiTrainingService.listGatewayProviders(req.user.id);
+  }
+
+  @Post('gateway/route')
+  routeGatewayRequest(@Request() req: any, @Body() dto: GatewayRouteDto) {
+    return this.aiTrainingService.routeGatewayRequest(req.user.id, dto);
+  }
+
+  @Post('gateway/outcome')
+  recordProviderOutcome(@Request() req: any, @Body() dto: RecordOutcomeDto) {
+    return this.aiTrainingService.recordProviderOutcome(req.user.id, dto);
+  }
+
+  @Get('gateway/health')
+  listProviderHealth(@Request() req: any) {
+    return this.aiTrainingService.listProviderHealth(req.user.id);
+  }
+
+  @Post('gateway/failover')
+  planGatewayFailover(@Request() req: any, @Body() dto: FailoverPlanDto) {
+    return this.aiTrainingService.planGatewayFailover(req.user.id, dto);
+  }
+
+  @Post('gateway/byok')
+  @HttpCode(HttpStatus.CREATED)
+  registerWorkspaceKey(@Request() req: any, @Body() dto: ByokRegisterDto) {
+    return this.aiTrainingService.registerWorkspaceKey(req.user.id, dto);
+  }
+
+  @Get('gateway/byok')
+  listWorkspaceKeys(@Request() req: any, @Query('workspaceId') workspaceId: string) {
+    return this.aiTrainingService.listWorkspaceKeys(req.user.id, workspaceId);
+  }
+
+  @Post('gateway/policy')
+  checkDataPolicy(@Request() req: any, @Body() dto: PolicyCheckDto) {
+    return this.aiTrainingService.checkDataPolicy(req.user.id, dto);
+  }
+
+  @Post('gateway/usage')
+  @HttpCode(HttpStatus.CREATED)
+  recordProviderUsage(@Request() req: any, @Body() dto: UsageRecordDto) {
+    return this.aiTrainingService.recordProviderUsage(req.user.id, dto);
+  }
+
+  @Get('gateway/accounting')
+  buildProviderAccounting(@Request() req: any, @Query('providerId') providerId: string) {
+    return this.aiTrainingService.buildProviderAccounting(req.user.id, { providerId });
   }
 }
