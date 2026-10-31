@@ -4,6 +4,8 @@ import { PortalService } from './portal.service';
 import { PortalSession } from './entities/portal-session.entity';
 import { PortalVisit } from './entities/portal-visit.entity';
 import { Invoice } from '../invoices/entities/invoice.entity';
+import { InvoiceStatus } from '../invoices/enums';
+import { QuoteStatus } from '../quotes/entities/quote.entity';
 import { Quote } from '../quotes/entities/quote.entity';
 
 // Multi-user portal scenarios: two owners with the same customer email,
@@ -116,7 +118,7 @@ describe('portal functional scenarios', () => {
       userId: 'owner-a',
       customerEmail: 'ann@example.com',
       number: 'INV-0001',
-      status: 'sent',
+      status: InvoiceStatus.SENT,
       currency: 'USD',
       totalCents: 5000,
       notes: 'private note never for the customer',
@@ -138,7 +140,7 @@ describe('portal functional scenarios', () => {
       userId: 'owner-a',
       customerEmail: 'ann@example.com',
       number: 'QT-0001',
-      status: 'sent',
+      status: QuoteStatus.SENT,
       totalCents: 7000,
     });
     const view = await ctx.service.viewResource(session.token, 'quotes');
