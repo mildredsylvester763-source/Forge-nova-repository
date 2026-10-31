@@ -72,6 +72,16 @@ import {
   buildOnDeviceBundle as buildOnDeviceBundleEngine,
   routeModel as routeModelEngine,
 } from './engine/model-serving-engine';
+import {
+  lookupResponseCache as lookupResponseCacheEngine,
+  admitCacheEntry as admitCacheEntryEngine,
+  applyStreamEvent as applyStreamEventEngine,
+  planStreamResume as planStreamResumeEngine,
+  aggregateServingMetrics as aggregateServingMetricsEngine,
+  evaluateShadow as evaluateShadowEngine,
+  planRollback as planRollbackEngine,
+  StreamEvent,
+} from './engine/model-operations-engine';
 import { EvalSuiteVersion } from './entities/eval-suite-version.entity';
 import { PanelVoteRecord } from './entities/panel-vote.entity';
 import { SafetyProbeBattery } from './entities/safety-battery.entity';
@@ -89,6 +99,11 @@ import { ServingScalePlan } from './entities/serving-scale-plan.entity';
 import { QuantizationPlanRow } from './entities/quantization-plan.entity';
 import { OnDeviceBundle } from './entities/on-device-bundle.entity';
 import { RoutingDecision } from './entities/routing-decision.entity';
+import { ResponseCacheEntry } from './entities/response-cache-entry.entity';
+import { StreamSession } from './entities/stream-session.entity';
+import { ServingMetricSample } from './entities/serving-metric-sample.entity';
+import { ShadowDeployment } from './entities/shadow-deployment.entity';
+import { RollbackEvent } from './entities/rollback-event.entity';
 import { TrainingRun } from './entities/training-run.entity';
 import {
   CreateTrainingAssetDto, BuildDatasetDto,
@@ -103,6 +118,11 @@ import {
   RegisterModelDto, BuildModelCardDto, PromoteModelDto,
   PlanServingScaleDto, BuildQuantizationDto, BuildBundleDto,
   RoutePromptDto,
+  CacheLookupDto, CacheAdmitDto,
+  StreamOpenDto, StreamChunkDto, StreamLifecycleDto, StreamResumeDto,
+  MetricSampleDto, AggregateMetricsDto,
+  ShadowCreateDto, ShadowPairDto, ShadowEvaluateDto,
+  RollbackDto,
 } from './dto/ai-training.dto';
 
 @Injectable()
@@ -148,6 +168,16 @@ export class AiTrainingService {
     private readonly onDeviceBundleRepository: Repository<OnDeviceBundle>,
     @InjectRepository(RoutingDecision)
     private readonly routingDecisionRepository: Repository<RoutingDecision>,
+    @InjectRepository(ResponseCacheEntry)
+    private readonly responseCacheEntryRepository: Repository<ResponseCacheEntry>,
+    @InjectRepository(StreamSession)
+    private readonly streamSessionRepository: Repository<StreamSession>,
+    @InjectRepository(ServingMetricSample)
+    private readonly servingMetricSampleRepository: Repository<ServingMetricSample>,
+    @InjectRepository(ShadowDeployment)
+    private readonly shadowDeploymentRepository: Repository<ShadowDeployment>,
+    @InjectRepository(RollbackEvent)
+    private readonly rollbackEventRepository: Repository<RollbackEvent>,
   ) {}
 
   // --- 1. Admit an asset through the gates (AI-002/003/004) ---
@@ -1281,5 +1311,286 @@ export class AiTrainingService {
       where: { userId },
       order: { createdAt: 'ASC' },
     });
+  }
+
+  // --- 10. Model operations: cache, streaming, metrics, shadow, rollback (AI-040..044) ---
+  // The cache is per-user per-model and fingerprint-idempotent: an exact hit
+  // answers free, a cached prefix discounts input processing, and pinned
+  // entries are never evicted. Streams are engine-evolved reducer state — a
+  // gap, a double-complete or an invented suffix can never reach the DB.
+  // Metrics are honest nearest-rank percentiles over raw samples. Shadows
+  // freeze the engine verdict only above the sample floor. Rollbacks flip
+  // only to previously-served versions, idempotent by fingerprint. Zero-trust
+  // scoped throughout: every query carries the owning userId.
+
+  async lookupResponse(userId: string, dto: CacheLookupDto) {
+    const rows = await this.responseCacheEntryRepository.find({
+      where: { userId, modelId: dto.modelId },
+      order: { createdAt: 'ASC' },
+    });
+    const verdict = lookupResponseCacheEngine({
+      modelId: dto.modelId,
+      prompt: dto.prompt,
+      entries: rows.map((r) => r.entry),
+    });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason);
+    }
+    return verdict.value;
+  }
+
+  async admitResponseCache(userId: string, dto: CacheAdmitDto) {
+    const rows = await this.responseCacheEntryRepository.find({
+      where: { userId, modelId: dto.modelId },
+      order: { createdAt: 'ASC' },
+    });
+    const verdict = admitCacheEntryEngine({
+      modelId: dto.modelId,
+      prompt: dto.prompt,
+      promptTokens: dto.promptTokens,
+      outputTokens: dto.outputTokens,
+      maxEntries: dto.maxEntries,
+      pinned: dto.pinned,
+      now: dto.now ?? Date.now(),
+      entries: rows.map((r) => r.entry),
+    });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason);
+    }
+    const result = verdict.value;
+    if (result.duplicate) {
+      const existing = rows.find((r) => r.fingerprint === result.admitted.id);
+      if (existing) {
+        existing.entry = result.admitted;
+        const saved = await this.responseCacheEntryRepository.save(existing);
+        return { ...saved, duplicate: true, evicted: [] as string[] };
+      }
+    }
+    for (const victim of result.evicted) {
+      const row = rows.find((r) => r.entry.id === victim);
+      if (row) {
+        await this.responseCacheEntryRepository.remove(row);
+      }
+    }
+    const row = this.responseCacheEntryRepository.create({
+      userId,
+      modelId: dto.modelId,
+      fingerprint: result.admitted.id,
+      entry: result.admitted,
+    });
+    const saved = await this.responseCacheEntryRepository.save(row);
+    return { ...saved, duplicate: false, evicted: result.evicted };
+  }
+
+  async listCacheEntries(userId: string, modelId?: string): Promise<ResponseCacheEntry[]> {
+    const where: any = { userId };
+    if (modelId) where.modelId = modelId;
+    return this.responseCacheEntryRepository.find({ where, order: { createdAt: 'ASC' } });
+  }
+
+  async openStream(userId: string, dto: StreamOpenDto) {
+    const existing = await this.streamSessionRepository.findOne({
+      where: { userId, streamId: dto.streamId },
+    });
+    if (existing) {
+      if (existing.state.status === 'open') {
+        return { ...existing, reused: true };
+      }
+      throw new ConflictException('stream-open-after-' + existing.state.status + ':' + dto.streamId);
+    }
+    const row = this.streamSessionRepository.create({
+      userId,
+      streamId: dto.streamId,
+      modelId: dto.modelId,
+      state: { streamId: dto.streamId, status: 'open', chunks: [] },
+    });
+    const saved = await this.streamSessionRepository.save(row);
+    return { ...saved, reused: false };
+  }
+
+  private async evolveStream(userId: string, streamId: string, event: StreamEvent): Promise<StreamSession> {
+    const row = await this.streamSessionRepository.findOne({
+      where: { userId, streamId },
+    });
+    if (!row) {
+      throw new NotFoundException('stream-not-found:' + streamId);
+    }
+    const verdict = applyStreamEventEngine(row.state, event);
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason);
+    }
+    row.state = verdict.value;
+    return this.streamSessionRepository.save(row);
+  }
+
+  async appendStreamChunk(userId: string, dto: StreamChunkDto): Promise<StreamSession> {
+    return this.evolveStream(userId, dto.streamId, { type: 'chunk', index: dto.index, content: dto.content });
+  }
+
+  async cancelStream(userId: string, dto: StreamLifecycleDto): Promise<StreamSession> {
+    return this.evolveStream(userId, dto.streamId, { type: 'cancel' });
+  }
+
+  async completeStream(userId: string, dto: StreamLifecycleDto): Promise<StreamSession> {
+    return this.evolveStream(userId, dto.streamId, { type: 'complete' });
+  }
+
+  async resumeStream(userId: string, dto: StreamResumeDto) {
+    const row = await this.streamSessionRepository.findOne({
+      where: { userId, streamId: dto.streamId },
+    });
+    if (!row) {
+      throw new NotFoundException('stream-not-found:' + dto.streamId);
+    }
+    const verdict = planStreamResumeEngine(row.state, dto.clientLastIndex);
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason);
+    }
+    return verdict.value;
+  }
+
+  async getStream(userId: string, streamId: string): Promise<StreamSession> {
+    const row = await this.streamSessionRepository.findOne({
+      where: { userId, streamId },
+    });
+    if (!row) {
+      throw new NotFoundException('stream-not-found:' + streamId);
+    }
+    return row;
+  }
+
+  async recordServingMetric(userId: string, dto: MetricSampleDto): Promise<ServingMetricSample> {
+    const row = this.servingMetricSampleRepository.create({
+      userId,
+      modelId: dto.modelId,
+      sample: {
+        latencyMs: dto.latencyMs,
+        tokens: dto.tokens,
+        costUsd: dto.costUsd,
+        ok: dto.ok,
+        ttftMs: dto.ttftMs,
+      },
+    });
+    return this.servingMetricSampleRepository.save(row);
+  }
+
+  async buildServingMetrics(userId: string, dto: AggregateMetricsDto) {
+    const rows = await this.servingMetricSampleRepository.find({
+      where: { userId, modelId: dto.modelId },
+      order: { createdAt: 'ASC' },
+    });
+    const verdict = aggregateServingMetricsEngine({
+      modelId: dto.modelId,
+      samples: rows.map((r) => r.sample),
+      latencyBudgetMs: dto.latencyBudgetMs,
+    });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason);
+    }
+    return verdict.value;
+  }
+
+  async listServingMetricSamples(userId: string, modelId?: string): Promise<ServingMetricSample[]> {
+    const where: any = { userId };
+    if (modelId) where.modelId = modelId;
+    return this.servingMetricSampleRepository.find({ where, order: { createdAt: 'ASC' } });
+  }
+
+  async createShadowDeployment(userId: string, dto: ShadowCreateDto): Promise<ShadowDeployment> {
+    if (dto.championId === dto.challengerId) {
+      throw new BadRequestException('shadow-same-model:' + dto.championId);
+    }
+    const dup = await this.shadowDeploymentRepository.findOne({
+      where: { userId, championId: dto.championId, challengerId: dto.challengerId },
+    });
+    if (dup) {
+      throw new ConflictException('shadow-deployment-duplicate:' + dto.championId + ':' + dto.challengerId);
+    }
+    const row = this.shadowDeploymentRepository.create({
+      userId,
+      championId: dto.championId,
+      challengerId: dto.challengerId,
+      status: 'shadowing',
+      pairs: [],
+      result: null,
+    });
+    return this.shadowDeploymentRepository.save(row);
+  }
+
+  async recordShadowPair(userId: string, dto: ShadowPairDto): Promise<ShadowDeployment> {
+    const row = await this.shadowDeploymentRepository.findOne({
+      where: { userId, championId: dto.championId, challengerId: dto.challengerId },
+    });
+    if (!row) {
+      throw new NotFoundException('shadow-deployment-not-found:' + dto.championId + ':' + dto.challengerId);
+    }
+    if (row.status !== 'shadowing') {
+      throw new ConflictException('shadow-pair-after-' + row.status + ':' + dto.championId);
+    }
+    row.pairs = [...row.pairs, { agree: dto.agree }];
+    return this.shadowDeploymentRepository.save(row);
+  }
+
+  async evaluateShadowDeployment(userId: string, dto: ShadowEvaluateDto) {
+    const row = await this.shadowDeploymentRepository.findOne({
+      where: { userId, championId: dto.championId, challengerId: dto.challengerId },
+    });
+    if (!row) {
+      throw new NotFoundException('shadow-deployment-not-found:' + dto.championId + ':' + dto.challengerId);
+    }
+    const verdict = evaluateShadowEngine({
+      championId: dto.championId,
+      challengerId: dto.challengerId,
+      pairs: row.pairs,
+      agreementThreshold: dto.agreementThreshold,
+    });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason);
+    }
+    row.result = verdict.value;
+    if (verdict.value.verdict === 'promote-shadow') {
+      row.status = 'promoted';
+    }
+    await this.shadowDeploymentRepository.save(row);
+    return verdict.value;
+  }
+
+  async listShadowDeployments(userId: string, championId?: string): Promise<ShadowDeployment[]> {
+    const where: any = { userId };
+    if (championId) where.championId = championId;
+    return this.shadowDeploymentRepository.find({ where, order: { createdAt: 'ASC' } });
+  }
+
+  async rollbackModelVersion(userId: string, dto: RollbackDto) {
+    const verdict = planRollbackEngine({
+      modelId: dto.modelId,
+      currentVersion: dto.currentVersion,
+      targetVersion: dto.targetVersion,
+      servedVersions: dto.servedVersions,
+    });
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason);
+    }
+    const rows = await this.rollbackEventRepository.find({
+      where: { userId, modelId: dto.modelId },
+      order: { createdAt: 'ASC' },
+    });
+    const identical = rows.find((r) => JSON.stringify(r.plan) === JSON.stringify(verdict.value));
+    if (identical) {
+      return { ...identical, reused: true };
+    }
+    const row = this.rollbackEventRepository.create({
+      userId,
+      modelId: dto.modelId,
+      plan: verdict.value,
+    });
+    const saved = await this.rollbackEventRepository.save(row);
+    return { ...saved, reused: false };
+  }
+
+  async listRollbackEvents(userId: string, modelId?: string): Promise<RollbackEvent[]> {
+    const where: any = { userId };
+    if (modelId) where.modelId = modelId;
+    return this.rollbackEventRepository.find({ where, order: { createdAt: 'ASC' } });
   }
 }
