@@ -113,6 +113,9 @@ import { StreamSession } from './modules/ai-training/entities/stream-session.ent
 import { ServingMetricSample } from './modules/ai-training/entities/serving-metric-sample.entity';
 import { ShadowDeployment } from './modules/ai-training/entities/shadow-deployment.entity';
 import { RollbackEvent } from './modules/ai-training/entities/rollback-event.entity';
+import { ModelPin } from './modules/ai-training/entities/model-pin.entity';
+import { InstanceReservation } from './modules/ai-training/entities/instance-reservation.entity';
+import { OnPremPackage } from './modules/ai-training/entities/on-prem-package.entity';
 import { LoyaltyAccount } from './modules/loyalty/entities/loyalty-account.entity';
 import { LoyaltyEvent } from './modules/loyalty/entities/loyalty-event.entity';
 import { ReferralCode } from './modules/referrals/entities/referral-code.entity';
@@ -206,6 +209,9 @@ import { ReferralsModule } from './modules/referrals/referrals.module';
     ServingMetricSample,
     ShadowDeployment,
     RollbackEvent,
+    ModelPin,
+    InstanceReservation,
+    OnPremPackage,
             LoyaltyAccount,
             LoyaltyEvent,
             ReferralCode,
