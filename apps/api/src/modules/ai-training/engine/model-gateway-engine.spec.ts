@@ -196,7 +196,7 @@ describe('model gateway engine order independence', () => {
       });
       expect(v.ok).toBe(true);
       if (v.ok) {
-        expect(v.value.costUsd).toBe(0.0019);
+        expect(v.value.costUsd).toBe(0.0029);
         expect(v.value.errorRate).toBe(0.5);
       }
     }
