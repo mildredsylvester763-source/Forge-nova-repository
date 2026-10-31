@@ -79,7 +79,9 @@ describe('integration-graph engine (FORGE TQ-032)', () => {
       const got = planIntegrationTests({ services: names, dependencies: deps });
       const oracleCases = new Set(deps.map((d) => d[0] + '->' + d[1]));
       const selfLoop = deps.some((d) => d[0] === d[1]);
-      expect(got.ok).toBe(!selfLoop ? true : false);
+      if (selfLoop) {
+        expect(got.ok).toBe(false);
+      }
       if (got.ok) {
         expect(got.cases?.length).toBe(oracleCases.size);
         expect(got.cases?.every((k) => oracleCases.has(k.from + '->' + k.to))).toBe(true);
