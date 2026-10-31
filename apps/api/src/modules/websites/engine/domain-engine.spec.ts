@@ -93,7 +93,7 @@ describe('domain-engine (500-case sweep, seed 42)', () => {
         }
         for (let i = 0; i < label.length; i += 1) {
           const c = label[i];
-          const okChar = (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9');
+          const okChar = (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c === '-';
           if (!okChar) {
             return false;
           }
