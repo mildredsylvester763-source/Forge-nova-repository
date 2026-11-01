@@ -1,3 +1,5 @@
+import { validateStep, STEP_CHECK_TYPES, StepValidationInput, StepValidationResult, StepFailure } from './step-validation';
+
 // Engine spec for step validation (FORGE AI-079). Pinned vectors first,
 // then a 500-case mulberry32(42) sweep against an independent oracle.
 
