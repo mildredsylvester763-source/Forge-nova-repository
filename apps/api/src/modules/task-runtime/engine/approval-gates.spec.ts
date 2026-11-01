@@ -1,4 +1,4 @@
-import { planApproval, resolveApproval, PlanApprovalInput, PlanApprovalResult } from './approval-gates';
+import { planApproval, resolveApproval, ApprovalPolicyInput, PlanApprovalInput, PlanApprovalResult } from './approval-gates';
 
 // Engine spec for approval gates (FORGE AI-080). Pinned vectors first,
 // then a 500-case mulberry32(42) sweep against an independent oracle.
@@ -100,7 +100,7 @@ describe('approval gates engine (FORGE AI-080)', () => {
       let rl = ['high'];
       let tcs = ['write', 'exec', 'network'];
       let mac = 1000;
-      const p = inp?.policy;
+      const p = inp?.policy as ApprovalPolicyInput | undefined;
       if (p !== undefined) {
         if (p === null || typeof p !== 'object' || Array.isArray(p)) return { ok: false, reason: 'approval-policy-invalid' };
         if (p.riskLevels !== undefined) {
