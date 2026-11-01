@@ -1,3 +1,5 @@
+import { appendTaskEvent, replayTask, TASK_EVENT_TYPES, AppendTaskEventInput, ReplayTaskInput, ReplayTaskResult } from './task-history';
+
 // Engine spec for task history (FORGE AI-082). Pinned vectors first,
 // then a 500-case mulberry32(42) sweep against an independent oracle.
 
