@@ -1,3 +1,5 @@
+import { detectParallelConflicts, DetectParallelConflictsInput, DetectParallelConflictsResult, ParallelConflict } from './parallel-agents';
+
 // Engine spec for parallel agents (FORGE AI-083). Pinned vectors first,
 // then a 500-case mulberry32(42) sweep against an independent oracle.
 
