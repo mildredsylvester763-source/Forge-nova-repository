@@ -145,6 +145,7 @@ import { TestAccount } from './modules/live-testing/entities/test-account.entity
 import { GeneratedSuite } from './modules/test-generation/entities/generated-suite.entity';
 import { OrchestratorPlan } from './modules/orchestrator/entities/orchestrator-plan.entity';
 import { TestQualityGolden } from './modules/test-quality/entities/test-quality-golden.entity';
+import { TaskRun } from './modules/task-runtime/entities/task-run.entity';
 import { WorkspaceContentItem } from './modules/workspace-retrieval/entities/workspace-content-item.entity';
 import { ResearchReport } from './modules/workspace-retrieval/entities/research-report.entity';
 import { SearchCacheEntry } from './modules/search-integrity/entities/search-cache-entry.entity';
@@ -161,6 +162,7 @@ import { SearchIntegrityModule } from './modules/search-integrity/search-integri
 import { TestGenerationModule } from './modules/test-generation/test-generation.module';
 import { OrchestratorModule } from './modules/orchestrator/orchestrator.module';
 import { TestQualityModule } from './modules/test-quality/test-quality.module';
+import { TaskRuntimeModule } from './modules/task-runtime/task-runtime.module';
 
 @Module({
   imports: [
@@ -276,6 +278,7 @@ import { TestQualityModule } from './modules/test-quality/test-quality.module';
             GeneratedSuite,
             OrchestratorPlan,
             TestQualityGolden,
+            TaskRun,
             WorkspaceContentItem,
             ResearchReport,
             SearchCacheEntry,
@@ -338,6 +341,7 @@ import { TestQualityModule } from './modules/test-quality/test-quality.module';
     TestGenerationModule,
     OrchestratorModule,
     TestQualityModule,
+    TaskRuntimeModule,
   ],
   providers: [
     {
