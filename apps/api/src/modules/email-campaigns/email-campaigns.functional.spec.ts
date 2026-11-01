@@ -17,7 +17,7 @@ import { fakeRepo } from '../../common/testing/fake-repository';
 
 interface Harness {
   templates: TemplatesService;
-  campaigns: CampaignsService;
+  campaignsService: CampaignsService;
   templateRows: EmailTemplate[];
   campaignRows: Campaign[];
   eventRows: CampaignEvent[];
@@ -29,7 +29,7 @@ function buildHarness(): Harness {
   const events = fakeRepo<CampaignEvent>();
   return {
     templates: new TemplatesService(templates.repo),
-    campaigns: new CampaignsService(campaigns.repo, events.repo, templates.repo),
+    campaignsService: new CampaignsService(campaigns.repo, events.repo, templates.repo),
     templateRows: templates.rows,
     campaignRows: campaigns.rows,
     eventRows: events.rows,
