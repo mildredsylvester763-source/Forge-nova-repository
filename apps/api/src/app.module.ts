@@ -150,6 +150,10 @@ import { FeedListing } from './modules/commerce-feeds/entities/feed-listing.enti
 import { ShopSyncPlan } from './modules/commerce-feeds/entities/shop-sync-plan.entity';
 import { ShoppingFeedRecord } from './modules/commerce-feeds/entities/shopping-feed-record.entity';
 import { CommerceFeedsModule } from './modules/commerce-feeds/commerce-feeds.module';
+import { EmailTemplate } from './modules/email-campaigns/entities/email-template.entity';
+import { Campaign } from './modules/email-campaigns/entities/campaign.entity';
+import { CampaignEvent } from './modules/email-campaigns/entities/campaign-event.entity';
+import { EmailCampaignsModule } from './modules/email-campaigns/email-campaigns.module';
 
 @Module({
   imports: [
@@ -251,6 +255,9 @@ import { CommerceFeedsModule } from './modules/commerce-feeds/commerce-feeds.mod
             FeedListing,
             ShopSyncPlan,
             ShoppingFeedRecord,
+            EmailTemplate,
+            Campaign,
+            CampaignEvent,
           ],
           synchronize: isDevelopment,
           logging: isDevelopment,
@@ -316,6 +323,7 @@ import { CommerceFeedsModule } from './modules/commerce-feeds/commerce-feeds.mod
     ContentModule,
     SocialModule,
     CommerceFeedsModule,
+    EmailCampaignsModule,
   ],
   providers: [
     {
