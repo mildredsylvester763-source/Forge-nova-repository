@@ -1,3 +1,5 @@
+import { applyTaskCommand, isTaskTerminal, TASK_STATES, TASK_COMMANDS, TASK_TERMINAL_STATES, TaskCommandInput, TaskCommandResult } from './task-control';
+
 // Engine spec for task control (FORGE AI-081). Pinned vectors first,
 // then a 500-case mulberry32(42) sweep against an independent oracle.
 
