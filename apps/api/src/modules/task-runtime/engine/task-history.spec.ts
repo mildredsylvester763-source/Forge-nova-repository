@@ -24,7 +24,7 @@ describe('task history engine (FORGE AI-082)', () => {
     const second = appendTaskEvent({ events: first.events, event: { type: 'step-started', stepId: 's1' } });
     expect(second.ok).toBe(true);
     expect(second.seq).toBe(2);
-    expect(second.events[1].stepId).toBe('s1');
+    expect(second.events?.[1].stepId).toBe('s1');
   });
 
   it('replays a full journal to its final state', () => {
