@@ -241,7 +241,7 @@ describe('email-campaign-engine', () => {
       }
       const verdict = validateBlock(block);
       expect(verdict.ok).toBe(expOk);
-      if (expOk && expRender !== null) {
+      if (expOk && expRender !== null && verdict.ok) {
         const rendered = renderTemplate({
           subject: 'Sweep subject',
           blocks: [verdict.value],
