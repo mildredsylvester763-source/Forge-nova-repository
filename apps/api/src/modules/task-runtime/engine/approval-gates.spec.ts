@@ -1,3 +1,5 @@
+import { planApproval, resolveApproval, PlanApprovalInput, PlanApprovalResult } from './approval-gates';
+
 // Engine spec for approval gates (FORGE AI-080). Pinned vectors first,
 // then a 500-case mulberry32(42) sweep against an independent oracle.
 
